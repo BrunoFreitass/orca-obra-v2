@@ -151,7 +151,7 @@ _FONTE_MAO_DE_OBRA = "Aproximação a partir da parcela de mão de obra das comp
 _DATA_MAO_DE_OBRA = "2026-06"
 
 MAO_DE_OBRA_POR_SERVICO = {
-    "Alvenaria (assentamento)":            {"preco": Preco(28.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA), "unidade": "m2_parede"},
+    "Alvenaria (assentamento)":            {"preco": Preco(37.86, "SINAPI RR - composição 89290 (servente 0,43×R$23,36 + pedreiro 0,86×R$32,36), alvenaria estrutural blocos cerâmicos 14x19x29 -- vedação cerâmica equivalente não localizada, usado como melhor referência disponível", "2026-06"), "unidade": "m2_parede"},
     "Assentamento de Piso (Área Seca)":    {"preco": Preco(22.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA), "unidade": "m2_piso_seco"},
     "Assentamento de Piso (Área Molhada)": {"preco": Preco(32.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA), "unidade": "m2_piso_molhado"},
     "Assentamento de Piso (Área Externa)": {"preco": Preco(26.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA), "unidade": "m2_piso_externo"},

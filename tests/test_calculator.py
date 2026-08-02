@@ -77,4 +77,4 @@ class TestRegressaoCasoReal:
     def test_total_mao_de_obra_telhado(self):
         mao_de_obra = calcular_mao_de_obra(self._dados(), tipo_cobertura="Telhado")
         total = round(sum(i["Total"] for i in mao_de_obra), 2)
-        assert total == pytest.approx(20053.07, abs=0.5)
+        assert total == pytest.approx(21825.47, abs=0.5)
