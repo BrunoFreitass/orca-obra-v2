@@ -18,3 +18,11 @@ aplicar_*.py
 corrigir_*.py
 limpar_*.py
 remover_*.py
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
