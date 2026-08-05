@@ -12,12 +12,14 @@ import json
 import os
 from datetime import date
 
+from core import paths
+
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font
 
 from core import coeficientes as coef
 
-CAMINHO_OVERRIDES = os.path.join(os.path.dirname(os.path.dirname(__file__)), "precos_customizados.json")
+CAMINHO_OVERRIDES = paths.OVERRIDES_PATH
 
 
 def _itens_editaveis():

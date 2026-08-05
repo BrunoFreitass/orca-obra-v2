@@ -1,7 +1,9 @@
 import json
 import os
 
-PERFIL_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "perfil_empresa.json")
+from core import paths
+
+PERFIL_PATH = paths.PERFIL_PATH
 
 PERFIL_PADRAO = {
     "nome_empresa": "",

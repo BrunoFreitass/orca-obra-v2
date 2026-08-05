@@ -115,9 +115,19 @@ def _montar_prompt():
            réguas de medida externas). Nesse caso, voce PRECISA
            multiplicar largura x altura do comodo pra estimar a area,
            o que e uma estimativa por calculo, nao uma leitura direta.
-    4. Percorra o perimetro de cada comodo e conte os segmentos de
-       parede, somando os comprimentos lineares (nao conte a mesma
-       parede duas vezes quando ela e compartilhada entre dois comodos).
+    4. **PAREDES (instrução crítica -- leia com atenção):**
+       Percorra o perimetro de cada comodo e some os comprimentos
+       lineares de TODOS os segmentos de parede. **IMPORTANTE:**
+       - Uma parede COMPARTILHADA entre dois comodos (ex: parede entre
+         sala e cozinha) deve ser contada APENAS UMA VEZ no total.
+       - Paredes EXTERNAS (fachada) contam sempre.
+       - Paredes INTERNAS (divisórias) contam uma vez cada, mesmo que
+         sejam usadas por dois cômodos adjacentes.
+       - NÃO subestime: o total de metros de parede tipicamente é
+         0,55 a 1,10 vezes a área total de piso. Se sua soma der menos
+         que 0,55x a área total, revise -- provavelmente esqueceu de
+         contar paredes internas ou externas.
+       - Para cada parede, use o comprimento linear (nao a area).
     5. Para cada porta da planta (geralmente um arco de 1/4 de circulo),
        classifique se ela e:
        - "interna": conecta dois ambientes internos da casa.

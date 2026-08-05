@@ -10,16 +10,15 @@ from core.validacao import validar_dados
 from core.historico import inicializar_db, salvar_orcamento, listar_orcamentos
 from core.perfil_empresa import carregar_perfil, salvar_perfil
 from core import tabela_precos
+from core import paths
 
 st.set_page_config(page_title="OrçaObra AI", page_icon="🏗️", layout="centered")
 
 inicializar_db()
 
-PASTA_ORCAMENTOS = "orcamentos_salvos"
-os.makedirs(PASTA_ORCAMENTOS, exist_ok=True)
-
-PASTA_PERFIL = "perfil_empresa"
-os.makedirs(PASTA_PERFIL, exist_ok=True)
+paths.garantir_diretorios()
+PASTA_ORCAMENTOS = paths.PASTA_ORCAMENTOS
+PASTA_PERFIL = paths.PASTA_PERFIL
 
 CONFIANCA_VISUAL = {
     "alta": {"emoji": "🟢", "label": "Confiança alta"},

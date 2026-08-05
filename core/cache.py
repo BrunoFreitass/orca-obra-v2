@@ -2,8 +2,10 @@ import hashlib
 import json
 import os
 
-CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".cache_ia")
-os.makedirs(CACHE_DIR, exist_ok=True)
+from core import paths
+
+CACHE_DIR = paths.CACHE_DIR
+paths.garantir_diretorios()
 
 
 def _hash_arquivo(caminho_arquivo):

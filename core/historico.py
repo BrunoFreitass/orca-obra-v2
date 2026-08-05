@@ -2,7 +2,9 @@ import sqlite3
 import os
 from datetime import datetime
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "historico.db")
+from core import paths
+
+DB_PATH = paths.DB_PATH
 
 
 def _conectar():
