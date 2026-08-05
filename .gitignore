@@ -13,3 +13,8 @@ data/
 temp_planta.*
 Orcamento_Gerado.csv
 Orcamento_Gerado.xlsx
+# Scripts temporários de manutenção
+aplicar_*.py
+corrigir_*.py
+limpar_*.py
+remover_*.py
