@@ -3,15 +3,15 @@ from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
 
-def _fill_mesclado(ws, row, col_ini, col_fim, fill, font=None, alignment=None):
-    """Aplica fill/font/alignment em TODAS as células de um range mesclado.
-    Resolve bug onde apenas a primeira célula recebia a cor de fundo."""
+def _aplicar_em_mesclado(ws, row, col_ini, col_fim, fill, font=None, alignment=None):
+    """Aplica fill/font/alignment em TODAS as celulas de um range mesclado.
+    Resolve bug onde apenas a primeira celula recebia a cor de fundo."""
     for col in range(col_ini, col_fim + 1):
         celula = ws.cell(row=row, column=col)
         celula.fill = fill
         if font:
             celula.font = font
-        if alignment and col == col_ini:
+        if alignment:
             celula.alignment = alignment
 
 
@@ -28,25 +28,26 @@ def gerar_excel(dados_orcamento, output_path, bdi_percentual=0):
     verde_venda = "2E7D32"
     cinza_claro = "F2F2F2"
 
-    # --- CABEÇALHO PRINCIPAL ---
+    # --- CABECALHO PRINCIPAL ---
     ws.merge_cells("A1:D1")
-    ws["A1"] = "OrçaObra AI — Orçamento Estimado de Obra"
     fill_cabecalho = PatternFill(start_color=azul_cabecalho, end_color=azul_cabecalho, fill_type="solid")
     font_cabecalho = Font(name=fonte_padrao, size=14, bold=True, color="FFFFFF")
-    _fill_mesclado(ws, 1, 1, 4, fill_cabecalho, font_cabecalho,
-                   Alignment(horizontal="center", vertical="center"))
+    align_cabecalho = Alignment(horizontal="center", vertical="center")
+    _aplicar_em_mesclado(ws, 1, 1, 4, fill_cabecalho, font_cabecalho, align_cabecalho)
+    ws["A1"] = "OrçaObra AI — Orçamento Estimado de Obra"
     ws.row_dimensions[1].height = 26
 
-    # --- CABEÇALHO DA TABELA ---
+    # --- CABECALHO DA TABELA ---
     linha_cabecalho = 3
     colunas = ["Item", "Quantidade", "Preço Unitário (R$)", "Total (R$)"]
     fill_header = PatternFill(start_color=azul_cabecalho, end_color=azul_cabecalho, fill_type="solid")
     font_header = Font(name=fonte_padrao, size=11, bold=True, color="FFFFFF")
+    align_header = Alignment(horizontal="center", vertical="center")
     for col_idx, titulo in enumerate(colunas, start=1):
         celula = ws.cell(row=linha_cabecalho, column=col_idx, value=titulo)
         celula.font = font_header
         celula.fill = fill_header
-        celula.alignment = Alignment(horizontal="center", vertical="center")
+        celula.alignment = align_header
 
     borda_fina = Border(
         left=Side(style="thin", color="CCCCCC"),
@@ -70,18 +71,19 @@ def gerar_excel(dados_orcamento, output_path, bdi_percentual=0):
     for tipo in ordem_grupos:
         itens_grupo = grupos[tipo]
 
-        # --- TÍTULO DA SEÇÃO (ex: MATERIAL) ---
+        # --- TITULO DA SECAO (ex: MATERIAL) ---
         ws.merge_cells(f"A{linha_atual}:D{linha_atual}")
-        ws.cell(row=linha_atual, column=1, value=tipo.upper())
         fill_secao = PatternFill(start_color=azul_secao, end_color=azul_secao, fill_type="solid")
         font_secao = Font(name=fonte_padrao, size=11, bold=True, color="FFFFFF")
-        _fill_mesclado(ws, linha_atual, 1, 4, fill_secao, font_secao,
-                       Alignment(horizontal="left", vertical="center", indent=1))
+        align_secao = Alignment(horizontal="left", vertical="center", indent=1)
+        _aplicar_em_mesclado(ws, linha_atual, 1, 4, fill_secao, font_secao, align_secao)
+        ws.cell(row=linha_atual, column=1, value=tipo.upper())
         linha_atual += 1
 
         primeira_linha_grupo = linha_atual
         for i, item in enumerate(itens_grupo):
             zebra = cinza_claro if i % 2 == 1 else "FFFFFF"
+            fill_zebra = PatternFill(start_color=zebra, end_color=zebra, fill_type="solid")
 
             total_calculado = round(item["Quantidade"] * item["Preco_Unit"], 2)
 
@@ -92,8 +94,8 @@ def gerar_excel(dados_orcamento, output_path, bdi_percentual=0):
 
             for col_idx in range(1, 5):
                 celula = ws.cell(row=linha_atual, column=col_idx)
-                celula.font = Font(name=fonte_padrao, size=10)
-                celula.fill = PatternFill(start_color=zebra, end_color=zebra, fill_type="solid")
+                celula.font = Font(name=fonte_padrao, size=10, color="000000")
+                celula.fill = fill_zebra
                 celula.border = borda_fina
                 if col_idx in (3, 4):
                     celula.number_format = 'R$ #,##0.00'
@@ -110,13 +112,13 @@ def gerar_excel(dados_orcamento, output_path, bdi_percentual=0):
 
         # --- SUBTOTAL ---
         ws.merge_cells(f"A{linha_atual}:C{linha_atual}")
-        ws.cell(row=linha_atual, column=1, value=f"Subtotal — {tipo}")
         font_sub = Font(name=fonte_padrao, size=10, bold=True, italic=True, color="000000")
         align_sub = Alignment(horizontal="right", vertical="center")
         for col in range(1, 4):
             c = ws.cell(row=linha_atual, column=col)
             c.font = font_sub
             c.alignment = align_sub
+        ws.cell(row=linha_atual, column=1, value=f"Subtotal — {tipo}")
         celula_subtotal = ws.cell(row=linha_atual, column=4, value=subtotal_valor)
         celula_subtotal.font = Font(name=fonte_padrao, size=10, bold=True, color="000000")
         celula_subtotal.number_format = 'R$ #,##0.00'
@@ -127,11 +129,11 @@ def gerar_excel(dados_orcamento, output_path, bdi_percentual=0):
     linha_custo_direto = linha_atual
     label_custo = "CUSTO DIRETO" if bdi_percentual else "TOTAL ESTIMADO"
     ws.merge_cells(f"A{linha_custo_direto}:C{linha_custo_direto}")
-    ws.cell(row=linha_custo_direto, column=1, value=label_custo)
     fill_custo = PatternFill(start_color=azul_cabecalho, end_color=azul_cabecalho, fill_type="solid")
     font_custo = Font(name=fonte_padrao, size=12, bold=True, color="FFFFFF")
-    _fill_mesclado(ws, linha_custo_direto, 1, 3, fill_custo, font_custo,
-                   Alignment(horizontal="right", vertical="center"))
+    align_custo = Alignment(horizontal="right", vertical="center")
+    _aplicar_em_mesclado(ws, linha_custo_direto, 1, 3, fill_custo, font_custo, align_custo)
+    ws.cell(row=linha_custo_direto, column=1, value=label_custo)
 
     custo_direto_valor = 0.0
     for tipo in ordem_grupos:
@@ -151,27 +153,27 @@ def gerar_excel(dados_orcamento, output_path, bdi_percentual=0):
         # --- BDI ---
         linha_bdi = linha_custo_direto + 1
         ws.merge_cells(f"A{linha_bdi}:C{linha_bdi}")
-        ws.cell(row=linha_bdi, column=1,
-                value=f"BDI ({bdi_percentual:g}%) — administração, lucro, impostos e imprevistos")
         font_bdi = Font(name=fonte_padrao, size=10, italic=True, color="000000")
         align_bdi = Alignment(horizontal="right", vertical="center")
         for col in range(1, 4):
             c = ws.cell(row=linha_bdi, column=col)
             c.font = font_bdi
             c.alignment = align_bdi
+        ws.cell(row=linha_bdi, column=1,
+                value=f"BDI ({bdi_percentual:g}%) — administração, lucro, impostos e imprevistos")
         bdi_valor = round(custo_direto_valor * bdi_percentual / 100, 2)
         celula_bdi_valor = ws.cell(row=linha_bdi, column=4, value=bdi_valor)
         celula_bdi_valor.font = Font(name=fonte_padrao, size=10, color="000000")
         celula_bdi_valor.number_format = 'R$ #,##0.00'
 
-        # --- PREÇO DE VENDA ---
+        # --- PRECO DE VENDA ---
         linha_preco_venda = linha_bdi + 1
         ws.merge_cells(f"A{linha_preco_venda}:C{linha_preco_venda}")
-        ws.cell(row=linha_preco_venda, column=1, value="PREÇO DE VENDA")
         fill_venda = PatternFill(start_color=verde_venda, end_color=verde_venda, fill_type="solid")
         font_venda = Font(name=fonte_padrao, size=12, bold=True, color="FFFFFF")
-        _fill_mesclado(ws, linha_preco_venda, 1, 3, fill_venda, font_venda,
-                       Alignment(horizontal="right", vertical="center"))
+        align_venda = Alignment(horizontal="right", vertical="center")
+        _aplicar_em_mesclado(ws, linha_preco_venda, 1, 3, fill_venda, font_venda, align_venda)
+        ws.cell(row=linha_preco_venda, column=1, value="PREÇO DE VENDA")
 
         preco_venda_valor = round(custo_direto_valor + bdi_valor, 2)
         celula_venda_valor = ws.cell(row=linha_preco_venda, column=4, value=preco_venda_valor)
@@ -185,17 +187,17 @@ def gerar_excel(dados_orcamento, output_path, bdi_percentual=0):
     for col_idx, largura in larguras.items():
         ws.column_dimensions[get_column_letter(col_idx)].width = largura
 
-    # --- RODAPÉ ---
+    # --- RODAPE ---
     linha_rodape = linha_preco_venda + 2
     ws.merge_cells(f"A{linha_rodape}:D{linha_rodape}")
-    ws.cell(row=linha_rodape, column=1,
-            value="Nota: os totais são calculados automaticamente (Quantidade x Preço Unitário).")
     font_rodape = Font(name=fonte_padrao, size=8, italic=True, color="666666")
     align_rodape = Alignment(horizontal="left", vertical="center")
     for col in range(1, 5):
         c = ws.cell(row=linha_rodape, column=col)
         c.font = font_rodape
         c.alignment = align_rodape
+    ws.cell(row=linha_rodape, column=1,
+            value="Nota: os totais são calculados automaticamente (Quantidade x Preço Unitário).")
 
     wb.save(xlsx_path)
     return xlsx_path
