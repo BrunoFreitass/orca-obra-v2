@@ -150,7 +150,14 @@ def calcular_mao_de_obra(dados, tipo_cobertura="Telhado"):
         ))
 
     # Split elétrico: infra (obra bruta) + acabamento
-    preco_eletrico_base = MAO_DE_OBRA_POR_SERVICO["Instalação Elétrica"]["preco"]
+    # Usa obter_preco() (em vez do Preco padrão direto) para respeitar
+    # preços customizados que o usuário tenha enviado pela planilha de
+    # preços (core/tabela_precos.py) -- do contrário essa customização
+    # era salva, mas nunca aplicada aqui.
+    preco_eletrico_base = obter_preco(
+        "mao_de_obra__Instalação Elétrica",
+        MAO_DE_OBRA_POR_SERVICO["Instalação Elétrica"]["preco"],
+    )
     # 60% infra / 40% acabamento (proporção aproximada do mercado)
     itens.append(ItemOrcamento(
         "Mão de Obra", "Instalação Elétrica - Infraestrutura", qtd_eletricos,
@@ -164,7 +171,10 @@ def calcular_mao_de_obra(dados, tipo_cobertura="Telhado"):
     ))
 
     # Split hidráulico: infra (obra bruta) + acabamento
-    preco_hidraulico_base = MAO_DE_OBRA_POR_SERVICO["Instalação Hidráulica"]["preco"]
+    preco_hidraulico_base = obter_preco(
+        "mao_de_obra__Instalação Hidráulica",
+        MAO_DE_OBRA_POR_SERVICO["Instalação Hidráulica"]["preco"],
+    )
     itens.append(ItemOrcamento(
         "Mão de Obra", "Instalação Hidráulica - Infraestrutura", qtd_hidraulicos,
         round(preco_hidraulico_base.valor * 0.60 * fator_regional, 2),

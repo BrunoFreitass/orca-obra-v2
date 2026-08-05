@@ -217,6 +217,18 @@ if arquivo_pdf is not None:
             try:
                 dados_extraidos = extrair_dados_da_planta(arquivo_temp)
                 st.session_state["dados_extraidos"] = dados_extraidos
+                # Descarta valores editados/calculados da planta ANTERIOR
+                # (campos de área/portas/janelas e as tabelas de materiais
+                # e mão de obra), para que a tela mostre os dados recém
+                # extraídos em vez de repetir a última planta analisada.
+                for chave_para_limpar in (
+                    "input_area_seca", "input_area_molhada", "input_area_externa",
+                    "input_metros_parede", "input_portas_internas",
+                    "input_portas_externas", "input_janelas",
+                    "materiais_editados", "mao_de_obra_editada",
+                    "orcamento_assinatura",
+                ):
+                    st.session_state.pop(chave_para_limpar, None)
             except ErroExtracaoAmigavel as e:
                 st.error(f"⚠️ {e.mensagem_amigavel}")
                 if e.detalhe_tecnico:
@@ -272,7 +284,8 @@ if arquivo_pdf is not None:
         with col4:
             metros_parede = st.number_input(
                 "Paredes Lineares (m)",
-                value=float(dados["metros_parede"]), step=0.5, min_value=0.0
+                value=float(dados["metros_parede"]), step=0.5, min_value=0.0,
+                key="input_metros_parede"
             )
             mostrar_badge("metros_parede", confianca)
 
@@ -344,6 +357,24 @@ if arquivo_pdf is not None:
             )
 
         st.write("---")
+
+        # Assinatura de tudo que influencia QUANTIDADES no orçamento. Se
+        # qualquer um desses valores mudar (edição manual de área/portas,
+        # troca de padrão de acabamento ou de tipo de cobertura), as
+        # tabelas de materiais e mão de obra são recalculadas do zero --
+        # do contrário elas continuariam mostrando quantidades da
+        # combinação anterior, mesmo com os campos acima já atualizados.
+        # Edições manuais de PREÇO feitas antes da mudança são perdidas
+        # de propósito, já que a lista de itens/quantidades é outra.
+        assinatura_atual = (
+            padrao, estrutura, area_piso_seco, area_piso_molhado,
+            area_piso_externo, metros_parede, portas_internas,
+            portas_externas, janelas,
+        )
+        if st.session_state.get("orcamento_assinatura") != assinatura_atual:
+            st.session_state.pop("materiais_editados", None)
+            st.session_state.pop("mao_de_obra_editada", None)
+            st.session_state["orcamento_assinatura"] = assinatura_atual
 
         st.write("### 📦 Materiais")
         st.caption(

@@ -18,6 +18,11 @@ aplicar_*.py
 corrigir_*.py
 limpar_*.py
 remover_*.py
+adicionar_*.py
+
+# Logs (gerados por core/logger.py em tempo de execução)
+logs/
+
 # IDEs
 .vscode/
 .idea/
