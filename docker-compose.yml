@@ -1,0 +1,20 @@
+services:
+  app:
+    build: .
+    container_name: orcaobra-ai
+    ports:
+      - "8501:8501"
+    volumes:
+      # Dados persistentes fora do container
+      - ./orcamentos_salvos:/app/orcamentos_salvos
+      - ./perfil_empresa:/app/perfil_empresa
+      - ./historico.db:/app/historico.db
+      - ./precos_customizados.json:/app/precos_customizados.json
+      - ./.cache_ia:/app/.cache_ia
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_API_KEYS=${GEMINI_API_KEYS:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-3.1-flash-lite}
+      - MOCK_AI=${MOCK_AI:-false}
+      - USE_CACHE=${USE_CACHE:-true}
+    restart: unless-stopped

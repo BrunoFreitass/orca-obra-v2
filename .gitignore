@@ -1,0 +1,15 @@
+.env
+.cache_ia/
+historico.db
+orcamentos_salvos/
+perfil_empresa.json
+perfil_empresa/
+precos_customizados.json
+venv/
+.venv*/
+__pycache__/
+data/
+*.pyc
+temp_planta.*
+Orcamento_Gerado.csv
+Orcamento_Gerado.xlsx
