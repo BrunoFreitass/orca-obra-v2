@@ -322,6 +322,26 @@ def extrair_dados_da_planta(caminho_arquivo):
 
     # Defesa: garante que todos os 7 campos agregados existam, mesmo se
     # o modelo esquecer algum (preenche com 0).
+    # ------------------------------------------------------------------
+    # FALLBACK: corrige metros de parede se a IA subestimou
+    # ------------------------------------------------------------------
+    area_total = (
+        dados.get("area_piso_seco", 0)
+        + dados.get("area_piso_molhado", 0)
+        + dados.get("area_piso_externo", 0)
+    )
+    mp = dados.get("metros_parede", 0)
+    if area_total > 0 and mp < area_total * 0.55:
+        sugestao = round(area_total * 0.75, 2)
+        dados["metros_parede"] = sugestao
+        if "confianca" not in dados:
+            dados["confianca"] = {}
+        dados["confianca"]["metros_parede"] = {
+            "nivel": "baixa",
+            "motivo": f"IA subestimou ({mp:.0f}m); corrigido automaticamente para {sugestao:.0f}m"
+        }
+    # ------------------------------------------------------------------
+
     for campo in CAMPOS_AGREGADOS:
         dados.setdefault(campo, 0)
 
