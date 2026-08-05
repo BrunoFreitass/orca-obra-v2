@@ -32,15 +32,6 @@ def calcular_materiais(dados, padrao, tipo_cobertura="Telhado"):
     qtd_pontos_eletricos = round(d.area_piso_total / M2_POR_PONTO_ELETRICO.valor)
     qtd_pontos_hidraulicos = round(d.area_piso_total / M2_POR_PONTO_HIDRAULICO.valor)
 
-    # Precos unitarios dos pontos (antes do split) para validacao
-    preco_eletrico_total = obter_preco(f"ponto_eletrico__{padrao}",
-        PRECOS_PONTO_ELETRICO_INFRA[padrao]).valor +         obter_preco(f"ponto_eletrico_acabamento__{padrao}",
-        PRECOS_PONTO_ELETRICO_ACABAMENTO[padrao]).valor
-
-    preco_hidraulico_total = obter_preco(f"ponto_hidraulico_infra__{padrao}",
-        PRECOS_PONTO_HIDRAULICO_INFRA[padrao]).valor +         obter_preco(f"ponto_hidraulico_acabamento__{padrao}",
-        PRECOS_PONTO_HIDRAULICO_ACABAMENTO[padrao]).valor
-
     itens = [
         # === OBRA BRUTA ===
         ItemOrcamento("Material", "Bloco Cerâmico 14x19x29",

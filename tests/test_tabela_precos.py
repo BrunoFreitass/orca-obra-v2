@@ -6,7 +6,7 @@ import pytest
 from openpyxl import Workbook
 
 from core import tabela_precos as tp
-from core.coeficientes import PRECO_CIMENTO_SACO
+from core.coeficientes import PRECO_CIMENTO_SACO, PRECO_AREIA_M3
 
 
 @pytest.fixture(autouse=True)
@@ -42,7 +42,7 @@ class TestObterPreco:
 
     def test_chave_sem_override_nao_e_afetada_por_override_de_outra_chave(self):
         tp.salvar_overrides({"cimento": 50.0})
-        preco_areia = tp.obter_preco("areia", tp._itens_editaveis()[0][3])
+        preco_areia = tp.obter_preco("areia", PRECO_AREIA_M3)
         # areia nao foi customizada -- deve continuar no padrao
         assert preco_areia.fonte != "Tabela de preços enviada pelo usuário"
 

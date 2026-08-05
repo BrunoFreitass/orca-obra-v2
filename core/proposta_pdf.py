@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
@@ -73,7 +74,7 @@ def gerar_pdf_proposta(dados_orcamento, output_path, nome_projeto,
     story = []
 
     # --- Cabecalho: logo (se houver) + nome da empresa/profissional ---
-    if caminho_logo:
+    if caminho_logo and os.path.exists(caminho_logo):
         try:
             # Limita a largura maxima do logo pra nao dominar a pagina,
             # preservando a proporcao original da imagem.
