@@ -99,9 +99,16 @@ def gerar_pdf_proposta(dados_orcamento, output_path, nome_projeto,
     story.append(Paragraph(nome_empresa or "OrçaObra AI", estilo_titulo))
     story.append(Paragraph("Proposta de Orçamento de Obra", estilo_subtitulo))
 
-    linha_contato = " · ".join(parte for parte in (contato, registro) if parte)
-    if linha_contato:
-        story.append(Paragraph(linha_contato, estilo_contato))
+    # Contato: aceita string (compatibilidade) ou lista de linhas
+    if contato:
+        if isinstance(contato, list):
+            for parte in contato:
+                if parte:
+                    story.append(Paragraph(parte, estilo_contato))
+        else:
+            story.append(Paragraph(contato, estilo_contato))
+    if registro:
+        story.append(Paragraph(registro, estilo_contato))
 
     story.append(Spacer(1, 10))
     story.append(HRFlowable(width="100%", color=colors.HexColor("#1F4E78"), thickness=1.2))

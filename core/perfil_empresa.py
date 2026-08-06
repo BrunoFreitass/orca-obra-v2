@@ -7,8 +7,10 @@ PERFIL_PATH = paths.PERFIL_PATH
 
 PERFIL_PADRAO = {
     "nome_empresa": "",
-    "contato": "",
-    "registro": "",  # ex: CREA/CAU
+    "profissional_responsavel": "",
+    "telefone": "",
+    "email": "",
+    "registro": "",  # ex: CREA/CAU/CNPJ
     "caminho_logo": "",
 }
 
@@ -27,12 +29,15 @@ def carregar_perfil():
     return perfil
 
 
-def salvar_perfil(nome_empresa, contato, registro, caminho_logo=""):
+def salvar_perfil(nome_empresa, profissional_responsavel, telefone, email,
+                   registro, caminho_logo=""):
     """Grava o perfil da empresa/profissional em disco (perfil_empresa.json),
     pra nao precisar redigitar isso a cada orcamento gerado."""
     perfil = {
         "nome_empresa": nome_empresa,
-        "contato": contato,
+        "profissional_responsavel": profissional_responsavel,
+        "telefone": telefone,
+        "email": email,
         "registro": registro,
         "caminho_logo": caminho_logo,
     }

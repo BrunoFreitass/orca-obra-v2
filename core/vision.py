@@ -157,7 +157,6 @@ def _montar_prompt():
     return PROMPT_EXTRACAO
 
 
-
 def _redimensionar_para_max(imagem_cv, max_dim=1024):
     """Reduz a imagem para que o lado maior tenha no máximo max_dim pixels.
     Isso diminui o payload da API, acelera o upload e evita estourar
@@ -169,7 +168,6 @@ def _redimensionar_para_max(imagem_cv, max_dim=1024):
     nova_largura = int(largura * escala)
     nova_altura = int(altura * escala)
     return cv2.resize(imagem_cv, (nova_largura, nova_altura), interpolation=cv2.INTER_AREA)
-
 
 
 def _preparar_imagem(caminho_arquivo):
@@ -206,9 +204,6 @@ def _preparar_imagem(caminho_arquivo):
     _, buffer = cv2.imencode(".jpg", imagem, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
 
     return buffer.tobytes()
-
-
-
 
 
 def _chamar_gemini_com_uma_chave(chave, prompt, img_base64):
@@ -354,7 +349,7 @@ def extrair_dados_da_planta(caminho_arquivo):
             dados[campo] = 0
 
     # ------------------------------------------------------------------
-    # FALLBACK: corrige metros de parede se a IA subestimou
+    # FALLBACK INTELIGENTE: corrige metros de parede se a IA subestimou
     # ------------------------------------------------------------------
     area_total = (
         (dados.get("area_piso_seco") or 0)
@@ -362,14 +357,20 @@ def extrair_dados_da_planta(caminho_arquivo):
         + (dados.get("area_piso_externo") or 0)
     )
     mp = dados.get("metros_parede") or 0
+    portas_internas = dados.get("portas_internas") or 0
+
     if area_total > 0 and mp < area_total * 0.55:
-        sugestao = round(area_total * 0.75, 2)
+        # Heuristica: mais portas internas = mais divisoes = mais paredes
+        # Fator base 0.55 (studio/open space) ate 1.10 (muitas divisoes)
+        fator_complexidade = 0.55 + min(portas_internas * 0.05, 0.55)
+        fator_complexidade = max(0.55, min(fator_complexidade, 1.10))
+        sugestao = round(area_total * fator_complexidade, 2)
         dados["metros_parede"] = sugestao
         if "confianca" not in dados:
             dados["confianca"] = {}
         dados["confianca"]["metros_parede"] = {
             "nivel": "baixa",
-            "motivo": f"IA subestimou ({mp:.0f}m); corrigido automaticamente para {sugestao:.0f}m"
+            "motivo": f"IA subestimou ({mp:.0f}m); corrigido automaticamente para {sugestao:.0f}m (fator {fator_complexidade:.2f}x)"
         }
     # ------------------------------------------------------------------
 

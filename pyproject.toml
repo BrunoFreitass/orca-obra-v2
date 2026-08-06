@@ -18,7 +18,4 @@ ignore = ["BLE001", "S110", "DTZ005", "DTZ011"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --tb=short"
-env = [
-    "MOCK_AI=true",
-    "USE_CACHE=false",
-]
+
