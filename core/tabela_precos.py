@@ -10,7 +10,7 @@ um preco de material/mao de obra em si.
 """
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font
@@ -151,7 +151,7 @@ def importar_tabela_excel(caminho_arquivo):
 def salvar_overrides(precos_atualizados):
     """Persiste os precos customizados em disco (precos_customizados.json),
     com a data do upload como nova data de referencia desses itens."""
-    hoje = datetime.now(tz=timezone.utc).strftime("%Y-%m")
+    hoje = datetime.now(tz=UTC).strftime("%Y-%m")
     dados = carregar_overrides()
     for chave, valor in precos_atualizados.items():
         dados[chave] = {"valor": valor, "data_ref": hoje}
@@ -166,7 +166,7 @@ def carregar_overrides():
     core/coeficientes.py em tudo)."""
     if not os.path.exists(CAMINHO_OVERRIDES):
         return {}
-    with open(CAMINHO_OVERRIDES, "r", encoding="utf-8") as f:
+    with open(CAMINHO_OVERRIDES, encoding="utf-8") as f:
         return json.load(f)
 
 

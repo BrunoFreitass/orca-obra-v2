@@ -3,6 +3,7 @@ import tempfile
 
 import streamlit as st
 
+from config import LOCAL_OBRA
 from core import orcamento_service, paths, tabela_precos
 from core.calculator import calcular_mao_de_obra, calcular_materiais
 from core.historico import (
@@ -16,7 +17,6 @@ from core.perfil_empresa import carregar_perfil, salvar_perfil
 from core.proposta_pdf import gerar_pdf_proposta
 from core.reporter import gerar_excel
 from core.validacao import validar_dados
-from config import LOCAL_OBRA
 from core.vision import ErroExtracaoAmigavel, extrair_dados_da_planta
 
 st.set_page_config(page_title="OrçaObra AI", page_icon="🏗️", layout="centered")
@@ -164,17 +164,17 @@ with st.expander("💲 Personalizar Tabela de Preços (avançado)"):
         try:
             atualizados, avisos = tabela_precos.importar_tabela_excel(caminho_temp_precos)
 
-        for aviso in avisos:
-            st.warning(aviso)
+            for aviso in avisos:
+                st.warning(aviso)
 
-        if atualizados:
-            st.info(f"{len(atualizados)} preço(s) serão atualizados.")
-            if st.button("✅ Aplicar estes novos preços", key="btn_aplicar_precos"):
-                tabela_precos.salvar_overrides(atualizados)
-                st.success("Tabela de preços atualizada! Ela já vale para os próximos orçamentos.")
-                st.rerun()
-        elif not avisos:
-            st.info("Nenhum preço foi alterado em relação ao que já está em uso.")
+            if atualizados:
+                st.info(f"{len(atualizados)} preço(s) serão atualizados.")
+                if st.button("✅ Aplicar estes novos preços", key="btn_aplicar_precos"):
+                    tabela_precos.salvar_overrides(atualizados)
+                    st.success("Tabela de preços atualizada! Ela já vale para os próximos orçamentos.")
+                    st.rerun()
+            elif not avisos:
+                st.info("Nenhum preço foi alterado em relação ao que já está em uso.")
 
         finally:
             if os.path.exists(caminho_temp_precos):
@@ -212,7 +212,10 @@ st.caption(
     "💡 Dica: plantas com um **Quadro de Áreas** (tabela com a área em m² de cada cômodo) "
     "dão resultados mais precisos que plantas só com cotas lineares nas bordas."
 )
-arquivo_pdf = st.file_uploader("Arraste ou selecione o PDF da planta baixa", type=["pdf", "jpg", "jpeg", "png"], key="upload_planta")
+arquivo_pdf = st.file_uploader(
+    "Arraste ou selecione o PDF da planta baixa",
+    type=["pdf", "jpg", "jpeg", "png"], 
+    key="upload_planta")
 
 if arquivo_pdf is not None:
     st.success("Planta carregada com sucesso!")

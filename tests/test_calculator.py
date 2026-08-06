@@ -9,6 +9,7 @@ Dois tipos de caso:
 """
 import pytest
 
+from core import tabela_precos
 from core.calculator import calcular_mao_de_obra, calcular_materiais
 from core.coeficientes import (
     CONSUMO_TIJOLO_POR_M2_PAREDE,
@@ -16,7 +17,6 @@ from core.coeficientes import (
     MARGEM_PERDA,
     PRECO_BLOCO_CERAMICO,
 )
-from core import tabela_precos
 from core.models import DadosExtracao
 
 

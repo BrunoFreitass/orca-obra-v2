@@ -18,7 +18,7 @@ def carregar_perfil():
     que o app roda), retorna os valores padrao (vazios)."""
     if not os.path.exists(PERFIL_PATH):
         return dict(PERFIL_PADRAO)
-    with open(PERFIL_PATH, "r", encoding="utf-8") as f:
+    with open(PERFIL_PATH, encoding="utf-8") as f:
         dados = json.load(f)
     # Garante que campos novos (adicionados em versoes futuras) existam
     # mesmo lendo um perfil.json salvo por uma versao anterior.

@@ -26,7 +26,7 @@ def buscar_cache(caminho_arquivo):
     se essa planta ainda nunca foi analisada."""
     caminho = _caminho_cache(caminho_arquivo)
     if os.path.exists(caminho):
-        with open(caminho, "r", encoding="utf-8") as f:
+        with open(caminho, encoding="utf-8") as f:
             return json.load(f)
     return None
 

@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -109,7 +109,7 @@ def gerar_pdf_proposta(dados_orcamento, output_path, nome_projeto,
 
     dados_capa = [
         ["Projeto / Cliente:", nome_projeto],
-        ["Data:", datetime.now(tz=timezone.utc).strftime("%d/%m/%Y")],
+        ["Data:", datetime.now(tz=UTC).strftime("%d/%m/%Y")],
         ["Estado da Obra:", estado_uf],
         ["Padrão de Acabamento:", padrao],
         ["Tipo de Cobertura:", tipo_cobertura],
