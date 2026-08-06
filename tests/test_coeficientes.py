@@ -5,7 +5,7 @@ em si estao certos (isso e decisao de negocio, nao de codigo).
 import re
 
 from core import coeficientes
-from core.coeficientes import Preco, data_mais_antiga, VERSAO_TABELA
+from core.coeficientes import VERSAO_TABELA, Preco, data_mais_antiga
 
 
 def _todos_os_precos():

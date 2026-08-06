@@ -2,7 +2,12 @@
 e serializacao de ItemOrcamento."""
 import pytest
 
-from core.models import DadosExtracao, ItemOrcamento, itens_para_dicts, ALTURA_PAREDE_PADRAO
+from core.models import (
+    ALTURA_PAREDE_PADRAO,
+    DadosExtracao,
+    ItemOrcamento,
+    itens_para_dicts,
+)
 
 
 class TestDadosExtracao:

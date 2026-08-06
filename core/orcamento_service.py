@@ -7,14 +7,14 @@ funcao aqui importa streamlit; app.py chama estas funcoes e so cuida
 de mostrar o resultado na tela.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def nome_arquivo_seguro(nome_projeto: str, limite: int = 40) -> str:
     """Gera um nome de arquivo unico e seguro a partir do nome do
     projeto/cliente: remove caracteres invalidos e prefixa com um
     timestamp, para nunca sobrescrever um orcamento anterior."""
-    carimbo = datetime.now().strftime("%Y%m%d_%H%M%S")
+    carimbo = datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S")
     limpo = "".join(c if c.isalnum() or c in " -_" else "_" for c in nome_projeto)
     limpo = limpo.strip().replace(" ", "_")[:limite]
     return f"{carimbo}_{limpo}"

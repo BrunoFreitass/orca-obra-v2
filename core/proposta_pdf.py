@@ -1,12 +1,21 @@
 import os
-from datetime import datetime
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import cm
+from datetime import datetime, timezone
+
 from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import cm
 from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, Image, KeepTogether
+    HRFlowable,
+    Image,
+    KeepTogether,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
 )
+
 from core.coeficientes import data_mais_antiga
 
 
@@ -82,7 +91,7 @@ def gerar_pdf_proposta(dados_orcamento, output_path, nome_projeto,
             logo.hAlign = "LEFT"
             story.append(logo)
             story.append(Spacer(1, 8))
-        except Exception:
+        except (OSError, ValueError):
             # Logo invalido/corrompido nao pode derrubar a geracao do
             # PDF inteiro -- ignora o logo e segue sem ele.
             pass
@@ -100,7 +109,7 @@ def gerar_pdf_proposta(dados_orcamento, output_path, nome_projeto,
 
     dados_capa = [
         ["Projeto / Cliente:", nome_projeto],
-        ["Data:", datetime.now().strftime("%d/%m/%Y")],
+        ["Data:", datetime.now(tz=timezone.utc).strftime("%d/%m/%Y")],
         ["Estado da Obra:", estado_uf],
         ["Padrão de Acabamento:", padrao],
         ["Tipo de Cobertura:", tipo_cobertura],

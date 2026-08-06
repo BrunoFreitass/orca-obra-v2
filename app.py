@@ -1,16 +1,21 @@
-import streamlit as st
 import os
-from core.vision import extrair_dados_da_planta, ErroExtracaoAmigavel
+
+import streamlit as st
+
+from core import orcamento_service, paths, tabela_precos
 from core.calculator import calcular_mao_de_obra, calcular_materiais
+from core.historico import (
+    excluir_orcamento,
+    inicializar_db,
+    listar_orcamentos,
+    salvar_orcamento,
+)
 from core.models import DadosExtracao
-from core import orcamento_service
-from core.reporter import gerar_excel
-from core.proposta_pdf import gerar_pdf_proposta
-from core.validacao import validar_dados
-from core.historico import inicializar_db, salvar_orcamento, listar_orcamentos
 from core.perfil_empresa import carregar_perfil, salvar_perfil
-from core import tabela_precos
-from core import paths
+from core.proposta_pdf import gerar_pdf_proposta
+from core.reporter import gerar_excel
+from core.validacao import validar_dados
+from core.vision import ErroExtracaoAmigavel, extrair_dados_da_planta
 
 st.set_page_config(page_title="OrçaObra AI", page_icon="🏗️", layout="centered")
 
@@ -235,7 +240,7 @@ if arquivo_pdf is not None:
                     with st.expander("Detalhes técnicos (para diagnóstico)"):
                         st.code(e.detalhe_tecnico)
                 st.session_state.pop("dados_extraidos", None)
-            except Exception as e:
+            except (ValueError, KeyError, RuntimeError) as e:
                 st.error("⚠️ Ocorreu um erro inesperado ao analisar a planta.")
                 with st.expander("Detalhes técnicos"):
                     st.code(str(e))
@@ -343,6 +348,18 @@ if arquivo_pdf is not None:
             with col_ajuste1:
                 if st.button(f"⚡ Ajustar para {sugestao_parede} m", key="btn_ajuste_parede"):
                     st.session_state["dados_extraidos"]["metros_parede"] = sugestao_parede
+                    # O campo "Paredes Lineares" tem key própria
+                    # (input_metros_parede) desde a correção do bug de
+                    # planta nova -- por causa disso, o widget passa a
+                    # ignorar o "value=" recalculado e mantém o que já
+                    # estava guardado nessa key. Sem remover a key aqui,
+                    # o clique atualizava dados_extraidos por baixo dos
+                    # panos, mas a tela continuava mostrando o valor
+                    # antigo. Também limpa a assinatura do orçamento
+                    # para que Materiais/Mão de Obra recalculem com o
+                    # novo valor de parede.
+                    st.session_state.pop("input_metros_parede", None)
+                    st.session_state.pop("orcamento_assinatura", None)
                     st.rerun()
             with col_ajuste2:
                 st.caption("Clique para aplicar a sugestão automaticamente (pode editar depois).")
@@ -517,8 +534,7 @@ if arquivo_pdf is not None:
                     col_m4.metric("Preço de Venda", f"R$ {preco_venda:,.2f}")
 
                     col_dl1, col_dl2 = st.columns(2)
-                    with col_dl1:
-                        with open(caminho_excel, "rb") as file:
+                    with col_dl1, open(caminho_excel, "rb") as file:
                             st.download_button(
                                 label="📊 Baixar Excel (uso interno)",
                                 data=file,
@@ -527,16 +543,15 @@ if arquivo_pdf is not None:
                                 use_container_width=True,
                                 key="btn_download_excel"
                             )
-                    with col_dl2:
-                        with open(caminho_pdf, "rb") as file:
-                            st.download_button(
-                                label="📄 Baixar PDF (proposta ao cliente)",
-                                data=file,
-                                file_name=os.path.basename(caminho_pdf),
-                                mime="application/pdf",
-                                use_container_width=True,
-                                key="btn_download_pdf"
-                            )
+                    with col_dl2, open(caminho_pdf, "rb") as file:
+                        st.download_button(
+                            label="📄 Baixar PDF (proposta ao cliente)",
+                            data=file,
+                            file_name=os.path.basename(caminho_pdf),
+                            mime="application/pdf",
+                            use_container_width=True,
+                            key="btn_download_pdf"
+                        )
 
 st.write("---")
 
@@ -587,3 +602,28 @@ else:
                         )
                 else:
                     st.caption("⚠️ PDF não disponível (orçamento anterior a essa função).")
+
+            st.write("")
+            chave_confirmar = f"confirmar_exclusao_{registro['id']}"
+            if st.session_state.get(chave_confirmar):
+                st.warning(
+                    "Tem certeza que deseja excluir este orçamento do histórico? "
+                    "Os arquivos Excel/PDF salvos em disco não são apagados, só o registro na lista."
+                )
+                col_conf1, col_conf2 = st.columns(2)
+                with col_conf1:
+                    if st.button("✅ Sim, excluir", key=f"btn_confirma_excluir_{registro['id']}",
+                                 use_container_width=True):
+                        excluir_orcamento(registro["id"])
+                        st.session_state.pop(chave_confirmar, None)
+                        st.rerun()
+                with col_conf2:
+                    if st.button("↩️ Cancelar", key=f"btn_cancela_excluir_{registro['id']}",
+                                 use_container_width=True):
+                        st.session_state.pop(chave_confirmar, None)
+                        st.rerun()
+            else:
+                if st.button("🗑️ Excluir do histórico", key=f"btn_excluir_{registro['id']}",
+                             use_container_width=True):
+                    st.session_state[chave_confirmar] = True
+                    st.rerun()

@@ -10,14 +10,13 @@ um preco de material/mao de obra em si.
 """
 import json
 import os
-from datetime import date
-
-from core import paths
+from datetime import datetime, timezone
 
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font
 
 from core import coeficientes as coef
+from core import paths
 
 CAMINHO_OVERRIDES = paths.OVERRIDES_PATH
 
@@ -152,7 +151,7 @@ def importar_tabela_excel(caminho_arquivo):
 def salvar_overrides(precos_atualizados):
     """Persiste os precos customizados em disco (precos_customizados.json),
     com a data do upload como nova data de referencia desses itens."""
-    hoje = date.today().strftime("%Y-%m-%d")
+    hoje = datetime.now(tz=timezone.utc).date().strftime("%Y-%m-%d")
     dados = carregar_overrides()
     for chave, valor in precos_atualizados.items():
         dados[chave] = {"valor": valor, "data_ref": hoje}

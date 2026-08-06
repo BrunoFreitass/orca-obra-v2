@@ -8,7 +8,6 @@ Este modulo centraliza essas regras num unico lugar.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List
 
 # Pe direito padrao (m) usado para converter metros lineares de parede
 # em area vertical de parede. Antes esse "2.8" estava duplicado dentro
@@ -30,7 +29,7 @@ class DadosExtracao:
     portas_internas: int = 0
     portas_externas: int = 0
     janelas: int = 0
-    confianca: Dict = field(default_factory=dict)
+    confianca: dict = field(default_factory=dict)
 
     @property
     def area_piso_total(self) -> float:
@@ -103,5 +102,5 @@ class ItemOrcamento:
         }
 
 
-def itens_para_dicts(itens: List[ItemOrcamento]) -> List[dict]:
+def itens_para_dicts(itens: list[ItemOrcamento]) -> list[dict]:
     return [item.to_dict() for item in itens]

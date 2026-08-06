@@ -8,6 +8,9 @@ precos_customizados.json
 venv/
 .venv*/
 __pycache__/
+.pytest_cache/
+.ruff_cache/
+coverage.xml
 data/
 *.pyc
 temp_planta.*

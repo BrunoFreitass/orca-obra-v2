@@ -1,15 +1,16 @@
 import base64
 import json
 import os
-import time
 import tempfile
+import time
 
 import cv2
 import requests
 
+from config import DADOS_MOCK, GEMINI_API_KEYS, GEMINI_MODEL, MOCK_AI, USE_CACHE
 from core import cache
-from config import GEMINI_API_KEYS, GEMINI_MODEL, MOCK_AI, USE_CACHE, DADOS_MOCK
 from core.image_processing import melhorar_imagem
+
 
 class ErroExtracaoAmigavel(Exception):
     """

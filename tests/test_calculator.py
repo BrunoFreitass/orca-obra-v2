@@ -9,9 +9,14 @@ Dois tipos de caso:
 """
 import pytest
 
+from core.calculator import calcular_mao_de_obra, calcular_materiais
+from core.coeficientes import (
+    CONSUMO_TIJOLO_POR_M2_PAREDE,
+    FATOR_REGIONAL_RR,
+    MARGEM_PERDA,
+    PRECO_BLOCO_CERAMICO,
+)
 from core.models import DadosExtracao
-from core.calculator import calcular_materiais, calcular_mao_de_obra
-from core.coeficientes import PRECO_BLOCO_CERAMICO, CONSUMO_TIJOLO_POR_M2_PAREDE, MARGEM_PERDA, FATOR_REGIONAL_RR
 
 
 def _item(itens, nome):

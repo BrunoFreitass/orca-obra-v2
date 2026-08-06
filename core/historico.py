@@ -1,6 +1,5 @@
 import sqlite3
-import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 from core import paths
 
@@ -56,7 +55,7 @@ def salvar_orcamento(nome_projeto, estado_uf, padrao, tipo_cobertura,
             caminho_excel, caminho_pdf
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
-        datetime.now().strftime("%d/%m/%Y %H:%M"),
+        datetime.now(tz=timezone.utc).strftime("%d/%m/%Y %H:%M"),
         nome_projeto, estado_uf, padrao, tipo_cobertura,
         area_piso, custo_direto, bdi_percentual, preco_venda,
         caminho_excel, caminho_pdf,

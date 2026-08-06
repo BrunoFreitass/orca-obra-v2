@@ -6,7 +6,7 @@ import pytest
 from openpyxl import Workbook
 
 from core import tabela_precos as tp
-from core.coeficientes import PRECO_CIMENTO_SACO, PRECO_AREIA_M3
+from core.coeficientes import PRECO_AREIA_M3, PRECO_CIMENTO_SACO
 
 
 @pytest.fixture(autouse=True)
@@ -51,13 +51,13 @@ class TestImportarTabelaExcel:
     def test_valor_alterado_entra_em_atualizados(self, tmp_path):
         caminho = tmp_path / "planilha.xlsx"
         _planilha_com([["cimento", "Material", "Cimento", 50.0, "", ""]]).save(caminho)
-        atualizados, avisos = tp.importar_tabela_excel(str(caminho))
+        atualizados, _avisos = tp.importar_tabela_excel(str(caminho))
         assert atualizados == {"cimento": 50.0}
 
     def test_valor_igual_ao_atual_nao_entra_em_atualizados(self, tmp_path):
         caminho = tmp_path / "planilha.xlsx"
         _planilha_com([["cimento", "Material", "Cimento", PRECO_CIMENTO_SACO.valor, "", ""]]).save(caminho)
-        atualizados, avisos = tp.importar_tabela_excel(str(caminho))
+        atualizados, _avisos = tp.importar_tabela_excel(str(caminho))
         assert atualizados == {}
 
     def test_chave_desconhecida_gera_aviso_e_e_ignorada(self, tmp_path):

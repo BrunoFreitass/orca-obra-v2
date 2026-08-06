@@ -20,7 +20,6 @@ dado -- pior do que nao ter o rastreamento.
 
 from dataclasses import dataclass
 
-
 VERSAO_TABELA = "2026.07"  # AAAA.MM da ultima revisao geral desta tabela
 
 

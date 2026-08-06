@@ -7,13 +7,11 @@ import os
 
 import pytest
 
+from core import orcamento_service, tabela_precos
+from core.calculator import calcular_mao_de_obra, calcular_materiais
 from core.models import DadosExtracao
-from core.calculator import calcular_materiais, calcular_mao_de_obra
-from core import orcamento_service
-from core.reporter import gerar_excel
 from core.proposta_pdf import gerar_pdf_proposta
-from core.perfil_empresa import PERFIL_PADRAO
-from core import tabela_precos
+from core.reporter import gerar_excel
 
 
 @pytest.fixture(autouse=True)
