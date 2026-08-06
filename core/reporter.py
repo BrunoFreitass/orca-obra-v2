@@ -3,18 +3,6 @@ from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
 
-def _aplicar_em_mesclado(ws, row, col_ini, col_fim, fill, font=None, alignment=None):
-    """Aplica fill/font/alignment em TODAS as celulas de um range mesclado.
-    Resolve bug onde apenas a primeira celula recebia a cor de fundo."""
-    for col in range(col_ini, col_fim + 1):
-        celula = ws.cell(row=row, column=col)
-        celula.fill = fill
-        if font:
-            celula.font = font
-        if alignment:
-            celula.alignment = alignment
-
-
 def gerar_excel(dados_orcamento, output_path, bdi_percentual=0):
     xlsx_path = output_path.replace(".csv", ".xlsx")
 
@@ -29,11 +17,16 @@ def gerar_excel(dados_orcamento, output_path, bdi_percentual=0):
     cinza_claro = "F2F2F2"
 
     # --- CABECALHO PRINCIPAL ---
-    ws.merge_cells("A1:D1")
+    # Aplica fill em TODAS as celulas ANTES do merge (openpyxl exige isso)
     fill_cabecalho = PatternFill(start_color=azul_cabecalho, end_color=azul_cabecalho, fill_type="solid")
     font_cabecalho = Font(name=fonte_padrao, size=14, bold=True, color="FFFFFF")
     align_cabecalho = Alignment(horizontal="center", vertical="center")
-    _aplicar_em_mesclado(ws, 1, 1, 4, fill_cabecalho, font_cabecalho, align_cabecalho)
+    for col in range(1, 5):
+        c = ws.cell(row=1, column=col)
+        c.fill = fill_cabecalho
+        c.font = font_cabecalho
+        c.alignment = align_cabecalho
+    ws.merge_cells("A1:D1")
     ws["A1"] = "OrçaObra AI — Orçamento Estimado de Obra"
     ws.row_dimensions[1].height = 26
 
@@ -72,11 +65,16 @@ def gerar_excel(dados_orcamento, output_path, bdi_percentual=0):
         itens_grupo = grupos[tipo]
 
         # --- TITULO DA SECAO (ex: MATERIAL) ---
-        ws.merge_cells(f"A{linha_atual}:D{linha_atual}")
+        # Aplica fill em TODAS as celulas ANTES do merge
         fill_secao = PatternFill(start_color=azul_secao, end_color=azul_secao, fill_type="solid")
         font_secao = Font(name=fonte_padrao, size=11, bold=True, color="FFFFFF")
         align_secao = Alignment(horizontal="left", vertical="center", indent=1)
-        _aplicar_em_mesclado(ws, linha_atual, 1, 4, fill_secao, font_secao, align_secao)
+        for col in range(1, 5):
+            c = ws.cell(row=linha_atual, column=col)
+            c.fill = fill_secao
+            c.font = font_secao
+            c.alignment = align_secao
+        ws.merge_cells(f"A{linha_atual}:D{linha_atual}")
         ws.cell(row=linha_atual, column=1, value=tipo.upper())
         linha_atual += 1
 
@@ -128,11 +126,16 @@ def gerar_excel(dados_orcamento, output_path, bdi_percentual=0):
     # --- CUSTO DIRETO ---
     linha_custo_direto = linha_atual
     label_custo = "CUSTO DIRETO" if bdi_percentual else "TOTAL ESTIMADO"
-    ws.merge_cells(f"A{linha_custo_direto}:C{linha_custo_direto}")
+    # Aplica fill em TODAS as celulas ANTES do merge
     fill_custo = PatternFill(start_color=azul_cabecalho, end_color=azul_cabecalho, fill_type="solid")
     font_custo = Font(name=fonte_padrao, size=12, bold=True, color="FFFFFF")
     align_custo = Alignment(horizontal="right", vertical="center")
-    _aplicar_em_mesclado(ws, linha_custo_direto, 1, 3, fill_custo, font_custo, align_custo)
+    for col in range(1, 4):
+        c = ws.cell(row=linha_custo_direto, column=col)
+        c.fill = fill_custo
+        c.font = font_custo
+        c.alignment = align_custo
+    ws.merge_cells(f"A{linha_custo_direto}:C{linha_custo_direto}")
     ws.cell(row=linha_custo_direto, column=1, value=label_custo)
 
     custo_direto_valor = 0.0
@@ -168,11 +171,16 @@ def gerar_excel(dados_orcamento, output_path, bdi_percentual=0):
 
         # --- PRECO DE VENDA ---
         linha_preco_venda = linha_bdi + 1
-        ws.merge_cells(f"A{linha_preco_venda}:C{linha_preco_venda}")
+        # Aplica fill em TODAS as celulas ANTES do merge
         fill_venda = PatternFill(start_color=verde_venda, end_color=verde_venda, fill_type="solid")
         font_venda = Font(name=fonte_padrao, size=12, bold=True, color="FFFFFF")
         align_venda = Alignment(horizontal="right", vertical="center")
-        _aplicar_em_mesclado(ws, linha_preco_venda, 1, 3, fill_venda, font_venda, align_venda)
+        for col in range(1, 4):
+            c = ws.cell(row=linha_preco_venda, column=col)
+            c.fill = fill_venda
+            c.font = font_venda
+            c.alignment = align_venda
+        ws.merge_cells(f"A{linha_preco_venda}:C{linha_preco_venda}")
         ws.cell(row=linha_preco_venda, column=1, value="PREÇO DE VENDA")
 
         preco_venda_valor = round(custo_direto_valor + bdi_valor, 2)
