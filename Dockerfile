@@ -15,7 +15,10 @@ ENV OMP_NUM_THREADS=1
 WORKDIR /app
 
 # Instala dependências do sistema (OpenCV precisa de libgl)
-RUN apt-get update && apt-get install -y --no-install-recommends     libgl1-mesa-glx     libglib2.0-0     libsm6     libxext6     libxrender-dev     && rm -rf /var/lib/apt/lists/*
+# libgl1-mesa-glx foi descontinuado (virou libgl1) nas versões
+# mais novas do Debian/Ubuntu -- a imagem python:3.12-slim já
+# está em uma base (trixie) onde só libgl1 existe.
+RUN apt-get update && apt-get install -y --no-install-recommends     libgl1     libglib2.0-0     libsm6     libxext6     libxrender-dev     && rm -rf /var/lib/apt/lists/*
 
 # Copia e instala dependências Python primeiro (cache de layer)
 COPY requirements.txt requirements-dev.txt ./
