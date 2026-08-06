@@ -10,6 +10,9 @@ import requests
 from config import DADOS_MOCK, GEMINI_API_KEYS, GEMINI_MODEL, MOCK_AI, USE_CACHE
 from core import cache
 from core.image_processing import melhorar_imagem
+from core.monitor_api import inicializar_tabela_monitor, registrar_chamada
+
+inicializar_tabela_monitor()
 
 
 class ErroExtracaoAmigavel(Exception):
@@ -149,6 +152,7 @@ PROMPT_EXTRACAO = """
     }
     """
 
+
 def _montar_prompt():
     return PROMPT_EXTRACAO
 
@@ -165,6 +169,7 @@ def _redimensionar_para_max(imagem_cv, max_dim=1024):
     nova_largura = int(largura * escala)
     nova_altura = int(altura * escala)
     return cv2.resize(imagem_cv, (nova_largura, nova_altura), interpolation=cv2.INTER_AREA)
+
 
 
 def _preparar_imagem(caminho_arquivo):
@@ -274,6 +279,7 @@ def extrair_dados_da_planta(caminho_arquivo):
     if USE_CACHE:
         resultado_em_cache = cache.buscar_cache(caminho_arquivo)
         if resultado_em_cache is not None:
+            registrar_chamada(status="CACHE", modelo=GEMINI_MODEL)
             return resultado_em_cache
 
     if not GEMINI_API_KEYS:
@@ -288,14 +294,29 @@ def extrair_dados_da_planta(caminho_arquivo):
     img_base64 = base64.b64encode(img_bytes).decode("utf-8")
     prompt = _montar_prompt()
 
+    inicio = time.time()
     erros_por_chave = []
     for indice, chave in enumerate(GEMINI_API_KEYS, start=1):
         resultado, erro = _chamar_gemini_com_uma_chave(chave, prompt, img_base64)
 
         if resultado is not None:
+            duracao = int((time.time() - inicio) * 1000)
+            registrar_chamada(
+                status="OK",
+                modelo=GEMINI_MODEL,
+                chave_indice=indice,
+                duracao_ms=duracao,
+                bytes_enviados=len(img_bytes),
+            )
             break
 
         erros_por_chave.append(f"Chave {indice}: {erro['status'] or 'erro desconhecido'}")
+        registrar_chamada(
+            status="ERRO",
+            modelo=GEMINI_MODEL,
+            chave_indice=indice,
+            erro_status=erro.get("status"),
+        )
         continue
     else:
         algum_erro_de_cota = any("RESOURCE_EXHAUSTED" in e for e in erros_por_chave)
