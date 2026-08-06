@@ -1,0 +1,809 @@
+warning: in the working copy of '.env.example', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.github/workflows/ci.yml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.streamlit/config.toml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'config.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'core/__init__.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'core/cache.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'core/calculator.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'core/coeficientes.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'core/historico.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'core/image_processing.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'core/logger.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'core/models.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'core/monitor_api.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'core/orcamento_service.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'core/paths.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'core/perfil_empresa.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'core/proposta_pdf.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'core/reporter.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'core/tabela_precos.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'core/validacao.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'core/vision.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/__init__.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/test_calculator.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/test_coeficientes.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/test_integracao.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/test_models.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/test_orcamento_service.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/test_tabela_precos.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/test_validacao.py', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/.env.example b/.env.example[m
+[1mindex 4607c3d..5525228 100644[m
+[1m--- a/.env.example[m
+[1m+++ b/.env.example[m
+[36m@@ -9,10 +9,10 @@[m [mdisponivel atualmente e da conta bem de extracao estruturada simples.[m
+ # atual em https://ai.google.dev/gemini-api/docs/changelog[m
+ GEMINI_MODEL=gemini-3.1-flash-lite[m
+ [m
+[31m-# Deixe true para testar a interface sem gastar chamadas de API[m
+[32m+[m[32m# Deixe true para testar a interface sem gastar chamadas de API ou false para usar a API real[m
+ MOCK_AI=false[m
+ [m
+[31m-# Deixe true para reaproveitar respostas ja obtidas para a mesma planta[m
+[32m+[m[32m# Deixe true para reaproveitar respostas ja obtidas para a mesma planta ou false para sempre chamar a API real[m
+ USE_CACHE=true[m
+ [m
+ # Limite diario de chamadas Gemini para alerta de cota[m
+[1mdiff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml[m
+[1mindex c1bdd86..191fec6 100644[m
+[1m--- a/.github/workflows/ci.yml[m
+[1m+++ b/.github/workflows/ci.yml[m
+[36m@@ -51,4 +51,4 @@[m [mjobs:[m
+       - name: Upload coverage (optional)[m
+         if: matrix.python-version == '3.12'[m
+         run: pytest tests/ --cov=core --cov-report=xml --cov-report=term[m
+[31m-        continue-on-error: true[m
+\ No newline at end of file[m
+[32m+[m[32m        continue-on-error: true[m
+[1mdiff --git a/.streamlit/config.toml b/.streamlit/config.toml[m
+[1mindex 86b80f0..33111c3 100644[m
+[1m--- a/.streamlit/config.toml[m
+[1m+++ b/.streamlit/config.toml[m
+[36m@@ -11,4 +11,4 @@[m [mrunOnSave = false[m
+ fileWatcherType = "none"[m
+ [m
+ [browser][m
+[31m-gatherUsageStats = false[m
+\ No newline at end of file[m
+[32m+[m[32mgatherUsageStats = false[m
+[1mdiff --git a/app.py b/app.py[m
+[1mindex 36bb186..01133e4 100644[m
+[1m--- a/app.py[m
+[1m+++ b/app.py[m
+[36m@@ -1,27 +1,27 @@[m
+[31m-import os[m
+[31m-import tempfile[m
+[32m+[m[32m"""OrçaObra AI — Orquestrador principal.[m
+[32m+[m
+[32m+[m[32mA interface foi modularizada em core/ui_*.py para facilitar manutenção:[m
+[32m+[m[32m  - ui_config.py    → tema claro/escuro + CSS dinâmico[m
+[32m+[m[32m  - ui_sidebar.py   → sidebar (empresa, projeto, planta, preços, monitor)[m
+[32m+[m[32m  - ui_revisao.py   → revisão dos dados extraídos da planta[m
+[32m+[m[32m  - ui_orcamento.py → materiais, mão de obra, BDI, geração de docs[m
+[32m+[m[32m  - ui_historico.py → componente reutilizável de histórico[m
+[32m+[m[32m"""[m
+ [m
+ import streamlit as st[m
+ [m
+ from config import LOCAL_OBRA[m
+[31m-from core import orcamento_service, paths, tabela_precos[m
+[31m-from core.calculator import calcular_mao_de_obra, calcular_materiais[m
+[31m-from core.historico import ([m
+[31m-    excluir_orcamento,[m
+[31m-    inicializar_db,[m
+[31m-    listar_orcamentos,[m
+[31m-    salvar_orcamento,[m
+[31m-)[m
+[31m-from core.models import DadosExtracao[m
+[31m-from core.monitor_api import inicializar_tabela_monitor, status_cota[m
+[31m-from core.perfil_empresa import carregar_perfil, salvar_perfil[m
+[31m-from core.proposta_pdf import gerar_pdf_proposta[m
+[31m-from core.reporter import gerar_excel[m
+[31m-from core.validacao import validar_dados[m
+[31m-from core.vision import ErroExtracaoAmigavel, extrair_dados_da_planta[m
+[32m+[m[32mfrom core import paths[m
+[32m+[m[32mfrom core.historico import inicializar_db[m
+[32m+[m[32mfrom core.monitor_api import inicializar_tabela_monitor[m
+[32m+[m[32mfrom core.ui_config import injetar_css[m
+[32m+[m[32mfrom core.ui_historico import renderizar_historico[m
+[32m+[m[32mfrom core.ui_orcamento import renderizar_orcamento[m
+[32m+[m[32mfrom core.ui_revisao import renderizar_revisao[m
+[32m+[m[32mfrom core.ui_sidebar import renderizar_sidebar[m
+ [m
+ # =====================================================================[m
+[31m-# CONFIGURAÇÃO DA PÁGINA[m
+[32m+[m[32m# INICIALIZAÇÃO[m
+ # =====================================================================[m
+ st.set_page_config([m
+     page_title="OrçaObra AI",[m
+[36m@@ -30,290 +30,15 @@[m [mst.set_page_config([m
+     initial_sidebar_state="expanded",[m
+ )[m
+ [m
+[31m-# =====================================================================[m
+[31m-# CSS CUSTOM[m
+[31m-# =====================================================================[m
+[31m-st.markdown("""[m
+[31m-<style>[m
+[31m-    div[data-testid="stMetric"] {[m
+[31m-        background: #f8f9fa;[m
+[31m-        border-radius: 12px;[m
+[31m-        padding: 16px;[m
+[31m-        border: 1px solid #e9ecef;[m
+[31m-    }[m
+[31m-    div[data-testid="stMetric"] > div:first-child {[m
+[31m-        font-weight: 600 !important;[m
+[31m-        color: #1F4E78 !important;[m
+[31m-    }[m
+[31m-    .stButton>button[kind="primary"] {[m
+[31m-        background-color: #1F4E78;[m
+[31m-        color: white;[m
+[31m-        border-radius: 8px;[m
+[31m-        height: 3em;[m
+[31m-        font-weight: 600;[m
+[31m-        width: 100%;[m
+[31m-    }[m
+[31m-    .stButton>button {[m
+[31m-        border-radius: 8px;[m
+[31m-    }[m
+[31m-    section[data-testid="stSidebar"] > div {[m
+[31m-        padding-top: 1rem;[m
+[31m-    }[m
+[31m-    .stAlert {[m
+[31m-        border-radius: 8px !important;[m
+[31m-    }[m
+[31m-    /* Títulos mais limpos */[m
+[31m-    h1, h2, h3 {[m
+[31m-        color: #1F4E78 !important;[m
+[31m-    }[m
+[31m-</style>[m
+[31m-""", unsafe_allow_html=True)[m
+[31m-[m
+[31m-# =====================================================================[m
+[31m-# INICIALIZAÇÃO[m
+[31m-# =====================================================================[m
+ inicializar_db()[m
+ inicializar_tabela_monitor()[m
+[31m-[m
+ paths.garantir_diretorios()[m
+[31m-PASTA_ORCAMENTOS = paths.PASTA_ORCAMENTOS[m
+[31m-PASTA_PERFIL = paths.PASTA_PERFIL[m
+[31m-[m
+[31m-CONFIANCA_VISUAL = {[m
+[31m-    "alta": {"emoji": "🟢", "label": "Confiança alta"},[m
+[31m-    "media": {"emoji": "🟡", "label": "Confiança média"},[m
+[31m-    "baixa": {"emoji": "🔴", "label": "Confiança baixa — revise"},[m
+[31m-}[m
+[31m-[m
+[31m-CAMPOS_EXTRACAO = ([m
+[31m-    "area_piso_seco", "area_piso_molhado", "area_piso_externo",[m
+[31m-    "metros_parede", "portas_internas", "portas_externas", "janelas",[m
+[31m-)[m
+[31m-[m
+[32m+[m[32minjetar_css()[m
+ [m
+ # =====================================================================[m
+[31m-# FUNÇÕES AUXILIARES[m
+[32m+[m[32m# SIDEBAR — retorna configurações selecionadas[m
+ # =====================================================================[m
+[31m-def badge_confianca(campo, confianca):[m
+[31m-    info = (confianca or {}).get(campo, {"nivel": "media", "motivo": ""})[m
+[31m-    nivel = info.get("nivel", "media")[m
+[31m-    visual = CONFIANCA_VISUAL.get(nivel, CONFIANCA_VISUAL["media"])[m
+[31m-    return visual, info.get("motivo", "")[m
+[31m-[m
+[31m-[m
+[31m-def mostrar_badge(campo, confianca):[m
+[31m-    visual, motivo = badge_confianca(campo, confianca)[m
+[31m-    st.caption(f"{visual['emoji']} {visual['label']}" + (f" — {motivo}" if motivo else ""))[m
+[31m-[m
+[31m-[m
+[31m-def validar_proporcao_parede(area_piso_total, metros_parede):[m
+[31m-    avisos = [][m
+[31m-    sugestao = None[m
+[31m-    if area_piso_total <= 0 or metros_parede <= 0:[m
+[31m-        return avisos, sugestao[m
+[31m-[m
+[31m-    razao = metros_parede / area_piso_total[m
+[31m-    minimo_razao = 0.55[m
+[31m-    maximo_razao = 1.10[m
+[31m-    minimo_esperado = round(area_piso_total * minimo_razao)[m
+[31m-    maximo_esperado = round(area_piso_total * maximo_razao)[m
+[31m-    sugestao_tipica = round(area_piso_total * 0.75)[m
+[31m-[m
+[31m-    if razao < minimo_razao:[m
+[31m-        sugestao = sugestao_tipica[m
+[31m-        avisos.append([m
+[31m-            f"🧱 ATENÇÃO: Metros de parede SUBESTIMADOS\n\n"[m
+[31m-            f"A IA leu **{metros_parede:.0f} m** de parede para **{area_piso_total:.0f} m²** de área. "[m
+[31m-            f"O mínimo esperado é **{minimo_esperado} m** (máximo: {maximo_esperado} m).\n\n"[m
+[31m-            f"👉 Sugestão: ajuste para ~{sugestao_tipica} m de parede, que é o típico para uma casa "[m
+[31m-            f"de {area_piso_total:.0f} m² com quartos, banheiros, sala e cozinha.\n\n"[m
+[31m-            f"_Se não ajustar, o orçamento ficará R$ {round((sugestao_tipica - metros_parede) * 2.8 * 40):,} "[m
+[31m-            f"a R$ {round((sugestao_tipica - metros_parede) * 2.8 * 55):,} mais barato do que deveria "[m
+[31m-            f"(impacto em blocos, tinta e mão de obra)._"[m
+[31m-        )[m
+[31m-    elif razao > maximo_razao:[m
+[31m-        avisos.append([m
+[31m-            f"🧱 ATENÇÃO: Metros de parede SUPESTIMADOS\n\n"[m
+[31m-            f"A IA leu **{metros_parede:.0f} m** de parede para **{area_piso_total:.0f} m²** de área. "[m
+[31m-            f"O máximo esperado é **{maximo_esperado} m**. Confira se nenhuma parede foi contada duas vezes."[m
+[31m-        )[m
+[31m-[m
+[31m-    return avisos, sugestao[m
+[31m-[m
+[31m-[m
+[31m-# =====================================================================[m
+[31m-# SIDEBAR — Upload, Configurações e Monitor[m
+[31m-# =====================================================================[m
+[31m-with st.sidebar:[m
+[31m-    st.title("🏗️ OrçaObra AI")[m
+[31m-    st.caption(f"📍 {LOCAL_OBRA}")[m
+[31m-[m
+[31m-    st.divider()[m
+[31m-[m
+[31m-    # --- Monitor de API ---[m
+[31m-    cota = status_cota()[m
+[31m-    if cota["nivel"] == "critico":[m
+[31m-        st.error(cota["mensagem"], icon="🔴")[m
+[31m-    elif cota["nivel"] == "alerta":[m
+[31m-        st.warning(cota["mensagem"], icon="🟡")[m
+[31m-    else:[m
+[31m-        st.success(cota["mensagem"], icon="🟢")[m
+[31m-[m
+[31m-    st.divider()[m
+[31m-[m
+[31m-    # --- Upload da Planta ---[m
+[31m-    st.subheader("📂 Planta Baixa")[m
+[31m-    st.caption([m
+[31m-        "PDF, JPG ou PNG. Plantas com **Quadro de Áreas** dão resultados mais precisos."[m
+[31m-    )[m
+[31m-    arquivo_pdf = st.file_uploader([m
+[31m-        "Selecione o arquivo",[m
+[31m-        type=["pdf", "jpg", "jpeg", "png"],[m
+[31m-        label_visibility="collapsed",[m
+[31m-        key="upload_planta",[m
+[31m-    )[m
+[31m-[m
+[31m-    if arquivo_pdf is not None:[m
+[31m-        st.success("Planta carregada!")[m
+[31m-        extensao = os.path.splitext(arquivo_pdf.name)[1][m
+[31m-        with tempfile.NamedTemporaryFile(delete=False, suffix=extensao) as tmp:[m
+[31m-            tmp.write(arquivo_pdf.getbuffer())[m
+[31m-            arquivo_temp = tmp.name[m
+[31m-[m
+[31m-        if st.button("🔍 Analisar Planta", type="primary", use_container_width=True):[m
+[31m-            with st.spinner("Analisando com IA..."):[m
+[31m-                try:[m
+[31m-                    dados_extraidos = extrair_dados_da_planta(arquivo_temp)[m
+[31m-                    st.session_state["dados_extraidos"] = dados_extraidos[m
+[31m-                    for chave_para_limpar in ([m
+[31m-                        "input_area_seca", "input_area_molhada", "input_area_externa",[m
+[31m-                        "input_metros_parede", "input_portas_internas",[m
+[31m-                        "input_portas_externas", "input_janelas",[m
+[31m-                        "materiais_editados", "mao_de_obra_editada",[m
+[31m-                        "orcamento_assinatura",[m
+[31m-                    ):[m
+[31m-                        st.session_state.pop(chave_para_limpar, None)[m
+[31m-                    st.rerun()[m
+[31m-                except ErroExtracaoAmigavel as e:[m
+[31m-                    st.error(f"⚠️ {e.mensagem_amigavel}")[m
+[31m-                    if e.detalhe_tecnico:[m
+[31m-                        with st.expander("Detalhes técnicos"):[m
+[31m-                            st.code(e.detalhe_tecnico)[m
+[31m-                    st.session_state.pop("dados_extraidos", None)[m
+[31m-                except (ValueError, KeyError, RuntimeError) as e:[m
+[31m-                    st.error("⚠️ Erro inesperado na análise.")[m
+[31m-                    with st.expander("Detalhes"):[m
+[31m-                        st.code(str(e))[m
+[31m-                    st.session_state.pop("dados_extraidos", None)[m
+[31m-                finally:[m
+[31m-                    if os.path.exists(arquivo_temp):[m
+[31m-                        os.remove(arquivo_temp)[m
+[31m-    else:[m
+[31m-        st.session_state.pop("dados_extraidos", None)[m
+[31m-[m
+[31m-    st.divider()[m
+[31m-[m
+[31m-    # --- Configurações da Obra ---[m
+[31m-    st.subheader("🛠️ Obra")[m
+[31m-    nome_projeto = st.text_input([m
+[31m-        "Projeto / Cliente",[m
+[31m-        placeholder="Ex.: Residência Sr. João",[m
+[31m-        key="input_nome_projeto",[m
+[31m-    )[m
+[31m-    padrao = st.selectbox([m
+[31m-        "Padrão de Acabamento",[m
+[31m-        ["Econômico", "Médio", "Alto Padrão"],[m
+[31m-        key="select_padrao",[m
+[31m-    )[m
+[31m-    estrutura = st.selectbox([m
+[31m-        "Tipo de Cobertura",[m
+[31m-        ["Telhado", "Laje"],[m
+[31m-        key="select_estrutura",[m
+[31m-    )[m
+[31m-[m
+[31m-    st.divider()[m
+[31m-[m
+[31m-    # --- Perfil da Empresa ---[m
+[31m-    with st.expander("⚙️ Sua Empresa", expanded=False):[m
+[31m-        perfil = carregar_perfil()[m
+[31m-        nome_empresa_input = st.text_input([m
+[31m-            "Nome", value=perfil["nome_empresa"], key="input_nome_empresa"[m
+[31m-        )[m
+[31m-        registro_input = st.text_input([m
+[31m-            "Registro", value=perfil["registro"], key="input_registro"[m
+[31m-        )[m
+[31m-        contato_input = st.text_input([m
+[31m-            "Contato", value=perfil["contato"], key="input_contato"[m
+[31m-        )[m
+[31m-        logo_upload = st.file_uploader([m
+[31m-            "Logo", type=["png", "jpg", "jpeg"], key="upload_logo"[m
+[31m-        )[m
+[31m-        if perfil["caminho_logo"] and os.path.exists(perfil["caminho_logo"]) and not logo_upload:[m
+[31m-            st.image(perfil["caminho_logo"], width=80)[m
+[31m-        if st.button("💾 Salvar", use_container_width=True, key="btn_salvar_perfil"):[m
+[31m-            caminho_logo_final = perfil["caminho_logo"][m
+[31m-            if logo_upload is not None:[m
+[31m-                extensao = os.path.splitext(logo_upload.name)[1][m
+[31m-                caminho_logo_final = os.path.join(PASTA_PERFIL, f"logo{extensao}")[m
+[31m-                with open(caminho_logo_final, "wb") as f:[m
+[31m-                    f.write(logo_upload.getbuffer())[m
+[31m-            perfil = salvar_perfil([m
+[31m-                nome_empresa=nome_empresa_input,[m
+[31m-                contato=contato_input,[m
+[31m-                registro=registro_input,[m
+[31m-                caminho_logo=caminho_logo_final,[m
+[31m-            )[m
+[31m-            st.success("Salvo!")[m
+[31m-            st.rerun()[m
+[31m-[m
+[31m-    st.divider()[m
+[31m-[m
+[31m-    # --- Tabela de Preços ---[m
+[31m-    with st.expander("💲 Preços Customizados", expanded=False):[m
+[31m-        caminho_modelo = os.path.join(PASTA_PERFIL, "modelo_tabela_precos.xlsx")[m
+[31m-        tabela_precos.gerar_modelo_excel(caminho_modelo)[m
+[31m-        with open(caminho_modelo, "rb") as f:[m
+[31m-            st.download_button([m
+[31m-                "📥 Modelo Excel",[m
+[31m-                data=f.read(),[m
+[31m-                file_name="tabela_precos_orcaobra.xlsx",[m
+[31m-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",[m
+[31m-                use_container_width=True,[m
+[31m-                key="btn_download_modelo",[m
+[31m-            )[m
+[31m-[m
+[31m-        arquivo_precos = st.file_uploader([m
+[31m-            "📤 Enviar planilha", type=["xlsx"], label_visibility="collapsed",[m
+[31m-            key="upload_tabela_precos",[m
+[31m-        )[m
+[31m-        if arquivo_precos is not None:[m
+[31m-            with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:[m
+[31m-                tmp.write(arquivo_precos.getbuffer())[m
+[31m-                caminho_temp_precos = tmp.name[m
+[31m-            try:[m
+[31m-                atualizados, avisos = tabela_precos.importar_tabela_excel(caminho_temp_precos)[m
+[31m-                for aviso in avisos:[m
+[31m-                    st.warning(aviso, icon="⚠️")[m
+[31m-                if atualizados:[m
+[31m-                    st.info(f"{len(atualizados)} preço(s) alterado(s).")[m
+[31m-                    if st.button("✅ Aplicar", use_container_width=True, key="btn_aplicar_precos"):[m
+[31m-                        tabela_precos.salvar_overrides(atualizados)[m
+[31m-                        st.success("Atualizado!")[m
+[31m-                        st.rerun()[m
+[31m-                elif not avisos:[m
+[31m-                    st.info("Nenhuma mudança detectada.")[m
+[31m-            finally:[m
+[31m-                if os.path.exists(caminho_temp_precos):[m
+[31m-                    os.remove(caminho_temp_precos)[m
+[31m-[m
+[31m-        overrides_atuais = tabela_precos.carregar_overrides()[m
+[31m-        if overrides_atuais:[m
+[31m-            st.caption(f"📌 {len(overrides_atuais)} preço(s) customizado(s)")[m
+[31m-            if st.button("↩️ Restaurar padrão", use_container_width=True, key="btn_restaurar_precos"):[m
+[31m-                tabela_precos.restaurar_padroes()[m
+[31m-                st.success("Restaurado!")[m
+[31m-                st.rerun()[m
+[31m-[m
+[32m+[m[32mconfig = renderizar_sidebar()[m
+ [m
+ # =====================================================================[m
+ # MAIN AREA[m
+[36m@@ -323,92 +48,22 @@[m [mwith st.sidebar:[m
+ # TELA INICIAL (sem dados extraídos)[m
+ # -----------------------------------------------------------------[m
+ if "dados_extraidos" not in st.session_state:[m
+[31m-    st.markdown("""[m
+[32m+[m[32m    c = "#1F4E78" if not st.session_state.get("tema_escuro") else "#4A9EFF"[m
+[32m+[m[32m    t = "#666666" if not st.session_state.get("tema_escuro") else "#A0A0A0"[m
+[32m+[m[32m    st.markdown(f"""[m
+     <div style="text-align: center; padding: 4rem 1rem;">[m
+[31m-        <h1 style="font-size: 3rem; margin-bottom: 0.5rem;">🏗️ OrçaObra AI</h1>[m
+[31m-        <p style="font-size: 1.25rem; color: #666;">[m
+[32m+[m[32m        <h1 style="font-size: 3rem; margin-bottom: 0.5rem; color: {c};">🏗️ OrçaObra AI</h1>[m
+[32m+[m[32m        <p style="font-size: 1.25rem; color: {t};">[m
+             Transforme plantas baixas em orçamentos detalhados em segundos[m
+         </p>[m
+[31m-        <p style="margin-top: 2rem; color: #888;">[m
+[31m-            👈 Use a barra lateral para fazer upload da planta e configurar a obra[m
+[32m+[m[32m        <p style="margin-top: 2rem; color: {t};">[m
+[32m+[m[32m            👈 Configure sua empresa, o projeto e envie a planta na barra lateral[m
+         </p>[m
+     </div>[m
+     """, unsafe_allow_html=True)[m
+ [m
+     st.divider()[m
+[31m-[m
+[31m-    # Histórico (sempre visível, mesmo sem dados)[m
+[31m-    st.header("📁 Histórico de Orçamentos")[m
+[31m-    orcamentos_salvos = listar_orcamentos()[m
+[31m-    if not orcamentos_salvos:[m
+[31m-        st.caption("Nenhum orçamento gerado ainda.")[m
+[31m-    else:[m
+[31m-        for registro in orcamentos_salvos:[m
+[31m-            with st.expander([m
+[31m-                f"{registro['nome_projeto']} — {registro['data_criacao']} — "[m
+[31m-                f"R$ {registro['preco_venda']:,.2f}"[m
+[31m-            ):[m
+[31m-                col_a, col_b, col_c = st.columns(3)[m
+[31m-                col_a.metric("Área", f"{registro['area_piso']:.0f} m²")[m
+[31m-                col_b.metric("Custo Direto", f"R$ {registro['custo_direto']:,.2f}")[m
+[31m-                col_c.metric("Preço de Venda", f"R$ {registro['preco_venda']:,.2f}")[m
+[31m-                st.caption([m
+[31m-                    f"Padrão: {registro['padrao']} · "[m
+[31m-                    f"Cobertura: {registro['tipo_cobertura']} · BDI: {registro['bdi_percentual']:g}%"[m
+[31m-                )[m
+[31m-[m
+[31m-                col_x, col_y = st.columns(2)[m
+[31m-                with col_x:[m
+[31m-                    if registro["caminho_excel"] and os.path.exists(registro["caminho_excel"]):[m
+[31m-                        with open(registro["caminho_excel"], "rb") as file:[m
+[31m-                            st.download_button([m
+[31m-                                label="📊 Excel",[m
+[31m-                                data=file,[m
+[31m-                                file_name=os.path.basename(registro["caminho_excel"]),[m
+[31m-                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",[m
+[31m-                                key=f"download_excel_{registro['id']}",[m
+[31m-                                use_container_width=True,[m
+[31m-                            )[m
+[31m-                    else:[m
+[31m-                        st.caption("⚠️ Excel não encontrado.")[m
+[31m-                with col_y:[m
+[31m-                    if registro.get("caminho_pdf") and os.path.exists(registro["caminho_pdf"]):[m
+[31m-                        with open(registro["caminho_pdf"], "rb") as file:[m
+[31m-                            st.download_button([m
+[31m-                                label="📄 PDF",[m
+[31m-                                data=file,[m
+[31m-                                file_name=os.path.basename(registro["caminho_pdf"]),[m
+[31m-                                mime="application/pdf",[m
+[31m-                                key=f"download_pdf_{registro['id']}",[m
+[31m-                                use_container_width=True,[m
+[31m-                            )[m
+[31m-                    else:[m
+[31m-                        st.caption("⚠️ PDF não disponível.")[m
+[31m-[m
+[31m-                chave_confirmar = f"confirmar_exclusao_{registro['id']}"[m
+[31m-                if st.session_state.get(chave_confirmar):[m
+[31m-                    st.warning([m
+[31m-                        "Tem certeza que deseja excluir este orçamento? "[m
+[31m-                        "Os arquivos em disco não são apagados."[m
+[31m-                    )[m
+[31m-                    col_conf1, col_conf2 = st.columns(2)[m
+[31m-                    with col_conf1:[m
+[31m-                        if st.button("✅ Sim, excluir", key=f"btn_confirma_excluir_{registro['id']}",[m
+[31m-                                     use_container_width=True):[m
+[31m-                            excluir_orcamento(registro["id"])[m
+[31m-                            st.session_state.pop(chave_confirmar, None)[m
+[31m-                            st.rerun()[m
+[31m-                    with col_conf2:[m
+[31m-                        if st.button("↩️ Cancelar", key=f"btn_cancela_excluir_{registro['id']}",[m
+[31m-                                     use_container_width=True):[m
+[31m-                            st.session_state.pop(chave_confirmar, None)[m
+[31m-                            st.rerun()[m
+[31m-                else:[m
+[31m-                    if st.button("🗑️ Excluir", key=f"btn_excluir_{registro['id']}",[m
+[31m-                                 use_container_width=True):[m
+[31m-                        st.session_state[chave_confirmar] = True[m
+[31m-                        st.rerun()[m
+[31m-[m
+[32m+[m[32m    renderizar_historico()[m
+     st.stop()[m
+ [m
+ [m
+[36m@@ -416,385 +71,17 @@[m [mif "dados_extraidos" not in st.session_state:[m
+ # TELA DE EDIÇÃO E ORÇAMENTO (dados extraídos presentes)[m
+ # -----------------------------------------------------------------[m
+ dados = st.session_state["dados_extraidos"][m
+[31m-confianca = dados.get("confianca", {})[m
+[31m-[m
+[31m-st.header("📊 Revisão dos Dados Extraídos")[m
+[31m-st.caption("Confira os valores lidos pela IA antes de gerar o orçamento.")[m
+[31m-[m
+[31m-# --- Cards de resumo ---[m
+[31m-col_kpi1, col_kpi2, col_kpi3 = st.columns(3)[m
+[31m-area_piso_seco = st.number_input([m
+[31m-    "Área Seca — m² (sala, quarto, cozinha)",[m
+[31m-    value=float(dados.get("area_piso_seco") or 0), step=0.5, min_value=0.0,[m
+[31m-    key="input_area_seca"[m
+[31m-)[m
+[31m-area_piso_molhado = st.number_input([m
+[31m-    "Área Molhada — m² (banheiro, área de serviço)",[m
+[31m-    value=float(dados.get("area_piso_molhado") or 0), step=0.5, min_value=0.0,[m
+[31m-    key="input_area_molhada"[m
+[31m-)[m
+[31m-area_piso_externo = st.number_input([m
+[31m-    "Área Externa — m² (varanda, garagem)",[m
+[31m-    value=float(dados.get("area_piso_externo") or 0), step=0.5, min_value=0.0,[m
+[31m-    key="input_area_externa"[m
+[31m-)[m
+[31m-[m
+[31m-# Recalcula total para o KPI[m
+[31m-dados_extracao_preview = DadosExtracao([m
+[31m-    area_piso_seco=area_piso_seco,[m
+[31m-    area_piso_molhado=area_piso_molhado,[m
+[31m-    area_piso_externo=area_piso_externo,[m
+[31m-    metros_parede=0, portas_internas=0, portas_externas=0, janelas=0,[m
+[31m-)[m
+[31m-area_piso_total_preview = dados_extracao_preview.area_piso_total[m
+[31m-[m
+[31m-with col_kpi1:[m
+[31m-    st.metric("Área Total", f"{area_piso_total_preview:.1f} m²")[m
+[31m-with col_kpi2:[m
+[31m-    st.metric("Padrão", padrao)[m
+[31m-with col_kpi3:[m
+[31m-    st.metric("Cobertura", estrutura)[m
+[31m-[m
+[31m-st.divider()[m
+[31m-[m
+[31m-# --- Paredes, portas e janelas ---[m
+[31m-st.subheader("Paredes, Portas e Janelas")[m
+[31m-[m
+[31m-metros_parede = st.number_input([m
+[31m-    "Paredes Lineares (m)",[m
+[31m-    value=float(dados.get("metros_parede") or 0), step=0.5, min_value=0.0,[m
+[31m-    key="input_metros_parede"[m
+[31m-)[m
+[31m-mostrar_badge("metros_parede", confianca)[m
+[31m-[m
+[31m-col_p1, col_p2 = st.columns(2)[m
+[31m-with col_p1:[m
+[31m-    portas_internas = st.number_input([m
+[31m-        "Portas Internas (un)",[m
+[31m-        value=int(dados.get("portas_internas") or 0), step=1, min_value=0,[m
+[31m-        key="input_portas_internas"[m
+[31m-    )[m
+[31m-    mostrar_badge("portas_internas", confianca)[m
+[31m-    janelas = st.number_input([m
+[31m-        "Janelas (un)",[m
+[31m-        value=int(dados.get("janelas") or 0), step=1, min_value=0,[m
+[31m-        key="input_janelas"[m
+[31m-    )[m
+[31m-    mostrar_badge("janelas", confianca)[m
+[31m-with col_p2:[m
+[31m-    portas_externas = st.number_input([m
+[31m-        "Portas Externas (un)",[m
+[31m-        value=int(dados.get("portas_externas") or 0), step=1, min_value=0,[m
+[31m-        key="input_portas_externas"[m
+[31m-    )[m
+[31m-    mostrar_badge("portas_externas", confianca)[m
+[31m-[m
+[31m-# --- Avisos de confiança baixa ---[m
+[31m-campos_baixa_confianca = [[m
+[31m-    campo for campo in CAMPOS_EXTRACAO[m
+[31m-    if confianca.get(campo, {}).get("nivel") == "baixa"[m
+[31m-][m
+[31m-if campos_baixa_confianca:[m
+[31m-    st.warning([m
+[31m-        "🔴 A IA teve baixa confiança em algum(ns) campo(s) acima. "[m
+[31m-        "Recomendamos conferir esses valores direto na planta antes de prosseguir."[m
+[31m-    )[m
+[31m-[m
+[31m-# --- Monta modelo de domínio ---[m
+[31m-dados_extracao = DadosExtracao([m
+[31m-    area_piso_seco=area_piso_seco,[m
+[31m-    area_piso_molhado=area_piso_molhado,[m
+[31m-    area_piso_externo=area_piso_externo,[m
+[31m-    metros_parede=metros_parede,[m
+[31m-    portas_internas=portas_internas,[m
+[31m-    portas_externas=portas_externas,[m
+[31m-    janelas=janelas,[m
+[31m-)[m
+[31m-area_piso_total = dados_extracao.area_piso_total[m
+[31m-[m
+[31m-# --- Validação de proporção parede ---[m
+[31m-avisos_parede, sugestao_parede = validar_proporcao_parede(area_piso_total, metros_parede)[m
+[31m-for aviso in avisos_parede:[m
+[31m-    st.error(aviso)[m
+[31m-[m
+[31m-if sugestao_parede and sugestao_parede != metros_parede:[m
+[31m-    col_ajuste1, col_ajuste2 = st.columns([1, 3])[m
+[31m-    with col_ajuste1:[m
+[31m-        if st.button(f"⚡ Ajustar para {sugestao_parede} m", key="btn_ajuste_parede"):[m
+[31m-            st.session_state["dados_extraidos"]["metros_parede"] = sugestao_parede[m
+[31m-            st.session_state.pop("input_metros_parede", None)[m
+[31m-            st.session_state.pop("orcamento_assinatura", None)[m
+[31m-            st.rerun()[m
+[31m-    with col_ajuste2:[m
+[31m-        st.caption("Clique para aplicar a sugestão automaticamente (pode editar depois).")[m
+[31m-[m
+[31m-# --- Validação geral ---[m
+[31m-avisos = validar_dados({[m
+[31m-    "area_piso": area_piso_total,[m
+[31m-    "metros_parede": metros_parede,[m
+[31m-    "portas": dados_extracao.portas_total,[m
+[31m-    "janelas": janelas,[m
+[31m-})[m
+[31m-if avisos:[m
+[31m-    st.warning([m
+[31m-        "⚠️ Alguns valores parecem incomuns. Confira antes de gerar o orçamento:\n\n"[m
+[31m-        + "\n".join(f"- {aviso}" for aviso in avisos)[m
+[31m-    )[m
+[31m-[m
+[31m-st.divider()[m
+[31m-[m
+[31m-# --- Assinatura para recalcular ---[m
+[31m-assinatura_atual = ([m
+[31m-    padrao, estrutura, area_piso_seco, area_piso_molhado,[m
+[31m-    area_piso_externo, metros_parede, portas_internas,[m
+[31m-    portas_externas, janelas,[m
+[31m-)[m
+[31m-if st.session_state.get("orcamento_assinatura") != assinatura_atual:[m
+[31m-    st.session_state.pop("materiais_editados", None)[m
+[31m-    st.session_state.pop("mao_de_obra_editada", None)[m
+[31m-    st.session_state["orcamento_assinatura"] = assinatura_atual[m
+[31m-[m
+[31m-# =====================================================================[m
+[31m-# MATERIAIS[m
+[31m-# =====================================================================[m
+[31m-st.header("📦 Materiais")[m
+[31m-st.caption("Edite o preço unitário conforme seu fornecedor.")[m
+[31m-[m
+[31m-materiais_sugeridos = calcular_materiais(dados_extracao, padrao, estrutura)[m
+[31m-[m
+[31m-chave_mat = "materiais_editados"[m
+[31m-if chave_mat not in st.session_state:[m
+[31m-    st.session_state[chave_mat] = materiais_sugeridos[m
+[31m-[m
+[31m-tabela_mat = st.data_editor([m
+[31m-    st.session_state[chave_mat],[m
+[31m-    column_config={[m
+[31m-        "Tipo": None,[m
+[31m-        "Material": st.column_config.TextColumn("Material", disabled=True),[m
+[31m-        "Quantidade": st.column_config.NumberColumn("Quantidade", disabled=True),[m
+[31m-        "Preco_Unit": st.column_config.NumberColumn("Preço Unit. (R$)", min_value=0.0, step=0.5),[m
+[31m-        "Total": st.column_config.NumberColumn("Total (R$)", disabled=True),[m
+[31m-    },[m
+[31m-    hide_index=True,[m
+[31m-    use_container_width=True,[m
+[31m-    key="editor_materiais",[m
+[31m-)[m
+[31m-[m
+[31m-materiais_final = [][m
+[31m-for item in tabela_mat:[m
+[31m-    item = dict(item)[m
+[31m-    item["Total"] = round(item["Quantidade"] * item["Preco_Unit"], 2)[m
+[31m-    materiais_final.append(item)[m
+[31m-st.session_state[chave_mat] = materiais_final[m
+[31m-[m
+[31m-total_materiais = sum(item["Total"] for item in materiais_final)[m
+[31m-st.metric("Total de Materiais", f"R$ {total_materiais:,.2f}")[m
+[31m-[m
+[31m-st.divider()[m
+[31m-[m
+[31m-# =====================================================================[m
+[31m-# MÃO DE OBRA[m
+[31m-# =====================================================================[m
+[31m-st.header("👷 Mão de Obra")[m
+[31m-st.caption("Valores sugeridos com base em composições SINAPI aproximadas.")[m
+ [m
+[31m-mao_de_obra_sugerida = calcular_mao_de_obra(dados_extracao, estrutura)[m
+[31m-[m
+[31m-chave_mo = "mao_de_obra_editada"[m
+[31m-if chave_mo not in st.session_state:[m
+[31m-    st.session_state[chave_mo] = mao_de_obra_sugerida[m
+[31m-[m
+[31m-tabela_mo = st.data_editor([m
+[31m-    st.session_state[chave_mo],[m
+[31m-    column_config={[m
+[31m-        "Tipo": None,[m
+[31m-        "Material": st.column_config.TextColumn("Serviço", disabled=True),[m
+[31m-        "Quantidade": st.column_config.NumberColumn("Quantidade", disabled=True),[m
+[31m-        "Preco_Unit": st.column_config.NumberColumn("Preço Unit. (R$)", min_value=0.0, step=0.5),[m
+[31m-        "Total": st.column_config.NumberColumn("Total (R$)", disabled=True),[m
+[31m-    },[m
+[31m-    hide_index=True,[m
+[31m-    use_container_width=True,[m
+[31m-    key="editor_mao_de_obra",[m
+[32m+[m[32m# Revisão dos dados → retorna modelo de domínio validado[m
+[32m+[m[32mdados_extracao = renderizar_revisao([m
+[32m+[m[32m    dados_extraidos=dados,[m
+[32m+[m[32m    padrao=config["padrao"],[m
+[32m+[m[32m    estrutura=config["estrutura"],[m
+[32m+[m[32m    local_obra=LOCAL_OBRA,[m
+ )[m
+ [m
+[31m-mao_de_obra_final = [][m
+[31m-for item in tabela_mo:[m
+[31m-    item = dict(item)[m
+[31m-    item["Total"] = round(item["Quantidade"] * item["Preco_Unit"], 2)[m
+[31m-    mao_de_obra_final.append(item)[m
+[31m-st.session_state[chave_mo] = mao_de_obra_final[m
+[31m-[m
+[31m-total_mao_de_obra = sum(item["Total"] for item in mao_de_obra_final)[m
+[31m-st.metric("Total de Mão de Obra", f"R$ {total_mao_de_obra:,.2f}")[m
+[32m+[m[32m# Orçamento completo (materiais + mão de obra + BDI + geração)[m
+[32m+[m[32mrenderizar_orcamento(dados_extracao, config)[m
+ [m
+ st.divider()[m
+[31m-[m
+[31m-# =====================================================================[m
+[31m-# BDI[m
+[31m-# =====================================================================[m
+[31m-st.header("💰 BDI (Benefícios e Despesas Indiretas)")[m
+[31m-st.caption([m
+[31m-    "Percentual sobre o custo direto para administração, lucro, impostos e imprevistos."[m
+[31m-)[m
+[31m-[m
+[31m-bdi_percentual = st.number_input([m
+[31m-    "BDI (%)", min_value=0.0, max_value=100.0, value=25.0, step=1.0,[m
+[31m-    key="input_bdi"[m
+[31m-)[m
+[31m-[m
+[31m-st.divider()[m
+[31m-[m
+[31m-# =====================================================================[m
+[31m-# GERAR ORÇAMENTO[m
+[31m-# =====================================================================[m
+[31m-if st.button("🚀 Gerar Orçamento Completo", type="primary", use_container_width=True):[m
+[31m-    if not nome_projeto.strip():[m
+[31m-        st.error("Informe o nome do projeto/cliente antes de gerar o orçamento.")[m
+[31m-    else:[m
+[31m-        with st.spinner("Calculando insumos e gerando documentos..."):[m
+[31m-            orcamento_final = orcamento_service.montar_orcamento_completo([m
+[31m-                materiais_final, mao_de_obra_final[m
+[31m-            )[m
+[31m-            custo_direto, preco_venda = orcamento_service.calcular_custo_e_preco([m
+[31m-                orcamento_final, bdi_percentual[m
+[31m-            )[m
+[31m-[m
+[31m-            base_nome = orcamento_service.nome_arquivo_seguro(nome_projeto)[m
+[31m-            excel_path = os.path.join(PASTA_ORCAMENTOS, f"{base_nome}.xlsx")[m
+[31m-            pdf_path = os.path.join(PASTA_ORCAMENTOS, f"{base_nome}.pdf")[m
+[31m-[m
+[31m-            caminho_excel = gerar_excel(orcamento_final, excel_path, bdi_percentual)[m
+[31m-[m
+[31m-            perfil = carregar_perfil()  # recarrega para garantir dados atualizados[m
+[31m-            caminho_pdf = gerar_pdf_proposta([m
+[31m-                orcamento_final, pdf_path,[m
+[31m-                nome_projeto=nome_projeto,[m
+[31m-                estado_uf=LOCAL_OBRA, padrao=padrao,[m
+[31m-                tipo_cobertura=estrutura, area_piso=area_piso_total,[m
+[31m-                bdi_percentual=bdi_percentual,[m
+[31m-                nome_empresa=perfil["nome_empresa"] or "OrçaObra AI",[m
+[31m-                contato=perfil["contato"],[m
+[31m-                registro=perfil["registro"],[m
+[31m-                caminho_logo=perfil["caminho_logo"],[m
+[31m-            )[m
+[31m-[m
+[31m-            salvar_orcamento([m
+[31m-                nome_projeto=nome_projeto,[m
+[31m-                estado_uf=LOCAL_OBRA,[m
+[31m-                padrao=padrao,[m
+[31m-                tipo_cobertura=estrutura,[m
+[31m-                area_piso=area_piso_total,[m
+[31m-                custo_direto=round(custo_direto, 2),[m
+[31m-                bdi_percentual=bdi_percentual,[m
+[31m-                preco_venda=preco_venda,[m
+[31m-                caminho_excel=caminho_excel,[m
+[31m-                caminho_pdf=caminho_pdf,[m
+[31m-            )[m
+[31m-[m
+[31m-            st.balloons()[m
+[31m-[m
+[31m-            st.header("📊 Resumo do Orçamento")[m
+[31m-            col_m1, col_m2, col_m3, col_m4 = st.columns(4)[m
+[31m-            col_m1.metric("Área Total", f"{area_piso_total:.0f} m²")[m
+[31m-            col_m2.metric("Paredes", f"{metros_parede:.0f} m")[m
+[31m-            
