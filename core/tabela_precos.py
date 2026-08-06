@@ -151,7 +151,7 @@ def importar_tabela_excel(caminho_arquivo):
 def salvar_overrides(precos_atualizados):
     """Persiste os precos customizados em disco (precos_customizados.json),
     com a data do upload como nova data de referencia desses itens."""
-    hoje = datetime.now(tz=timezone.utc).date().strftime("%Y-%m-%d")
+    hoje = datetime.now(tz=timezone.utc).strftime("%Y-%m")
     dados = carregar_overrides()
     for chave, valor in precos_atualizados.items():
         dados[chave] = {"valor": valor, "data_ref": hoje}

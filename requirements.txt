@@ -5,3 +5,4 @@ PyMuPDF
 openpyxl
 reportlab
 opencv-python-headless==4.10.0.84
+Pillow

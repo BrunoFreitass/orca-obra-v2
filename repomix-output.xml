@@ -1,0 +1,3597 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.github/
+  workflows/
+    ci.yml
+core/
+  __init__.py
+  cache.py
+  calculator.py
+  coeficientes.py
+  historico.py
+  image_processing.py
+  logger.py
+  models.py
+  orcamento_service.py
+  paths.py
+  perfil_empresa.py
+  proposta_pdf.py
+  reporter.py
+  tabela_precos.py
+  validacao.py
+  vision.py
+tests/
+  __init__.py
+  test_calculator.py
+  test_coeficientes.py
+  test_integracao.py
+  test_models.py
+  test_orcamento_service.py
+  test_tabela_precos.py
+  test_validacao.py
+.env.example
+.gitignore
+app.py
+config.py
+docker-compose.yml
+Dockerfile
+dockerignore
+requirements-dev.txt
+requirements.txt
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="core/logger.py">
+"""
+Logging estruturado para o OrçaObra AI.
+
+Por padrao, logs de INFO+ vao para o console (visiveis no Streamlit
+Cloud / terminal) e logs de DEBUG+ vao para arquivo rotativo
+(app.log, max 5MB, 3 backups). Isso permite diagnosticar problemas
+em producao sem poluir a tela do usuario.
+
+Uso:
+    from core.logger import get_logger
+    logger = get_logger(__name__)
+    logger.info("Orçamento gerado: %s", nome_projeto)
+    logger.error("Falha ao gerar PDF", exc_info=True)
+"""
+
+import logging
+import logging.handlers
+import os
+import sys
+
+LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs")
+os.makedirs(LOG_DIR, exist_ok=True)
+
+LOG_PATH = os.path.join(LOG_DIR, "orcaobra.log")
+
+_FMT_CONSOLE = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
+_FMT_FILE = "%(asctime)s | %(levelname)-8s | %(name)s | %(funcName)s:%(lineno)d | %(message)s"
+
+
+def _configurar():
+    """Configura o logging global uma unica vez."""
+    root = logging.getLogger()
+    if root.handlers:
+        return  # ja configurado (evita duplicar em reloads do Streamlit)
+
+    root.setLevel(logging.DEBUG)
+
+    # Handler de console: INFO+ (visivel pro usuario/dev)
+    console = logging.StreamHandler(sys.stdout)
+    console.setLevel(logging.INFO)
+    console.setFormatter(logging.Formatter(_FMT_CONSOLE, datefmt="%H:%M:%S"))
+    root.addHandler(console)
+
+    # Handler de arquivo rotativo: DEBUG+ (diagnostico completo)
+    arquivo = logging.handlers.RotatingFileHandler(
+        LOG_PATH, maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8"
+    )
+    arquivo.setLevel(logging.DEBUG)
+    arquivo.setFormatter(logging.Formatter(_FMT_FILE, datefmt="%Y-%m-%d %H:%M:%S"))
+    root.addHandler(arquivo)
+
+    # Reduz verbosidade de bibliotecas de terceiros
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger("requests").setLevel(logging.WARNING)
+    logging.getLogger("PIL").setLevel(logging.WARNING)
+
+
+def get_logger(nome: str) -> logging.Logger:
+    """Retorna um logger nomeado, ja configurado."""
+    _configurar()
+    return logging.getLogger(nome)
+</file>
+
+<file path="core/paths.py">
+"""
+Utilitário de caminhos de arquivo que funciona tanto no
+ambiente de desenvolvimento local quanto no Streamlit Cloud.
+
+No Streamlit Cloud, o filesystem do container é efêmero -- reinícios
+apagam tudo fora do diretório persistente. Este módulo detecta o
+ambiente e retorna caminhos adequados.
+"""
+import os
+
+
+def _diretorio_base():
+    """Retorna o diretório base para dados persistentes.
+
+    No Streamlit Cloud, existe um diretório persistente em
+    /mount/data/ (ou similar, dependendo da versão). Em ambiente
+    local, usa a pasta raiz do projeto.
+    """
+    # Streamlit Cloud (versões mais recentes usam /mount/data)
+    for candidato in ("/mount/data", "/app/data"):
+        if os.path.exists(candidato) and os.access(candidato, os.W_OK):
+            return candidato
+
+    # Ambiente local: pasta raiz do projeto (onde está app.py)
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+RAIZ = _diretorio_base()
+
+PASTA_ORCAMENTOS = os.path.join(RAIZ, "orcamentos_salvos")
+PASTA_PERFIL = os.path.join(RAIZ, "perfil_empresa")
+DB_PATH = os.path.join(RAIZ, "historico.db")
+CACHE_DIR = os.path.join(RAIZ, ".cache_ia")
+PERFIL_PATH = os.path.join(RAIZ, "perfil_empresa.json")
+OVERRIDES_PATH = os.path.join(RAIZ, "precos_customizados.json")
+
+
+def garantir_diretorios():
+    """Cria os diretórios de dados se não existirem."""
+    for pasta in (PASTA_ORCAMENTOS, PASTA_PERFIL, CACHE_DIR):
+        os.makedirs(pasta, exist_ok=True)
+</file>
+
+<file path="tests/test_integracao.py">
+"""Testes de integração — ciclo completo de geração de documentos.
+
+Verificam que Excel e PDF são criados corretamente a partir de um
+orçamento completo, sem depender da UI (Streamlit) nem da API Gemini.
+"""
+import os
+
+import pytest
+
+from core import orcamento_service, tabela_precos
+from core.calculator import calcular_mao_de_obra, calcular_materiais
+from core.models import DadosExtracao
+from core.proposta_pdf import gerar_pdf_proposta
+from core.reporter import gerar_excel
+
+
+@pytest.fixture(autouse=True)
+def sem_overrides():
+    """Garante que os testes rodem com precos padrao."""
+    tabela_precos.restaurar_padroes()
+    yield
+    tabela_precos.restaurar_padroes()
+
+
+@pytest.fixture
+def dados_exemplo():
+    """Dados tipicos de uma planta residencial pequena (115m2)."""
+    return DadosExtracao(
+        area_piso_seco=80.0,
+        area_piso_molhado=15.0,
+        area_piso_externo=20.0,
+        metros_parede=180.0,
+        portas_internas=6,
+        portas_externas=2,
+        janelas=8,
+    )
+
+
+@pytest.fixture
+def orcamento_completo(dados_exemplo):
+    """Monta um orcamento completo (material + mao de obra) pronto
+    para gerar documentos."""
+    materiais = calcular_materiais(dados_exemplo, padrao="Médio", tipo_cobertura="Telhado")
+    mao_de_obra = calcular_mao_de_obra(dados_exemplo, tipo_cobertura="Telhado")
+    return orcamento_service.montar_orcamento_completo(materiais, mao_de_obra)
+
+
+class TestGerarExcel:
+    def test_arquivo_e_criado_e_nao_esta_vazio(self, orcamento_completo, tmp_path):
+        caminho = tmp_path / "orcamento.xlsx"
+        resultado = gerar_excel(orcamento_completo, str(caminho), bdi_percentual=25)
+        assert os.path.exists(resultado)
+        assert os.path.getsize(resultado) > 1024  # pelo menos 1KB
+
+    def test_bdi_zero_nao_gera_linha_de_bdi(self, orcamento_completo, tmp_path):
+        caminho = tmp_path / "orcamento_sem_bdi.xlsx"
+        gerar_excel(orcamento_completo, str(caminho), bdi_percentual=0)
+        assert os.path.exists(caminho)
+
+    def test_extensao_csv_e_convertida_para_xlsx(self, orcamento_completo, tmp_path):
+        caminho_csv = tmp_path / "orcamento.csv"
+        resultado = gerar_excel(orcamento_completo, str(caminho_csv), bdi_percentual=0)
+        assert resultado.endswith(".xlsx")
+
+
+class TestGerarPdfProposta:
+    def test_pdf_e_criado_e_nao_esta_vazio(self, orcamento_completo, tmp_path):
+        caminho = tmp_path / "proposta.pdf"
+        gerar_pdf_proposta(
+            orcamento_completo,
+            str(caminho),
+            nome_projeto="Casa Teste",
+            estado_uf="Boa Vista/RR",
+            padrao="Médio",
+            tipo_cobertura="Telhado",
+            area_piso=115.0,
+            bdi_percentual=25,
+            nome_empresa="Teste Construtora",
+            contato="(95) 99999-9999",
+            registro="CREA-RR 12345",
+        )
+        assert os.path.exists(caminho)
+        assert os.path.getsize(caminho) > 2048  # PDF tem pelo menos 2KB
+
+    def test_pdf_sem_bdi_nao_gera_linha_bdi(self, orcamento_completo, tmp_path):
+        caminho = tmp_path / "proposta_sem_bdi.pdf"
+        gerar_pdf_proposta(
+            orcamento_completo,
+            str(caminho),
+            nome_projeto="Casa Sem BDI",
+            estado_uf="Boa Vista/RR",
+            padrao="Econômico",
+            tipo_cobertura="Laje",
+            area_piso=80.0,
+            bdi_percentual=0,
+        )
+        assert os.path.exists(caminho)
+        assert os.path.getsize(caminho) > 2048
+
+    def test_pdf_com_logo_invalido_nao_quebra(self, orcamento_completo, tmp_path):
+        """Logo que nao existe nao deve derrubar a geracao do PDF."""
+        caminho = tmp_path / "proposta_logo_ruim.pdf"
+        gerar_pdf_proposta(
+            orcamento_completo,
+            str(caminho),
+            nome_projeto="Casa Logo Ruim",
+            estado_uf="Boa Vista/RR",
+            padrao="Alto Padrão",
+            tipo_cobertura="Telhado",
+            area_piso=200.0,
+            bdi_percentual=15,
+            caminho_logo="/caminho/inexistente/logo.png",
+        )
+        assert os.path.exists(caminho)
+
+    def test_pdf_com_dados_minimos(self, orcamento_completo, tmp_path):
+        """PDF deve funcionar mesmo com apenas os campos obrigatorios."""
+        caminho = tmp_path / "proposta_minima.pdf"
+        gerar_pdf_proposta(
+            orcamento_completo,
+            str(caminho),
+            nome_projeto="Minima",
+            estado_uf="Boa Vista/RR",
+            padrao="Econômico",
+            tipo_cobertura="Telhado",
+            area_piso=50.0,
+        )
+        assert os.path.exists(caminho)
+</file>
+
+<file path="docker-compose.yml">
+services:
+  app:
+    build: .
+    container_name: orcaobra-ai
+    ports:
+      - "8501:8501"
+    volumes:
+      # Dados persistentes fora do container
+      - ./orcamentos_salvos:/app/orcamentos_salvos
+      - ./perfil_empresa:/app/perfil_empresa
+      - ./historico.db:/app/historico.db
+      - ./precos_customizados.json:/app/precos_customizados.json
+      - ./.cache_ia:/app/.cache_ia
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_API_KEYS=${GEMINI_API_KEYS:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-3.1-flash-lite}
+      - MOCK_AI=${MOCK_AI:-false}
+      - USE_CACHE=${USE_CACHE:-true}
+    restart: unless-stopped
+</file>
+
+<file path="dockerignore">
+.env
+.env.example
+.git
+.gitignore
+.github
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache_ia/
+historico.db
+orcamentos_salvos/
+perfil_empresa/
+precos_customizados.json
+*.pdf
+*.xlsx
+</file>
+
+<file path=".github/workflows/ci.yml">
+name: CI — Testes & Lint
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt', 'requirements-dev.txt') }}
+
+      - name: Install system deps (OpenCV)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1 libglib2.0-0
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+          pip install ruff
+
+      - name: Lint with Ruff
+        run: ruff check . --exclude .venv,venv,__pycache__,.cache_ia
+
+      - name: Run tests
+        run: pytest tests/ -v --tb=short
+        env:
+          MOCK_AI: "true"
+          USE_CACHE: "false"
+
+      - name: Upload coverage (optional)
+        if: matrix.python-version == '3.12'
+        run: pytest tests/ --cov=core --cov-report=xml --cov-report=term
+        continue-on-error: true
+</file>
+
+<file path="core/__init__.py">
+
+</file>
+
+<file path="core/image_processing.py">
+import cv2
+
+
+def melhorar_imagem(caminho):
+    """
+    Melhora a qualidade da planta antes da IA.
+    Retorna uma imagem OpenCV.
+    """
+
+    imagem = cv2.imread(caminho)
+
+    if imagem is None:
+        raise ValueError("Não foi possível abrir a imagem.")
+
+    # escala de cinza
+    gray = cv2.cvtColor(imagem, cv2.COLOR_BGR2GRAY)
+
+    # remove pequenos ruídos
+    gray = cv2.GaussianBlur(gray, (3, 3), 0)
+
+    # aumenta contraste
+    clahe = cv2.createCLAHE(
+        clipLimit=2.0,
+        tileGridSize=(8, 8)
+    )
+
+    gray = clahe.apply(gray)
+
+    return gray
+</file>
+
+<file path="core/validacao.py">
+# Faixas plausiveis para uma planta residencial/comercial tipica.
+# Valores fora daqui nao sao necessariamente errados (obras grandes
+# existem), mas sao raros o suficiente para merecer uma conferencia
+# manual antes de gerar o orcamento.
+FAIXAS = {
+    "area_piso": (5, 2000),       # m2
+    "metros_parede": (5, 2000),   # m lineares
+    "portas": (0, 50),            # unidades
+    "janelas": (0, 100),          # unidades
+}
+
+NOMES_EXIBICAO = {
+    "area_piso": "Área de Piso",
+    "metros_parede": "Paredes Lineares",
+    "portas": "Portas",
+    "janelas": "Janelas",
+}
+
+
+def validar_dados(dados):
+    """Confere se os valores extraidos estao dentro de uma faixa plausivel.
+    Retorna uma lista de avisos (strings). Lista vazia = tudo dentro do
+    esperado. Nao bloqueia o fluxo -- so alerta, ja que o usuario pode
+    corrigir os campos manualmente antes de gerar o orcamento."""
+    avisos = []
+
+    for campo, (minimo, maximo) in FAIXAS.items():
+        valor = dados.get(campo)
+        nome = NOMES_EXIBICAO[campo]
+
+        if valor is None:
+            avisos.append(f"{nome} não foi retornado pela IA.")
+            continue
+
+        if valor < 0:
+            avisos.append(f"{nome} veio negativo ({valor}) — provavelmente um erro de leitura.")
+        elif valor == 0 and minimo > 0:
+            # So alerta "zerado" quando o proprio campo NAO admite 0 como
+            # valor plausivel (ex: area de piso). Para campos cuja faixa
+            # comeca em 0 (portas, janelas), zero e um resultado legitimo
+            # e nao deveria gerar aviso.
+            avisos.append(f"{nome} veio zerado — confira se a planta foi lida corretamente.")
+        elif valor < minimo:
+            avisos.append(f"{nome} está bem abaixo do esperado ({valor}) — vale conferir.")
+        elif valor > maximo:
+            avisos.append(f"{nome} está bem acima do esperado ({valor}) — vale conferir.")
+
+    return avisos
+</file>
+
+<file path="tests/__init__.py">
+
+</file>
+
+<file path="tests/test_orcamento_service.py">
+"""Testes de core/orcamento_service.py -- soma de custo direto, BDI,
+e montagem do orcamento final."""
+
+from core import orcamento_service
+
+
+class TestCalcularCustoEPreco:
+    def test_bdi_zero_preco_venda_igual_ao_custo_direto(self):
+        itens = [{"Total": 1000.0}, {"Total": 500.0}]
+        custo, venda = orcamento_service.calcular_custo_e_preco(itens, bdi_percentual=0)
+        assert custo == 1500.0
+        assert venda == 1500.0
+
+    def test_bdi_25_por_cento(self):
+        itens = [{"Total": 1000.0}]
+        custo, venda = orcamento_service.calcular_custo_e_preco(itens, bdi_percentual=25)
+        assert custo == 1000.0
+        assert venda == 1250.0
+
+    def test_lista_vazia_nao_quebra(self):
+        custo, venda = orcamento_service.calcular_custo_e_preco([], bdi_percentual=25)
+        assert custo == 0.0
+        assert venda == 0.0
+
+    def test_arredonda_a_duas_casas(self):
+        itens = [{"Total": 33.333}, {"Total": 33.333}]
+        custo, venda = orcamento_service.calcular_custo_e_preco(itens, bdi_percentual=10)
+        assert custo == 66.67  # 66.666 arredondado
+        assert venda == round(66.67 * 1.10, 2)
+
+
+class TestMontarOrcamentoCompleto:
+    def test_junta_materiais_e_mao_de_obra_preservando_ordem(self):
+        materiais = [{"Tipo": "Material", "Material": "Bloco"}]
+        mao_de_obra = [{"Tipo": "Mão de Obra", "Material": "Alvenaria"}]
+        resultado = orcamento_service.montar_orcamento_completo(materiais, mao_de_obra)
+        assert resultado == materiais + mao_de_obra
+        assert resultado[0]["Tipo"] == "Material"
+        assert resultado[1]["Tipo"] == "Mão de Obra"
+
+    def test_nao_altera_as_listas_originais(self):
+        # Editar o resultado nao deveria vazar de volta pras listas de
+        # origem (evita bug sutil de estado compartilhado no Streamlit,
+        # onde app.py guarda materiais/mao_de_obra em st.session_state).
+        materiais = [{"Total": 10}]
+        mao_de_obra = [{"Total": 20}]
+        resultado = orcamento_service.montar_orcamento_completo(materiais, mao_de_obra)
+        resultado.append({"Total": 999})
+        assert len(materiais) == 1
+        assert len(mao_de_obra) == 1
+
+
+class TestNomeArquivoSeguro:
+    def test_remove_caracteres_invalidos(self):
+        nome = orcamento_service.nome_arquivo_seguro("Rua Oito, 447 / Jardim Tropical")
+        # nao deve conter barra nem virgula
+        assert "/" not in nome
+        assert "," not in nome
+
+    def test_sempre_comeca_com_timestamp_de_14_digitos(self):
+        nome = orcamento_service.nome_arquivo_seguro("Teste")
+        carimbo = nome.split("_")[0] + "_" + nome.split("_")[1]
+        assert len(carimbo) == 15  # AAAAMMDD_HHMMSS
+        assert carimbo.replace("_", "").isdigit()
+
+    def test_respeita_o_limite_de_caracteres(self):
+        nome_longo = "A" * 100
+        resultado = orcamento_service.nome_arquivo_seguro(nome_longo, limite=10)
+        # 10 caracteres do nome + o carimbo de tempo na frente
+        parte_nome = resultado.split("_", 2)[-1]
+        assert len(parte_nome) <= 10
+</file>
+
+<file path="tests/test_validacao.py">
+"""Testes de core/validacao.py -- faixas plausiveis dos dados extraidos."""
+from core.validacao import validar_dados
+
+
+def _dados_ok():
+    """Um conjunto de dados totalmente dentro das faixas esperadas,
+    usado como base -- cada teste so muda o campo que quer testar."""
+    return {"area_piso": 75, "metros_parede": 60, "portas": 5, "janelas": 6}
+
+
+class TestValidarDados:
+    def test_dados_normais_nao_geram_aviso(self):
+        assert validar_dados(_dados_ok()) == []
+
+    def test_campo_ausente_gera_aviso(self):
+        dados = _dados_ok()
+        del dados["area_piso"]
+        avisos = validar_dados(dados)
+        assert len(avisos) == 1
+        assert "não foi retornado pela IA" in avisos[0]
+
+    def test_valor_negativo_gera_aviso(self):
+        dados = _dados_ok()
+        dados["metros_parede"] = -10
+        avisos = validar_dados(dados)
+        assert any("negativo" in a for a in avisos)
+
+    def test_area_piso_zerada_gera_aviso(self):
+        # area_piso tem minimo > 0 na faixa -- zero e implausivel pra
+        # uma planta de verdade, deve alertar.
+        dados = _dados_ok()
+        dados["area_piso"] = 0
+        avisos = validar_dados(dados)
+        assert any("zerado" in a for a in avisos)
+
+    def test_portas_zeradas_nao_gera_aviso(self):
+        # portas/janelas tem faixa comecando em 0 -- zero e um resultado
+        # legitimo (planta sem porta interna, por exemplo) e NAO deve
+        # gerar aviso de "zerado".
+        dados = _dados_ok()
+        dados["portas"] = 0
+        avisos = validar_dados(dados)
+        assert avisos == []
+
+    def test_valor_muito_acima_do_esperado_gera_aviso(self):
+        dados = _dados_ok()
+        dados["area_piso"] = 5000  # acima do maximo (2000)
+        avisos = validar_dados(dados)
+        assert any("acima do esperado" in a for a in avisos)
+
+    def test_multiplos_campos_problematicos_geram_multiplos_avisos(self):
+        dados = {"area_piso": -5, "metros_parede": None, "portas": 0, "janelas": 6}
+        avisos = validar_dados(dados)
+        assert len(avisos) == 2  # area_piso negativa + metros_parede ausente
+</file>
+
+<file path=".env.example">
+# Copie este arquivo para .env e preencha com sua chave real.
+# NUNCA commite o arquivo .env no git.
+GEMINI_API_KEY=sua_chave_aqui
+
+# Modelo usado para ler as plantas. gemini-3.1-flash-lite e o mais barato
+# disponivel atualmente e da conta bem de extracao estruturada simples.
+# Troque para gemini-3.5-flash se precisar de mais precisao em plantas
+# complexas. Se aparecer erro 404 "no longer available", confira o nome
+# atual em https://ai.google.dev/gemini-api/docs/changelog
+GEMINI_MODEL=gemini-3.1-flash-lite
+
+# Deixe true para testar a interface sem gastar chamadas de API
+MOCK_AI=false
+
+# Deixe true para reaproveitar respostas ja obtidas para a mesma planta
+USE_CACHE=true
+</file>
+
+<file path="Dockerfile">
+# ============================================================
+# OrçaObra AI — Imagem de produção
+# ============================================================
+FROM python:3.12-slim
+
+# Evita buffering de logs no container
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# OpenBLAS pode estourar memória em containers com pouca RAM
+ENV OPENBLAS_NUM_THREADS=1
+ENV MKL_NUM_THREADS=1
+ENV OMP_NUM_THREADS=1
+
+WORKDIR /app
+
+# Instala dependências do sistema (OpenCV precisa de libgl)
+# libgl1-mesa-glx foi descontinuado (virou libgl1) nas versões
+# mais novas do Debian/Ubuntu -- a imagem python:3.12-slim já
+# está em uma base (trixie) onde só libgl1 existe.
+RUN apt-get update && apt-get install -y --no-install-recommends     libgl1     libglib2.0-0     libsm6     libxext6     libxrender-dev     && rm -rf /var/lib/apt/lists/*
+
+# Copia e instala dependências Python primeiro (cache de layer)
+COPY requirements.txt requirements-dev.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copia o código
+COPY . .
+
+# Cria diretórios de dados persistentes
+RUN mkdir -p /app/orcamentos_salvos /app/perfil_empresa /app/.cache_ia
+
+# Porta padrão do Streamlit
+EXPOSE 8501
+
+# Healthcheck simples
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health')" || exit 1
+
+CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+</file>
+
+<file path="requirements-dev.txt">
+-r requirements.txt
+pytest
+</file>
+
+<file path="requirements.txt">
+streamlit
+requests
+python-dotenv
+PyMuPDF
+openpyxl
+reportlab
+opencv-python-headless==4.10.0.84
+</file>
+
+<file path="core/cache.py">
+import hashlib
+import json
+import os
+
+from core import paths
+
+CACHE_DIR = paths.CACHE_DIR
+paths.garantir_diretorios()
+
+
+def _hash_arquivo(caminho_arquivo):
+    """Gera uma 'impressao digital' do conteudo do arquivo.
+    Mesmo arquivo (mesmos bytes) = mesmo hash = mesma resposta em cache."""
+    with open(caminho_arquivo, "rb") as f:
+        conteudo = f.read()
+    return hashlib.sha256(conteudo).hexdigest()
+
+
+def _caminho_cache(caminho_arquivo):
+    chave = _hash_arquivo(caminho_arquivo)
+    return os.path.join(CACHE_DIR, f"{chave}.json")
+
+
+def buscar_cache(caminho_arquivo):
+    """Retorna os dados salvos anteriormente para este arquivo, ou None
+    se essa planta ainda nunca foi analisada."""
+    caminho = _caminho_cache(caminho_arquivo)
+    if os.path.exists(caminho):
+        with open(caminho, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return None
+
+
+def salvar_cache(caminho_arquivo, dados):
+    caminho = _caminho_cache(caminho_arquivo)
+    with open(caminho, "w", encoding="utf-8") as f:
+        json.dump(dados, f, ensure_ascii=False, indent=2)
+</file>
+
+<file path="core/models.py">
+"""Modelos de dominio do OrcaObra AI.
+
+Antes desta refatoracao, os dados extraidos da planta (area_piso_seco,
+metros_parede, portas etc.) viajavam como dict solto entre vision.py,
+app.py e calculator.py -- e cada funcao que precisava da area total ou
+da area de parede repetia as mesmas 4-5 linhas de "dados.get(...)".
+Este modulo centraliza essas regras num unico lugar.
+"""
+
+from dataclasses import dataclass, field
+
+# Pe direito padrao (m) usado para converter metros lineares de parede
+# em area vertical de parede. Antes esse "2.8" estava duplicado dentro
+# de calcular_materiais() E calcular_mao_de_obra() em calculator.py.
+ALTURA_PAREDE_PADRAO = 2.8
+
+
+@dataclass
+class DadosExtracao:
+    """Os 7 campos agregados extraidos de uma planta baixa (pela IA, em
+    core/vision.py, ou editados manualmente na tela), mais o bloco de
+    confianca por campo.
+    """
+
+    area_piso_seco: float = 0.0
+    area_piso_molhado: float = 0.0
+    area_piso_externo: float = 0.0
+    metros_parede: float = 0.0
+    portas_internas: int = 0
+    portas_externas: int = 0
+    janelas: int = 0
+    confianca: dict = field(default_factory=dict)
+
+    @property
+    def area_piso_total(self) -> float:
+        return self.area_piso_seco + self.area_piso_molhado + self.area_piso_externo
+
+    @property
+    def portas_total(self) -> int:
+        return self.portas_internas + self.portas_externas
+
+    @property
+    def area_parede(self) -> float:
+        """Area vertical de parede (m2), assumindo o pe direito padrao."""
+        return self.metros_parede * ALTURA_PAREDE_PADRAO
+
+    def area_cobertura(self, tipo_cobertura: str) -> float:
+        """Area de cobertura (m2). Telhado tem fator 1.15 sobre a area de
+        piso pra cobrir o beiral/inclinacao; laje usa a area de piso direto."""
+        fator = 1.15 if tipo_cobertura == "Telhado" else 1.0
+        return round(self.area_piso_total * fator, 2)
+
+    @classmethod
+    def from_dict(cls, dados: dict) -> "DadosExtracao":
+        """Converte o dict cru (vindo do Gemini em core/vision.py, do
+        modo mock, ou dos campos editados na tela) para o modelo de
+        dominio. Aceita chaves faltando (usa 0 como default), do mesmo
+        jeito que o codigo anterior fazia com dados.get(...)."""
+        return cls(
+            area_piso_seco=float(dados.get("area_piso_seco", 0) or 0),
+            area_piso_molhado=float(dados.get("area_piso_molhado", 0) or 0),
+            area_piso_externo=float(dados.get("area_piso_externo", 0) or 0),
+            metros_parede=float(dados.get("metros_parede", 0) or 0),
+            portas_internas=int(dados.get("portas_internas", 0) or 0),
+            portas_externas=int(dados.get("portas_externas", 0) or 0),
+            janelas=int(dados.get("janelas", 0) or 0),
+            confianca=dados.get("confianca", {}),
+        )
+
+
+@dataclass
+class ItemOrcamento:
+    """Uma linha do orcamento (material ou mao de obra).
+
+    fase: "Obra Bruta" (estrutura/fechamento -- precisa estar pronto
+    antes do acabamento) ou "Acabamento" (revestimentos, pintura,
+    pontos finais). Usado pra agrupar e mostrar subtotais separados
+    na tela e nos documentos gerados (ver core/calculator.py)."""
+
+    tipo: str
+    material: str
+    quantidade: float
+    preco_unit: float
+    fase: str = "Obra Bruta"
+
+    @property
+    def total(self) -> float:
+        return round(self.quantidade * self.preco_unit, 2)
+
+    def to_dict(self) -> dict:
+        """Formato dict (Tipo/Material/Quantidade/Preco_Unit/Total/Fase) que
+        core/reporter.py e core/proposta_pdf.py ja esperam receber --
+        mantem compatibilidade sem precisar reescrever esses dois
+        modulos agora."""
+        return {
+            "Tipo": self.tipo,
+            "Material": self.material,
+            "Quantidade": self.quantidade,
+            "Preco_Unit": self.preco_unit,
+            "Total": self.total,
+            "Fase": self.fase,
+        }
+
+
+def itens_para_dicts(itens: list[ItemOrcamento]) -> list[dict]:
+    return [item.to_dict() for item in itens]
+</file>
+
+<file path="core/orcamento_service.py">
+"""Camada de servico do OrcaObra AI.
+
+Reune regras de negocio que antes viviam misturadas com codigo de
+interface (Streamlit) dentro de app.py -- geracao de nome de arquivo,
+soma de custo direto e calculo do preco de venda com BDI. Nenhuma
+funcao aqui importa streamlit; app.py chama estas funcoes e so cuida
+de mostrar o resultado na tela.
+"""
+
+from datetime import datetime, timezone
+
+
+def nome_arquivo_seguro(nome_projeto: str, limite: int = 40) -> str:
+    """Gera um nome de arquivo unico e seguro a partir do nome do
+    projeto/cliente: remove caracteres invalidos e prefixa com um
+    timestamp, para nunca sobrescrever um orcamento anterior."""
+    carimbo = datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S")
+    limpo = "".join(c if c.isalnum() or c in " -_" else "_" for c in nome_projeto)
+    limpo = limpo.strip().replace(" ", "_")[:limite]
+    return f"{carimbo}_{limpo}"
+
+
+def calcular_custo_e_preco(itens: list, bdi_percentual: float) -> tuple[float, float]:
+    """Soma o custo direto (material + mao de obra) de uma lista de
+    itens de orcamento e aplica o BDI para chegar ao preco de venda.
+    Retorna (custo_direto, preco_venda), ambos arredondados a 2 casas."""
+    custo_direto = round(sum(item["Total"] for item in itens), 2)
+    preco_venda = round(custo_direto * (1 + bdi_percentual / 100), 2)
+    return custo_direto, preco_venda
+
+
+def montar_orcamento_completo(materiais_editados: list, mao_de_obra_editada: list) -> list:
+    """Junta os materiais e a mao de obra (ambos ja editados pelo usuario
+    na tela) num unico orcamento -- lista de dicts no formato que
+    reporter.py e proposta_pdf.py esperam."""
+    return materiais_editados + mao_de_obra_editada
+</file>
+
+<file path="core/perfil_empresa.py">
+import json
+import os
+
+from core import paths
+
+PERFIL_PATH = paths.PERFIL_PATH
+
+PERFIL_PADRAO = {
+    "nome_empresa": "",
+    "contato": "",
+    "registro": "",  # ex: CREA/CAU
+    "caminho_logo": "",
+}
+
+
+def carregar_perfil():
+    """Le o perfil salvo em disco. Se nao existir ainda (primeira vez
+    que o app roda), retorna os valores padrao (vazios)."""
+    if not os.path.exists(PERFIL_PATH):
+        return dict(PERFIL_PADRAO)
+    with open(PERFIL_PATH, "r", encoding="utf-8") as f:
+        dados = json.load(f)
+    # Garante que campos novos (adicionados em versoes futuras) existam
+    # mesmo lendo um perfil.json salvo por uma versao anterior.
+    perfil = dict(PERFIL_PADRAO)
+    perfil.update(dados)
+    return perfil
+
+
+def salvar_perfil(nome_empresa, contato, registro, caminho_logo=""):
+    """Grava o perfil da empresa/profissional em disco (perfil_empresa.json),
+    pra nao precisar redigitar isso a cada orcamento gerado."""
+    perfil = {
+        "nome_empresa": nome_empresa,
+        "contato": contato,
+        "registro": registro,
+        "caminho_logo": caminho_logo,
+    }
+    with open(PERFIL_PATH, "w", encoding="utf-8") as f:
+        json.dump(perfil, f, ensure_ascii=False, indent=2)
+    return perfil
+</file>
+
+<file path="core/proposta_pdf.py">
+import os
+from datetime import datetime, timezone
+
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import cm
+from reportlab.platypus import (
+    HRFlowable,
+    Image,
+    KeepTogether,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
+
+from core.coeficientes import data_mais_antiga
+
+
+def _agrupar_por_tipo(dados_orcamento):
+    grupos = {}
+    ordem = []
+    for item in dados_orcamento:
+        tipo = item.get("Tipo", "Itens")
+        if tipo not in grupos:
+            grupos[tipo] = []
+            ordem.append(tipo)
+        grupos[tipo].append(item)
+    return ordem, grupos
+
+
+def gerar_pdf_proposta(dados_orcamento, output_path, nome_projeto,
+                        estado_uf, padrao, tipo_cobertura, area_piso,
+                        bdi_percentual=0, nome_empresa="OrçaObra AI",
+                        contato="", registro="", caminho_logo=""):
+    """Gera uma proposta comercial em PDF, com capa e tabela resumida
+    (sem quantidade/preco unitario por item -- so os totais por
+    servico/material), pensada pra ser enviada ao cliente final.
+
+    nome_empresa/contato/registro/caminho_logo: dados do profissional
+    ou empresa que esta emitindo a proposta (ver core/perfil_empresa.py),
+    pra personalizar o documento em vez de sair sempre com a marca
+    "OrçaObra AI". Todos opcionais -- se nao informados, o PDF sai
+    com a marca padrao e sem essas linhas de contato.
+
+    Diferente do Excel (gerado por core/reporter.py), que mostra o
+    detalhamento completo pra uso interno do profissional, o PDF e um
+    documento de APRESENTACAO: mais limpo, com capa, e sem expor a
+    composicao interna de custos linha a linha (o cliente ve o valor
+    total de cada servico, nao a conta de "quantidade x preco unitario"
+    que pode gerar questionamento ou negociacao item a item).
+    """
+    styles = getSampleStyleSheet()
+    estilo_titulo = ParagraphStyle(
+        "TituloCapa", parent=styles["Title"], fontSize=24, spaceAfter=4,
+        textColor=colors.HexColor("#1F4E78"),
+    )
+    estilo_subtitulo = ParagraphStyle(
+        "SubtituloCapa", parent=styles["Normal"], fontSize=13,
+        textColor=colors.HexColor("#4472A8"), spaceAfter=4,
+    )
+    estilo_contato = ParagraphStyle(
+        "ContatoCapa", parent=styles["Normal"], fontSize=9,
+        textColor=colors.HexColor("#666666"), spaceAfter=2,
+    )
+    estilo_secao = ParagraphStyle(
+        "Secao", parent=styles["Heading2"], fontSize=13,
+        textColor=colors.white, backColor=colors.HexColor("#4472A8"),
+        spaceBefore=14, spaceAfter=6, leftIndent=6, borderPadding=6,
+    )
+    estilo_rodape = ParagraphStyle(
+        "Rodape", parent=styles["Normal"], fontSize=8,
+        textColor=colors.grey,
+    )
+
+    doc = SimpleDocTemplate(
+        output_path, pagesize=A4,
+        topMargin=2 * cm, bottomMargin=2 * cm,
+        leftMargin=2 * cm, rightMargin=2 * cm,
+    )
+    story = []
+
+    # --- Cabecalho: logo (se houver) + nome da empresa/profissional ---
+    if caminho_logo and os.path.exists(caminho_logo):
+        try:
+            # Limita a largura maxima do logo pra nao dominar a pagina,
+            # preservando a proporcao original da imagem.
+            logo = Image(caminho_logo, width=4 * cm, height=4 * cm, kind="proportional")
+            logo.hAlign = "LEFT"
+            story.append(logo)
+            story.append(Spacer(1, 8))
+        except (OSError, ValueError):
+            # Logo invalido/corrompido nao pode derrubar a geracao do
+            # PDF inteiro -- ignora o logo e segue sem ele.
+            pass
+
+    story.append(Paragraph(nome_empresa or "OrçaObra AI", estilo_titulo))
+    story.append(Paragraph("Proposta de Orçamento de Obra", estilo_subtitulo))
+
+    linha_contato = " · ".join(parte for parte in (contato, registro) if parte)
+    if linha_contato:
+        story.append(Paragraph(linha_contato, estilo_contato))
+
+    story.append(Spacer(1, 10))
+    story.append(HRFlowable(width="100%", color=colors.HexColor("#1F4E78"), thickness=1.2))
+    story.append(Spacer(1, 16))
+
+    dados_capa = [
+        ["Projeto / Cliente:", nome_projeto],
+        ["Data:", datetime.now(tz=timezone.utc).strftime("%d/%m/%Y")],
+        ["Estado da Obra:", estado_uf],
+        ["Padrão de Acabamento:", padrao],
+        ["Tipo de Cobertura:", tipo_cobertura],
+        ["Área de Piso:", f"{area_piso:.0f} m²"],
+    ]
+    tabela_capa = Table(dados_capa, colWidths=[5 * cm, 10 * cm])
+    tabela_capa.setStyle(TableStyle([
+        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 10.5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("TEXTCOLOR", (0, 0), (0, -1), colors.HexColor("#1F4E78")),
+    ]))
+    story.append(tabela_capa)
+    story.append(Spacer(1, 20))
+
+    # --- Tabela resumida por secao (Material / Mao de Obra), so com totais ---
+    ordem_grupos, grupos = _agrupar_por_tipo(dados_orcamento)
+
+    custo_direto = 0.0
+    for tipo in ordem_grupos:
+        # Monta a secao inteira em uma lista separada, depois envolve
+        # em KeepTogether para evitar quebra no meio da tabela.
+        elementos_secao = []
+        elementos_secao.append(Paragraph(tipo.upper(), estilo_secao))
+
+        linhas = [["Item", "Total (R$)"]]
+        subtotal_grupo = 0.0
+        for item in grupos[tipo]:
+            linhas.append([item["Material"], f"R$ {item['Total']:,.2f}"])
+            subtotal_grupo += item["Total"]
+        linhas.append(["Subtotal", f"R$ {subtotal_grupo:,.2f}"])
+        custo_direto += subtotal_grupo
+
+        tabela = Table(linhas, colWidths=[11 * cm, 4 * cm])
+        tabela.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1F4E78")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, -1), 9.5),
+            ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -2), [colors.white, colors.HexColor("#F2F2F2")]),
+            ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+            ("LINEABOVE", (0, -1), (-1, -1), 0.8, colors.HexColor("#1F4E78")),
+            ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#CCCCCC")),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ]))
+        elementos_secao.append(tabela)
+
+        # KeepTogether: se a secao inteira (titulo + tabela) nao couber
+        # no espaco restante da pagina atual, ela e jogada para a
+        # proxima pagina inteira -- evitando a quebra no meio da tabela
+        # que gerava lixo no PDF.
+        story.append(KeepTogether(elementos_secao))
+
+    story.append(Spacer(1, 16))
+
+    # --- Bloco final: Custo Direto -> BDI -> Preco de Venda ---
+    linhas_final = [["Custo Direto", f"R$ {custo_direto:,.2f}"]]
+    if bdi_percentual:
+        valor_bdi = custo_direto * bdi_percentual / 100
+        preco_venda = custo_direto + valor_bdi
+        linhas_final.append([f"BDI ({bdi_percentual:g}%)", f"R$ {valor_bdi:,.2f}"])
+        linhas_final.append(["PREÇO DE VENDA", f"R$ {preco_venda:,.2f}"])
+
+    tabela_final = Table(linhas_final, colWidths=[11 * cm, 4 * cm])
+    estilo_final = [
+        ("FONTSIZE", (0, 0), (-1, -1), 11),
+        ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+    ]
+    if bdi_percentual:
+        estilo_final += [
+            ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+            ("FONTSIZE", (0, -1), (-1, -1), 13),
+            ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#2E7D32")),
+            ("TEXTCOLOR", (0, -1), (-1, -1), colors.white),
+        ]
+    tabela_final.setStyle(TableStyle(estilo_final))
+    story.append(tabela_final)
+
+    story.append(Spacer(1, 24))
+    story.append(HRFlowable(width="100%", color=colors.HexColor("#CCCCCC"), thickness=0.6))
+    story.append(Spacer(1, 6))
+    ref_ano, ref_mes = data_mais_antiga().split("-")
+    story.append(Paragraph(
+        "Este documento é uma estimativa de custos gerada automaticamente e não "
+        "substitui um orçamento detalhado de engenharia. Valores sujeitos a "
+        "alteração conforme condições específicas da obra e negociação. "
+        f"Preços de referência atualizados até {ref_mes}/{ref_ano} "
+        "(SINAPI/IBGE e pesquisa de mercado).",
+        estilo_rodape,
+    ))
+
+    doc.build(story)
+    return output_path
+</file>
+
+<file path="tests/test_coeficientes.py">
+"""Testes de core/coeficientes.py -- garante que a tabela de precos
+esta bem formada (toda entrada tem fonte e data), nao que os VALORES
+em si estao certos (isso e decisao de negocio, nao de codigo).
+"""
+import re
+
+from core import coeficientes
+from core.coeficientes import VERSAO_TABELA, Preco, data_mais_antiga
+
+
+def _todos_os_precos():
+    """Percorre o modulo inteiro e devolve todo objeto Preco encontrado
+    (direto ou dentro de dict/dict-de-dict) -- pra testar a tabela
+    inteira sem listar cada constante manualmente aqui."""
+    encontrados = []
+
+    def visitar(valor):
+        if isinstance(valor, Preco):
+            encontrados.append(valor)
+        elif isinstance(valor, dict):
+            for v in valor.values():
+                visitar(v)
+
+    for nome in dir(coeficientes):
+        if nome.startswith("_"):
+            continue
+        visitar(getattr(coeficientes, nome))
+
+    return encontrados
+
+
+def test_todo_preco_tem_fonte_preenchida():
+    for preco in _todos_os_precos():
+        assert preco.fonte and preco.fonte.strip(), f"Preco sem fonte: {preco}"
+
+
+def test_todo_preco_tem_data_referencia_no_formato_aaaa_mm():
+    padrao = re.compile(r"^\d{4}-\d{2}$")
+    for preco in _todos_os_precos():
+        assert padrao.match(preco.data_ref), f"data_ref fora do formato AAAA-MM: {preco}"
+
+
+def test_todo_preco_tem_valor_positivo():
+    for preco in _todos_os_precos():
+        assert preco.valor > 0, f"Preco com valor zero/negativo: {preco}"
+
+
+def test_versao_da_tabela_no_formato_aaaa_ponto_mm():
+    assert re.match(r"^\d{4}\.\d{2}$", VERSAO_TABELA)
+
+
+def test_data_mais_antiga_e_uma_das_datas_realmente_presentes():
+    todas_as_datas = {p.data_ref for p in _todos_os_precos()}
+    assert data_mais_antiga() in todas_as_datas
+    assert data_mais_antiga() == min(todas_as_datas)
+</file>
+
+<file path="tests/test_models.py">
+"""Testes de core/models.py -- propriedades derivadas de DadosExtracao
+e serializacao de ItemOrcamento."""
+import pytest
+
+from core.models import (
+    ALTURA_PAREDE_PADRAO,
+    DadosExtracao,
+    ItemOrcamento,
+    itens_para_dicts,
+)
+
+
+class TestDadosExtracao:
+    def test_area_piso_total_soma_as_tres_areas(self):
+        d = DadosExtracao(area_piso_seco=10, area_piso_molhado=5, area_piso_externo=3)
+        assert d.area_piso_total == 18
+
+    def test_portas_total_soma_internas_e_externas(self):
+        d = DadosExtracao(portas_internas=3, portas_externas=2)
+        assert d.portas_total == 5
+
+    def test_area_parede_usa_pe_direito_padrao(self):
+        d = DadosExtracao(metros_parede=10)
+        assert d.area_parede == pytest.approx(10 * ALTURA_PAREDE_PADRAO)
+
+    def test_area_cobertura_telhado_tem_fator_de_beiral(self):
+        d = DadosExtracao(area_piso_seco=100)
+        assert d.area_cobertura("Telhado") == pytest.approx(115.0)  # +15%
+
+    def test_area_cobertura_laje_nao_tem_fator_extra(self):
+        d = DadosExtracao(area_piso_seco=100)
+        assert d.area_cobertura("Laje") == pytest.approx(100.0)
+
+    def test_from_dict_aceita_chaves_faltando(self):
+        d = DadosExtracao.from_dict({"area_piso_seco": 50})
+        assert d.area_piso_seco == 50
+        assert d.metros_parede == 0
+        assert d.portas_internas == 0
+
+    def test_from_dict_aceita_valores_none(self):
+        # A IA as vezes retorna null pra um campo que nao conseguiu ler
+        # -- from_dict nao pode quebrar nesse caso.
+        d = DadosExtracao.from_dict({"area_piso_seco": None, "portas_internas": None})
+        assert d.area_piso_seco == 0
+        assert d.portas_internas == 0
+
+
+class TestItemOrcamento:
+    def test_total_e_quantidade_vezes_preco_unitario(self):
+        item = ItemOrcamento("Material", "Bloco", quantidade=100, preco_unit=1.5)
+        assert item.total == 150.0
+
+    def test_total_arredonda_a_duas_casas(self):
+        item = ItemOrcamento("Material", "X", quantidade=3, preco_unit=0.333)
+        assert item.total == 1.0  # 0.999 arredondado
+
+    def test_to_dict_tem_as_6_chaves_esperadas(self):
+        item = ItemOrcamento("Material", "Bloco", 100, 1.5)
+        d = item.to_dict()
+        assert set(d.keys()) == {"Tipo", "Material", "Quantidade", "Preco_Unit", "Total", "Fase"}
+        assert d["Total"] == 150.0
+
+    def test_fase_padrao_e_obra_bruta_quando_nao_especificada(self):
+        item = ItemOrcamento("Material", "Bloco", 100, 1.5)
+        assert item.fase == "Obra Bruta"
+
+    def test_fase_pode_ser_definida_explicitamente(self):
+        item = ItemOrcamento("Material", "Tinta", 10, 22.0, fase="Acabamento")
+        assert item.to_dict()["Fase"] == "Acabamento"
+
+
+def test_itens_para_dicts_converte_lista_inteira():
+    itens = [ItemOrcamento("Material", "A", 1, 10), ItemOrcamento("Material", "B", 2, 5)]
+    dicts = itens_para_dicts(itens)
+    assert len(dicts) == 2
+    assert dicts[0]["Total"] == 10
+    assert dicts[1]["Total"] == 10
+</file>
+
+<file path="tests/test_tabela_precos.py">
+"""Testes de core/tabela_precos.py -- ciclo de download/edicao/upload
+da planilha de precos customizados."""
+import os
+
+import pytest
+from openpyxl import Workbook
+
+from core import tabela_precos as tp
+from core.coeficientes import PRECO_AREIA_M3, PRECO_CIMENTO_SACO
+
+
+@pytest.fixture(autouse=True)
+def sem_overrides_salvos():
+    """Garante que cada teste comeca e termina sem nenhum override
+    salvo em disco -- os testes nao devem se afetar uns aos outros,
+    nem deixar lixo no arquivo real usado pelo app."""
+    tp.restaurar_padroes()
+    yield
+    tp.restaurar_padroes()
+
+
+def _planilha_com(linhas):
+    wb = Workbook()
+    ws = wb.active
+    ws.append(["Chave", "Categoria", "Item", "Preço (R$)", "Fonte", "Data"])
+    for linha in linhas:
+        ws.append(linha)
+    return wb
+
+
+class TestObterPreco:
+    def test_sem_override_retorna_o_padrao(self):
+        preco = tp.obter_preco("cimento", PRECO_CIMENTO_SACO)
+        assert preco.valor == PRECO_CIMENTO_SACO.valor
+        assert preco.fonte == PRECO_CIMENTO_SACO.fonte
+
+    def test_com_override_retorna_o_valor_customizado(self):
+        tp.salvar_overrides({"cimento": 50.0})
+        preco = tp.obter_preco("cimento", PRECO_CIMENTO_SACO)
+        assert preco.valor == 50.0
+        assert preco.fonte == "Tabela de preços enviada pelo usuário"
+
+    def test_chave_sem_override_nao_e_afetada_por_override_de_outra_chave(self):
+        tp.salvar_overrides({"cimento": 50.0})
+        preco_areia = tp.obter_preco("areia", PRECO_AREIA_M3)
+        # areia nao foi customizada -- deve continuar no padrao
+        assert preco_areia.fonte != "Tabela de preços enviada pelo usuário"
+
+
+class TestImportarTabelaExcel:
+    def test_valor_alterado_entra_em_atualizados(self, tmp_path):
+        caminho = tmp_path / "planilha.xlsx"
+        _planilha_com([["cimento", "Material", "Cimento", 50.0, "", ""]]).save(caminho)
+        atualizados, _avisos = tp.importar_tabela_excel(str(caminho))
+        assert atualizados == {"cimento": 50.0}
+
+    def test_valor_igual_ao_atual_nao_entra_em_atualizados(self, tmp_path):
+        caminho = tmp_path / "planilha.xlsx"
+        _planilha_com([["cimento", "Material", "Cimento", PRECO_CIMENTO_SACO.valor, "", ""]]).save(caminho)
+        atualizados, _avisos = tp.importar_tabela_excel(str(caminho))
+        assert atualizados == {}
+
+    def test_chave_desconhecida_gera_aviso_e_e_ignorada(self, tmp_path):
+        caminho = tmp_path / "planilha.xlsx"
+        _planilha_com([["nao_existe", "Material", "Fantasma", 99, "", ""]]).save(caminho)
+        atualizados, avisos = tp.importar_tabela_excel(str(caminho))
+        assert atualizados == {}
+        assert any("desconhecida" in a for a in avisos)
+
+    def test_valor_nao_numerico_gera_aviso_e_e_ignorado(self, tmp_path):
+        caminho = tmp_path / "planilha.xlsx"
+        _planilha_com([["cimento", "Material", "Cimento", "abc", "", ""]]).save(caminho)
+        atualizados, avisos = tp.importar_tabela_excel(str(caminho))
+        assert atualizados == {}
+        assert any("não numérico" in a for a in avisos)
+
+    def test_valor_zero_ou_negativo_gera_aviso_e_e_ignorado(self, tmp_path):
+        caminho = tmp_path / "planilha.xlsx"
+        _planilha_com([["cimento", "Material", "Cimento", 0, "", ""]]).save(caminho)
+        atualizados, avisos = tp.importar_tabela_excel(str(caminho))
+        assert atualizados == {}
+        assert any("zero ou negativo" in a for a in avisos)
+
+    def test_item_ausente_na_planilha_gera_aviso(self, tmp_path):
+        caminho = tmp_path / "planilha.xlsx"
+        _planilha_com([["cimento", "Material", "Cimento", 50.0, "", ""]]).save(caminho)
+        _, avisos = tp.importar_tabela_excel(str(caminho))
+        assert any("não apareceram na planilha enviada" in a for a in avisos)
+
+
+class TestRestaurarPadroes:
+    def test_remove_o_arquivo_de_overrides(self):
+        tp.salvar_overrides({"cimento": 50.0})
+        assert os.path.exists(tp.CAMINHO_OVERRIDES)
+        tp.restaurar_padroes()
+        assert not os.path.exists(tp.CAMINHO_OVERRIDES)
+
+    def test_chamar_sem_overrides_existentes_nao_quebra(self):
+        tp.restaurar_padroes()
+        tp.restaurar_padroes()  # chamar de novo nao deve gerar erro
+</file>
+
+<file path="config.py">
+import os
+
+from dotenv import load_dotenv
+
+load_dotenv()  # le o arquivo .env na raiz do projeto, se existir
+
+
+def _carregar_lista_de_chaves():
+    """Monta a lista de chaves Gemini disponiveis, na ordem em que
+    devem ser tentadas. Suporta dois formatos no .env, pra nao quebrar
+    quem ja tinha GEMINI_API_KEY configurada antes desse recurso:
+
+    - GEMINI_API_KEYS=chave1,chave2,chave3   (varias chaves, recomendado)
+    - GEMINI_API_KEY=chave1                  (formato antigo, continua funcionando)
+
+    Se as duas variaveis existirem, a chave de GEMINI_API_KEY entra
+    primeiro na lista (nao se perde), seguida das chaves extras de
+    GEMINI_API_KEYS que ainda nao estiverem la.
+    """
+    chaves = []
+
+    chave_unica = os.environ.get("GEMINI_API_KEY", "").strip()
+    if chave_unica:
+        chaves.append(chave_unica)
+
+    chaves_extra = os.environ.get("GEMINI_API_KEYS", "")
+    for chave in chaves_extra.split(","):
+        chave = chave.strip()
+        if chave and chave not in chaves:
+            chaves.append(chave)
+
+    return chaves
+
+
+# Lista de chaves Gemini, na ordem de tentativa. Quando uma chave
+# estoura a cota (erro RESOURCE_EXHAUSTED), o core/vision.py passa
+# automaticamente pra proxima da lista antes de desistir.
+GEMINI_API_KEYS = _carregar_lista_de_chaves()
+
+# Mantido por compatibilidade com codigo que ainda espera uma chave
+# unica (ex: mensagens de erro que citam "a chave configurada").
+GEMINI_API_KEY = GEMINI_API_KEYS[0] if GEMINI_API_KEYS else ""
+
+# Modelo usado para ler as plantas. gemini-3.1-flash-lite e o mais barato
+# disponivel atualmente e da conta bem de extracao estruturada simples.
+# Troque aqui se precisar de mais precisao em plantas complexas
+# (ex: gemini-3.5-flash), sem precisar mexer em codigo.
+# Obs: modelos do Gemini sao descontinuados com frequencia -- se aparecer
+# erro 404 "no longer available", confira o nome atual em
+# https://ai.google.dev/gemini-api/docs/changelog
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.1-flash-lite")
+
+# Ativa modo mock: nenhuma chamada a API e feita, retorna dados fixos.
+# Ideal para testar a interface (upload, calculo, geracao de excel)
+# sem consumir cota do Gemini. Ative com MOCK_AI=true no .env
+MOCK_AI = os.environ.get("MOCK_AI", "false").lower() == "true"
+
+# Ativa cache local em disco: o mesmo arquivo de planta (mesmo hash)
+# so e enviado pra API uma vez. Testes repetidos com a mesma planta
+# nao gastam cota de novo.
+USE_CACHE = os.environ.get("USE_CACHE", "true").lower() == "true"
+
+# Dados usados quando MOCK_AI=true. Formato com extracao POR AMBIENTE:
+# area de piso discriminada em seca/molhada/externa, portas em
+# internas/externas. Inclui o bloco "confianca" no mesmo formato que o
+# Gemini retorna de verdade, pra testar o indicador de confianca na
+# tela sem gastar cota de API.
+DADOS_MOCK = {
+    "area_piso_seco": 120.40,
+    "area_piso_molhado": 18.90,
+    "area_piso_externo": 26.50,
+    "metros_parede": 312.0,
+    "portas_internas": 12,
+    "portas_externas": 4,
+    "janelas": 14,
+    "confianca": {
+        "area_piso_seco": {"nivel": "alta", "motivo": "Cota de 120,40m² escrita na planta"},
+        "area_piso_molhado": {"nivel": "alta", "motivo": "Cotas de área escritas nos banheiros"},
+        "area_piso_externo": {"nivel": "media", "motivo": "Soma visual da varanda e garagem"},
+        "metros_parede": {"nivel": "media", "motivo": "Soma visual dos segmentos de parede"},
+        "portas_internas": {"nivel": "alta", "motivo": "Contagem visual de 12 arcos internos"},
+        "portas_externas": {"nivel": "alta", "motivo": "Contagem visual de 4 arcos externos"},
+        "janelas": {"nivel": "baixa", "motivo": "Planta mock, sem base visual real"},
+    },
+}
+</file>
+
+<file path="core/calculator.py">
+from core.coeficientes import (
+    CONSUMO_ACO_KG_POR_M2,
+    CONSUMO_AREIA_M3_POR_M2,
+    CONSUMO_ARGAMASSA_KG_POR_M2,
+    CONSUMO_BRITA_M3_POR_M2,
+    CONSUMO_CIMENTO_SACO_POR_M2,
+    CONSUMO_TIJOLO_POR_M2_PAREDE,
+    CONSUMO_TINTA_L_POR_M2,
+    FATOR_REGIONAL_RR,
+    M2_POR_PONTO_ELETRICO,
+    M2_POR_PONTO_HIDRAULICO,
+    MAO_DE_OBRA_POR_SERVICO,
+    MARGEM_PERDA,
+    PRECO_ACO_RR,
+    PRECO_AREIA_M3,
+    PRECO_ARGAMASSA_KG,
+    PRECO_BLOCO_CERAMICO,
+    PRECO_BRITA_M3,
+    PRECO_CIMENTO_SACO,
+    PRECO_TINTA_L,
+    PRECOS_COBERTURA,
+    PRECOS_JANELA,
+    PRECOS_PISO_EXTERNO,
+    PRECOS_PISO_MOLHADO,
+    PRECOS_PISO_SECO,
+    PRECOS_PONTO_ELETRICO_ACABAMENTO,
+    PRECOS_PONTO_ELETRICO_INFRA,
+    PRECOS_PONTO_HIDRAULICO_ACABAMENTO,
+    PRECOS_PONTO_HIDRAULICO_INFRA,
+    PRECOS_PORTA_EXTERNA,
+    PRECOS_PORTA_INTERNA,
+)
+from core.models import DadosExtracao, ItemOrcamento, itens_para_dicts
+from core.tabela_precos import obter_preco
+
+
+def _dados_extracao(dados) -> DadosExtracao:
+    """Aceita tanto um DadosExtracao pronto quanto um dict cru."""
+    return dados if isinstance(dados, DadosExtracao) else DadosExtracao.from_dict(dados)
+
+
+def calcular_materiais(dados, padrao, tipo_cobertura="Telhado"):
+    """Calcula os itens de MATERIAL do orcamento."""
+    d = _dados_extracao(dados)
+
+    fator_regional = FATOR_REGIONAL_RR.valor
+    area_cobertura = d.area_cobertura(tipo_cobertura)
+    margem = MARGEM_PERDA.valor
+    preco_aco_real = obter_preco("aco", PRECO_ACO_RR).valor
+    qtd_pontos_eletricos = round(d.area_piso_total / M2_POR_PONTO_ELETRICO.valor)
+    qtd_pontos_hidraulicos = round(d.area_piso_total / M2_POR_PONTO_HIDRAULICO.valor)
+
+    itens = [
+        # === OBRA BRUTA ===
+        ItemOrcamento("Material", "Bloco Cerâmico 14x19x29",
+                      round(d.area_parede * CONSUMO_TIJOLO_POR_M2_PAREDE.valor * margem),
+                      obter_preco("bloco_ceramico", PRECO_BLOCO_CERAMICO).valor * fator_regional,
+                      fase="Obra Bruta"),
+        ItemOrcamento("Material", f"Piso Interno - Área Seca ({padrao})",
+                      round(d.area_piso_seco * margem, 2),
+                      obter_preco(f"piso_seco__{padrao}", PRECOS_PISO_SECO[padrao]).valor * fator_regional,
+                      fase="Acabamento"),
+        ItemOrcamento("Material", f"Piso Interno - Área Molhada ({padrao})",
+                      round(d.area_piso_molhado * margem, 2),
+                      obter_preco(f"piso_molhado__{padrao}", PRECOS_PISO_MOLHADO[padrao]).valor * fator_regional,
+                      fase="Acabamento"),
+        ItemOrcamento("Material", f"Piso Externo ({padrao})",
+                      round(d.area_piso_externo * margem, 2),
+                      obter_preco(f"piso_externo__{padrao}", PRECOS_PISO_EXTERNO[padrao]).valor * fator_regional,
+                      fase="Acabamento"),
+        ItemOrcamento("Material", "Argamassa AC-II",
+                      round(d.area_piso_total * CONSUMO_ARGAMASSA_KG_POR_M2.valor * margem),
+                      obter_preco("argamassa", PRECO_ARGAMASSA_KG).valor * fator_regional,
+                      fase="Acabamento"),
+        ItemOrcamento("Material", "Tinta Acrílica Premium",
+                      round(d.area_parede * CONSUMO_TINTA_L_POR_M2.valor),
+                      obter_preco("tinta", PRECO_TINTA_L).valor * fator_regional,
+                      fase="Acabamento"),
+        ItemOrcamento("Material", f"Porta Interna ({padrao})",
+                      d.portas_internas,
+                      obter_preco(f"porta_interna__{padrao}", PRECOS_PORTA_INTERNA[padrao]).valor * fator_regional,
+                      fase="Acabamento"),
+        ItemOrcamento("Material", f"Porta Externa ({padrao})",
+                      d.portas_externas,
+                      obter_preco(f"porta_externa__{padrao}", PRECOS_PORTA_EXTERNA[padrao]).valor * fator_regional,
+                      fase="Acabamento"),
+        ItemOrcamento("Material", f"Janela ({padrao})",
+                      d.janelas,
+                      obter_preco(f"janela__{padrao}", PRECOS_JANELA[padrao]).valor * fator_regional,
+                      fase="Acabamento"),
+        ItemOrcamento("Material", f"Cobertura em {tipo_cobertura} ({padrao})",
+                      area_cobertura,
+                      obter_preco(f"cobertura_{tipo_cobertura}__{padrao}",
+                                  PRECOS_COBERTURA[tipo_cobertura][padrao]).valor * fator_regional,
+                      fase="Obra Bruta"),
+        ItemOrcamento("Material", "Cimento (Fundação/Estrutura)",
+                      round(d.area_piso_total * CONSUMO_CIMENTO_SACO_POR_M2.valor * margem),
+                      obter_preco("cimento", PRECO_CIMENTO_SACO).valor * fator_regional,
+                      fase="Obra Bruta"),
+        ItemOrcamento("Material", "Areia",
+                      round(d.area_piso_total * CONSUMO_AREIA_M3_POR_M2.valor * margem, 2),
+                      obter_preco("areia", PRECO_AREIA_M3).valor * fator_regional,
+                      fase="Obra Bruta"),
+        ItemOrcamento("Material", "Brita",
+                      round(d.area_piso_total * CONSUMO_BRITA_M3_POR_M2.valor * margem, 2),
+                      obter_preco("brita", PRECO_BRITA_M3).valor * fator_regional,
+                      fase="Obra Bruta"),
+        ItemOrcamento("Material", "Aço/Vergalhão",
+                      round(d.area_piso_total * CONSUMO_ACO_KG_POR_M2.valor * margem),
+                      preco_aco_real,
+                      fase="Obra Bruta"),
+        # --- Elétrica: split infra (obra bruta) + acabamento ---
+        ItemOrcamento("Material", f"Pontos Elétricos - Infraestrutura ({padrao})",
+                      qtd_pontos_eletricos,
+                      obter_preco(f"ponto_eletrico_infra__{padrao}",
+                                  PRECOS_PONTO_ELETRICO_INFRA[padrao]).valor * fator_regional,
+                      fase="Obra Bruta"),
+        ItemOrcamento("Material", f"Pontos Elétricos - Acabamento ({padrao})",
+                      qtd_pontos_eletricos,
+                      obter_preco(f"ponto_eletrico_acabamento__{padrao}",
+                                  PRECOS_PONTO_ELETRICO_ACABAMENTO[padrao]).valor * fator_regional,
+                      fase="Acabamento"),
+        # --- Hidráulica: split infra (obra bruta) + acabamento ---
+        ItemOrcamento("Material", f"Pontos Hidráulicos - Infraestrutura ({padrao})",
+                      qtd_pontos_hidraulicos,
+                      obter_preco(f"ponto_hidraulico_infra__{padrao}",
+                                  PRECOS_PONTO_HIDRAULICO_INFRA[padrao]).valor * fator_regional,
+                      fase="Obra Bruta"),
+        ItemOrcamento("Material", f"Pontos Hidráulicos - Acabamento ({padrao})",
+                      qtd_pontos_hidraulicos,
+                      obter_preco(f"ponto_hidraulico_acabamento__{padrao}",
+                                  PRECOS_PONTO_HIDRAULICO_ACABAMENTO[padrao]).valor * fator_regional,
+                      fase="Acabamento"),
+    ]
+
+    return itens_para_dicts(itens)
+
+
+def calcular_mao_de_obra(dados, tipo_cobertura="Telhado"):
+    """Gera as linhas de MAO DE OBRA por servico."""
+    d = _dados_extracao(dados)
+    fator_regional = FATOR_REGIONAL_RR.valor
+    area_cobertura = d.area_cobertura(tipo_cobertura)
+    qtd_eletricos = round(d.area_piso_total / M2_POR_PONTO_ELETRICO.valor)
+    qtd_hidraulicos = round(d.area_piso_total / M2_POR_PONTO_HIDRAULICO.valor)
+
+    # Mapeamento de servico -> (quantidade, fase)
+    servicos_base = {
+        "Alvenaria (assentamento)": (d.area_parede, "Obra Bruta"),
+        "Assentamento de Piso (Área Seca)": (d.area_piso_seco, "Acabamento"),
+        "Assentamento de Piso (Área Molhada)": (d.area_piso_molhado, "Acabamento"),
+        "Assentamento de Piso (Área Externa)": (d.area_piso_externo, "Acabamento"),
+        "Pintura": (d.area_parede, "Acabamento"),
+        "Instalação de Porta Interna": (d.portas_internas, "Acabamento"),
+        "Instalação de Porta Externa": (d.portas_externas, "Acabamento"),
+        "Instalação de Janela": (d.janelas, "Acabamento"),
+        "Execução de Cobertura": (area_cobertura, "Obra Bruta"),
+        "Estrutura (fundação/armação)": (d.area_piso_total, "Obra Bruta"),
+    }
+
+    itens = []
+    for servico, (qtd, fase) in servicos_base.items():
+        info = MAO_DE_OBRA_POR_SERVICO[servico]
+        itens.append(ItemOrcamento(
+            "Mão de Obra", servico, qtd,
+            round(obter_preco(f"mao_de_obra__{servico}", info["preco"]).valor * fator_regional, 2),
+            fase=fase
+        ))
+
+    # Split elétrico: infra (obra bruta) + acabamento
+    # Usa obter_preco() (em vez do Preco padrão direto) para respeitar
+    # preços customizados que o usuário tenha enviado pela planilha de
+    # preços (core/tabela_precos.py) -- do contrário essa customização
+    # era salva, mas nunca aplicada aqui.
+    preco_eletrico_base = obter_preco(
+        "mao_de_obra__Instalação Elétrica",
+        MAO_DE_OBRA_POR_SERVICO["Instalação Elétrica"]["preco"],
+    )
+    # 60% infra / 40% acabamento (proporção aproximada do mercado)
+    itens.append(ItemOrcamento(
+        "Mão de Obra", "Instalação Elétrica - Infraestrutura", qtd_eletricos,
+        round(preco_eletrico_base.valor * 0.60 * fator_regional, 2),
+        fase="Obra Bruta"
+    ))
+    itens.append(ItemOrcamento(
+        "Mão de Obra", "Instalação Elétrica - Acabamento", qtd_eletricos,
+        round(preco_eletrico_base.valor * 0.40 * fator_regional, 2),
+        fase="Acabamento"
+    ))
+
+    # Split hidráulico: infra (obra bruta) + acabamento
+    preco_hidraulico_base = obter_preco(
+        "mao_de_obra__Instalação Hidráulica",
+        MAO_DE_OBRA_POR_SERVICO["Instalação Hidráulica"]["preco"],
+    )
+    itens.append(ItemOrcamento(
+        "Mão de Obra", "Instalação Hidráulica - Infraestrutura", qtd_hidraulicos,
+        round(preco_hidraulico_base.valor * 0.60 * fator_regional, 2),
+        fase="Obra Bruta"
+    ))
+    itens.append(ItemOrcamento(
+        "Mão de Obra", "Instalação Hidráulica - Acabamento", qtd_hidraulicos,
+        round(preco_hidraulico_base.valor * 0.40 * fator_regional, 2),
+        fase="Acabamento"
+    ))
+
+    return itens_para_dicts(itens)
+</file>
+
+<file path="core/coeficientes.py">
+"""
+Tabela de precos e coeficientes de consumo -- fonte unica de verdade,
+versionada e rastreavel.
+
+Antes desta refatoracao (Fase 3 do roadmap), esses numeros estavam
+espalhados como constantes soltas em core/calculator.py e
+core/sinapi.py, sem nenhum registro de onde vieram nem de quando
+foram conferidos pela ultima vez. Se um preco estivesse desatualizado,
+a unica forma de descobrir era lembrar de cabeca.
+
+Cada valor agora e um objeto Preco(valor, fonte, data_ref) -- e da pra
+perguntar ao sistema, a qualquer momento, "qual e o dado mais antigo
+usado neste orcamento?" (ver data_mais_antiga(), usada no rodape do
+PDF gerado por core/proposta_pdf.py).
+
+REGRA AO ATUALIZAR UM PRECO: mude o "valor" e o "data_ref" juntos.
+Um preco novo com data antiga e uma mentira sobre a procedencia do
+dado -- pior do que nao ter o rastreamento.
+"""
+
+from dataclasses import dataclass
+
+VERSAO_TABELA = "2026.07"  # AAAA.MM da ultima revisao geral desta tabela
+
+
+@dataclass(frozen=True)
+class Preco:
+    valor: float
+    fonte: str
+    data_ref: str  # "AAAA-MM"
+
+
+def _mais_antiga(*precos_ou_dicts) -> str:
+    """Retorna a menor (mais antiga) data_ref entre varios Preco ou
+dicts de {chave: Preco}. Usado para calcular a data de referencia
+efetiva de um orcamento inteiro (ver data_mais_antiga() abaixo)."""
+    datas = []
+    for item in precos_ou_dicts:
+        if isinstance(item, Preco):
+            datas.append(item.data_ref)
+        else:
+            datas.extend(p.data_ref for p in item.values())
+    return min(datas)
+
+
+# =====================================================================
+# COEFICIENTES DE CONSUMO FISICO (quanto material por m2/ml) -- nao
+# variam por estado, so o PRECO do material varia regionalmente.
+# =====================================================================
+CONSUMO_TIJOLO_POR_M2_PAREDE = Preco(27, "SINAPI - composição alvenaria bloco cerâmico 14x19x29", "2026-06")
+CONSUMO_CIMENTO_SACO_POR_M2 = Preco(0.5, "SINAPI - composição contrapiso", "2026-06")
+CONSUMO_AREIA_M3_POR_M2 = Preco(0.5, "SINAPI - composição contrapiso", "2026-06")
+CONSUMO_BRITA_M3_POR_M2 = Preco(0.3, "SINAPI - composição concreto estrutural", "2026-06")
+CONSUMO_ACO_KG_POR_M2 = Preco(6, "SINAPI - composição estrutura/fundação", "2026-06")
+CONSUMO_ARGAMASSA_KG_POR_M2 = Preco(5, "Padrão de mercado - argamassa AC-II para assentamento de piso", "2026-06")
+CONSUMO_TINTA_L_POR_M2 = Preco(0.4, "Padrão de mercado - tinta acrílica premium, 2 demãos", "2026-06")
+M2_POR_PONTO_ELETRICO = Preco(5, "Estimativa de mercado (heurística, não é item SINAPI)", "2026-06")
+M2_POR_PONTO_HIDRAULICO = Preco(8, "Estimativa de mercado (heurística, não é item SINAPI)", "2026-06")
+MARGEM_PERDA = Preco(1.1, "Padrão de mercado para perda/quebra de material (10%)", "2026-06")
+
+# =====================================================================
+# PRECOS BASE POR PADRAO DE ACABAMENTO (R$), antes do fator regional
+# =====================================================================
+PRECOS_PISO_SECO = {
+    "Econômico": Preco(35.00, "Pesquisa de mercado - piso cerâmico econômico", "2026-06"),
+    "Médio": Preco(55.00, "Pesquisa de mercado - porcelanato padrão médio", "2026-06"),
+    "Alto Padrão": Preco(89.90, "Pesquisa de mercado - porcelanato importado/grande formato", "2026-06"),
+}
+PRECOS_PISO_MOLHADO = {
+    "Econômico": Preco(28.00, "Pesquisa de mercado - cerâmica antiderrapante econômica", "2026-06"),
+    "Médio": Preco(42.00, "Pesquisa de mercado - porcelanato antiderrapante médio", "2026-06"),
+    "Alto Padrão": Preco(68.00, "Pesquisa de mercado - porcelanato antiderrapante premium", "2026-06"),
+}
+PRECOS_PISO_EXTERNO = {
+    "Econômico": Preco(38.00, "Pesquisa de mercado - piso externo econômico", "2026-06"),
+    "Médio": Preco(58.00, "Pesquisa de mercado - piso externo antiderrapante médio", "2026-06"),
+    "Alto Padrão": Preco(95.00, "Pesquisa de mercado - piso externo premium", "2026-06"),
+}
+PRECOS_PORTA_INTERNA = {
+    "Econômico": Preco(150.00, "Pesquisa de mercado - porta lisa econômica", "2026-06"),
+    "Médio": Preco(260.00, "Pesquisa de mercado - porta semi-oca padrão médio", "2026-06"),
+    "Alto Padrão": Preco(480.00, "Pesquisa de mercado - porta maciça/design", "2026-06"),
+}
+PRECOS_PORTA_EXTERNA = {
+    "Econômico": Preco(280.00, "Pesquisa de mercado - porta externa econômica", "2026-06"),
+    "Médio": Preco(480.00, "Pesquisa de mercado - porta externa reforçada média", "2026-06"),
+    "Alto Padrão": Preco(850.00, "Pesquisa de mercado - porta externa blindada/design", "2026-06"),
+}
+PRECOS_JANELA = {
+    "Econômico": Preco(150.00, "Pesquisa de mercado - janela de alumínio econômica", "2026-06"),
+    "Médio": Preco(280.00, "Pesquisa de mercado - janela de alumínio padrão médio", "2026-06"),
+    "Alto Padrão": Preco(590.00, "Pesquisa de mercado - janela de alumínio premium/vidro duplo", "2026-06"),
+}
+
+# -----------------------------------------------------------------
+# PONTOS ELÉTRICOS E HIDRÁULICOS — split em infraestrutura + acabamento
+# (adicionado na v2 para maior granularidade de custo)
+# -----------------------------------------------------------------
+PRECOS_PONTO_ELETRICO_INFRA = {
+    "Econômico": Preco(55.00, "Pesquisa de mercado - infra elétrica econômica (tubo/fio/caixa)", "2026-06"),
+    "Médio": Preco(75.00, "Pesquisa de mercado - infra elétrica padrão médio", "2026-06"),
+    "Alto Padrão": Preco(110.00, "Pesquisa de mercado - infra elétrica premium (eletroduto, condulete)", "2026-06"),
+}
+PRECOS_PONTO_ELETRICO_ACABAMENTO = {
+    "Econômico": Preco(30.00, "Pesquisa de mercado - acabamento elétrico econômico (tomada/interruptor simples)", "2026-06"),
+    "Médio": Preco(45.00, "Pesquisa de mercado - acabamento elétrico padrão médio", "2026-06"),
+    "Alto Padrão": Preco(70.00, "Pesquisa de mercado - acabamento elétrico premium (tomada USB, dimmer, inteligente)", "2026-06"),
+}
+PRECOS_PONTO_HIDRAULICO_INFRA = {
+    "Econômico": Preco(70.00, "Pesquisa de mercado - infra hidráulica econômica (tubo/cotovelo/caixa)", "2026-06"),
+    "Médio": Preco(95.00, "Pesquisa de mercado - infra hidráulica padrão médio", "2026-06"),
+    "Alto Padrão": Preco(140.00, "Pesquisa de mercado - infra hidráulica premium (tubo PPR, registros de gaveta)", "2026-06"),
+}
+PRECOS_PONTO_HIDRAULICO_ACABAMENTO = {
+    "Econômico": Preco(40.00, "Pesquisa de mercado - acabamento hidráulico econômico (torneira simples, sifão)", "2026-06"),
+    "Médio": Preco(55.00, "Pesquisa de mercado - acabamento hidráulico padrão médio", "2026-06"),
+    "Alto Padrão": Preco(85.00, "Pesquisa de mercado - acabamento hidráulico premium (torneira monocomando, ducha)", "2026-06"),
+}
+
+PRECOS_COBERTURA = {
+    "Telhado": {
+        "Econômico": Preco(75.00, "Pesquisa de mercado - telhado cerâmico econômico", "2026-06"),
+        "Médio": Preco(110.00, "Pesquisa de mercado - telhado cerâmico padrão médio", "2026-06"),
+        "Alto Padrão": Preco(165.00, "Pesquisa de mercado - telhado com manta/isolamento premium", "2026-06"),
+    },
+    "Laje": {
+        "Econômico": Preco(95.00, "Pesquisa de mercado - laje pré-moldada econômica", "2026-06"),
+        "Médio": Preco(140.00, "Pesquisa de mercado - laje maciça padrão médio", "2026-06"),
+        "Alto Padrão": Preco(210.00, "Pesquisa de mercado - laje com impermeabilização premium", "2026-06"),
+    },
+}
+
+# =====================================================================
+# PRECOS FIXOS (nao variam por padrao de acabamento)
+# =====================================================================
+PRECO_BLOCO_CERAMICO = Preco(1.25, "Pesquisa de mercado - bloco cerâmico 14x19x29", "2026-06")
+PRECO_ARGAMASSA_KG = Preco(1.80, "Pesquisa de mercado - argamassa AC-II", "2026-06")
+PRECO_TINTA_L = Preco(22.00, "Pesquisa de mercado - tinta acrílica premium", "2026-06")
+PRECO_CIMENTO_SACO = Preco(44.00, "SINAPI/IBGE - média nacional, 1º bimestre/2026", "2026-06")
+PRECO_AREIA_M3 = Preco(120.00, "Pesquisa de mercado - areia média/grossa", "2026-06")
+PRECO_BRITA_M3 = Preco(140.00, "Pesquisa de mercado - brita nº 1", "2026-06")
+
+# =====================================================================
+# FATOR REGIONAL E ACO -- fixos para Roraima (RR), unico estado
+# atendido pelo OrçaObra neste momento.
+# =====================================================================
+FATOR_REGIONAL_RR = Preco(
+    1.070,
+    "buscadorsinapi.com.br (CEF/IBGE) - média geral de RR sobre a média nacional",
+    "2026-06",
+)
+
+PRECO_ACO_RR = Preco(
+    9.38,
+    "buscadorsinapi.com.br - insumo 32 (aço CA-50, 6,3mm, vergalhão), desonerado, RR",
+    "2026-04",
+)
+
+# =====================================================================
+# MAO DE OBRA POR SERVICO (valores medios de referencia nacional --
+# SEMPRE editaveis pelo usuario na tela antes de gerar o orcamento)
+# =====================================================================
+_FONTE_MAO_DE_OBRA = "Aproximação a partir da parcela de mão de obra das composições SINAPI (ainda não coletado item a item)"
+_DATA_MAO_DE_OBRA = "2026-06"
+
+MAO_DE_OBRA_POR_SERVICO = {
+    "Alvenaria (assentamento)":            {"preco": Preco(37.86, "SINAPI RR - composição 89290 (servente 0,43×R$23,36 + pedreiro 0,86×R$32,36), alvenaria estrutural blocos cerâmicos 14x19x29 -- vedação cerâmica equivalente não localizada, usado como melhor referência disponível", "2026-06"), "unidade": "m2_parede"},
+    "Assentamento de Piso (Área Seca)":    {"preco": Preco(22.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA), "unidade": "m2_piso_seco"},
+    "Assentamento de Piso (Área Molhada)": {"preco": Preco(32.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA), "unidade": "m2_piso_molhado"},
+    "Assentamento de Piso (Área Externa)": {"preco": Preco(26.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA), "unidade": "m2_piso_externo"},
+    "Pintura":                             {"preco": Preco(12.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA), "unidade": "m2_parede"},
+    "Instalação de Porta Interna":         {"preco": Preco(80.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA), "unidade": "unidade"},
+    "Instalação de Porta Externa":         {"preco": Preco(115.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA), "unidade": "unidade"},
+    "Instalação de Janela":                {"preco": Preco(70.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA), "unidade": "unidade"},
+    "Execução de Cobertura":               {"preco": Preco(45.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA), "unidade": "m2_cobertura"},
+    "Estrutura (fundação/armação)":        {"preco": Preco(35.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA), "unidade": "m2_area"},
+    "Instalação Elétrica":                 {"preco": Preco(60.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA), "unidade": "unidade"},
+    "Instalação Hidráulica":               {"preco": Preco(55.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA), "unidade": "unidade"},
+}
+
+
+def data_mais_antiga() -> str:
+    """Retorna a data_ref (AAAA-MM) mais antiga entre TODOS os precos e
+coeficientes desta tabela -- ou seja, o quao "desatualizado" o dado
+mais velho usado no motor de calculo esta."""
+    datas_mao_de_obra = [info["preco"].data_ref for info in MAO_DE_OBRA_POR_SERVICO.values()]
+    return min([
+        _mais_antiga(
+            CONSUMO_TIJOLO_POR_M2_PAREDE, CONSUMO_CIMENTO_SACO_POR_M2,
+            CONSUMO_AREIA_M3_POR_M2, CONSUMO_BRITA_M3_POR_M2, CONSUMO_ACO_KG_POR_M2,
+            CONSUMO_ARGAMASSA_KG_POR_M2, CONSUMO_TINTA_L_POR_M2,
+            M2_POR_PONTO_ELETRICO, M2_POR_PONTO_HIDRAULICO, MARGEM_PERDA,
+            PRECOS_PISO_SECO, PRECOS_PISO_MOLHADO, PRECOS_PISO_EXTERNO,
+            PRECOS_PORTA_INTERNA, PRECOS_PORTA_EXTERNA, PRECOS_JANELA,
+            PRECOS_PONTO_ELETRICO_INFRA, PRECOS_PONTO_ELETRICO_ACABAMENTO,
+            PRECOS_PONTO_HIDRAULICO_INFRA, PRECOS_PONTO_HIDRAULICO_ACABAMENTO,
+            PRECOS_COBERTURA["Telhado"], PRECOS_COBERTURA["Laje"],
+            PRECO_BLOCO_CERAMICO, PRECO_ARGAMASSA_KG, PRECO_TINTA_L,
+            PRECO_CIMENTO_SACO, PRECO_AREIA_M3, PRECO_BRITA_M3,
+            FATOR_REGIONAL_RR, PRECO_ACO_RR,
+        )
+    ] + datas_mao_de_obra)
+</file>
+
+<file path="core/historico.py">
+import sqlite3
+from datetime import datetime, timezone
+
+from core import paths
+
+DB_PATH = paths.DB_PATH
+
+
+def _conectar():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def inicializar_db():
+    """Cria a tabela de orcamentos, se ainda nao existir. Seguro de
+    chamar toda vez que o app sobe (CREATE TABLE IF NOT EXISTS)."""
+    conn = _conectar()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS orcamentos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            data_criacao TEXT NOT NULL,
+            nome_projeto TEXT NOT NULL,
+            estado_uf TEXT NOT NULL,
+            padrao TEXT NOT NULL,
+            tipo_cobertura TEXT NOT NULL,
+            area_piso REAL NOT NULL,
+            custo_direto REAL NOT NULL,
+            bdi_percentual REAL NOT NULL,
+            preco_venda REAL NOT NULL,
+            caminho_excel TEXT NOT NULL
+        )
+    """)
+    # Migracao: bancos criados antes do PDF de proposta nao tem essa
+    # coluna. ALTER TABLE ADD COLUMN falha se ela ja existir -- ignoramos
+    # esse erro especifico, que e o caso normal em bancos ja migrados.
+    try:
+        conn.execute("ALTER TABLE orcamentos ADD COLUMN caminho_pdf TEXT")
+    except sqlite3.OperationalError as e:
+        if "duplicate column" not in str(e).lower():
+            raise
+    conn.commit()
+    conn.close()
+
+
+def salvar_orcamento(nome_projeto, estado_uf, padrao, tipo_cobertura,
+                      area_piso, custo_direto, bdi_percentual, preco_venda,
+                      caminho_excel, caminho_pdf=None):
+    """Grava um orcamento gerado no historico. Retorna o id do registro."""
+    conn = _conectar()
+    cursor = conn.execute("""
+        INSERT INTO orcamentos (
+            data_criacao, nome_projeto, estado_uf, padrao, tipo_cobertura,
+            area_piso, custo_direto, bdi_percentual, preco_venda,
+            caminho_excel, caminho_pdf
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        datetime.now(tz=timezone.utc).strftime("%d/%m/%Y %H:%M"),
+        nome_projeto, estado_uf, padrao, tipo_cobertura,
+        area_piso, custo_direto, bdi_percentual, preco_venda,
+        caminho_excel, caminho_pdf,
+    ))
+    conn.commit()
+    novo_id = cursor.lastrowid
+    conn.close()
+    return novo_id
+
+
+def listar_orcamentos():
+    """Retorna todos os orcamentos salvos, mais recente primeiro."""
+    conn = _conectar()
+    linhas = conn.execute(
+        "SELECT * FROM orcamentos ORDER BY id DESC"
+    ).fetchall()
+    conn.close()
+    return [dict(linha) for linha in linhas]
+
+
+def excluir_orcamento(orcamento_id):
+    """Remove um registro do historico pelo id (nao apaga os arquivos
+    Excel/PDF em disco, so o registro no banco)."""
+    conn = _conectar()
+    conn.execute("DELETE FROM orcamentos WHERE id = ?", (orcamento_id,))
+    conn.commit()
+    conn.close()
+</file>
+
+<file path="core/tabela_precos.py">
+"""
+Permite ao usuario baixar um modelo de planilha com os precos atuais
+usados pelo motor de calculo, editar os que quiser, e subir de volta --
+sem precisar mexer em codigo (nem depender de mim) pra manter a tabela
+de precos atualizada quando o mercado ou o SINAPI mudar.
+
+Fora do escopo aqui: o fator regional (core/coeficientes.py) -- e um
+ajuste fixo pra Roraima, unico estado atendido pelo OrçaObra hoje, nao
+um preco de material/mao de obra em si.
+"""
+import json
+import os
+from datetime import datetime, timezone
+
+from openpyxl import Workbook, load_workbook
+from openpyxl.styles import Font
+
+from core import coeficientes as coef
+from core import paths
+
+CAMINHO_OVERRIDES = paths.OVERRIDES_PATH
+
+
+def _itens_editaveis():
+    """Lista (chave, categoria, rotulo, Preco) de todo item editavel
+    pela planilha. A "chave" e o elo estavel entre uma linha da
+    planilha e o coeficiente certo dentro de core/coeficientes.py --
+    nao depende do rotulo em portugues, que pode mudar sem quebrar o
+    vinculo."""
+    itens = []
+
+    def add(chave, categoria, rotulo, preco):
+        itens.append((chave, categoria, rotulo, preco))
+
+    add("bloco_ceramico", "Material", "Bloco Cerâmico 14x19x29", coef.PRECO_BLOCO_CERAMICO)
+    add("argamassa", "Material", "Argamassa AC-II (kg)", coef.PRECO_ARGAMASSA_KG)
+    add("tinta", "Material", "Tinta Acrílica Premium (L)", coef.PRECO_TINTA_L)
+    add("cimento", "Material", "Cimento (saco 50kg)", coef.PRECO_CIMENTO_SACO)
+    add("areia", "Material", "Areia (m³)", coef.PRECO_AREIA_M3)
+    add("brita", "Material", "Brita nº 1 (m³)", coef.PRECO_BRITA_M3)
+    add("aco", "Material", "Aço CA-50 (kg)", coef.PRECO_ACO_RR)
+
+    grupos_por_padrao = [
+        ("piso_seco", "Piso Área Seca", coef.PRECOS_PISO_SECO),
+        ("piso_molhado", "Piso Área Molhada", coef.PRECOS_PISO_MOLHADO),
+        ("piso_externo", "Piso Área Externa", coef.PRECOS_PISO_EXTERNO),
+        ("porta_interna", "Porta Interna", coef.PRECOS_PORTA_INTERNA),
+        ("porta_externa", "Porta Externa", coef.PRECOS_PORTA_EXTERNA),
+        ("janela", "Janela", coef.PRECOS_JANELA),
+        ("ponto_eletrico_infra", "Ponto Elétrico - Infraestrutura", coef.PRECOS_PONTO_ELETRICO_INFRA),
+        ("ponto_eletrico_acabamento", "Ponto Elétrico - Acabamento", coef.PRECOS_PONTO_ELETRICO_ACABAMENTO),
+        ("ponto_hidraulico_infra", "Ponto Hidráulico - Infraestrutura", coef.PRECOS_PONTO_HIDRAULICO_INFRA),
+        ("ponto_hidraulico_acabamento", "Ponto Hidráulico - Acabamento", coef.PRECOS_PONTO_HIDRAULICO_ACABAMENTO),
+    ]
+    for prefixo, rotulo_base, tabela in grupos_por_padrao:
+        for padrao, preco in tabela.items():
+            add(f"{prefixo}__{padrao}", "Material", f"{rotulo_base} ({padrao})", preco)
+
+    for tipo_cobertura, tabela in coef.PRECOS_COBERTURA.items():
+        for padrao, preco in tabela.items():
+            add(f"cobertura_{tipo_cobertura}__{padrao}", "Material",
+                f"Cobertura {tipo_cobertura} ({padrao})", preco)
+
+    for servico, info in coef.MAO_DE_OBRA_POR_SERVICO.items():
+        add(f"mao_de_obra__{servico}", "Mão de Obra", servico, info["preco"])
+
+    return itens
+
+
+def gerar_modelo_excel(output_path):
+    """Gera um .xlsx com todos os itens editaveis e o preco vigente
+    (incluindo overrides ja aplicados, se houver). O usuario baixa,
+    edita a coluna 'Preço (R$)' dos itens que quiser atualizar, e sobe
+    de volta em importar_tabela_excel()."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Tabela de Preços"
+
+    cabecalho = ["Chave (não editar)", "Categoria", "Item", "Preço (R$)", "Fonte atual", "Data de referência atual"]
+    ws.append(cabecalho)
+    for col in range(1, len(cabecalho) + 1):
+        ws.cell(row=1, column=col).font = Font(bold=True)
+
+    for chave, categoria, rotulo, preco_padrao in _itens_editaveis():
+        preco_efetivo = obter_preco(chave, preco_padrao)
+        ws.append([chave, categoria, rotulo, preco_efetivo.valor, preco_efetivo.fonte, preco_efetivo.data_ref])
+
+    ws.column_dimensions["A"].hidden = True  # so pra religar a linha ao item certo, nao e pro usuario mexer
+    for col, largura in {"B": 14, "C": 46, "D": 14, "E": 48, "F": 22}.items():
+        ws.column_dimensions[col].width = largura
+
+    wb.save(output_path)
+    return output_path
+
+
+def importar_tabela_excel(caminho_arquivo):
+    """Le uma planilha no formato de gerar_modelo_excel() (editada ou
+    nao) e retorna (precos_atualizados, avisos).
+
+    precos_atualizados: dict {chave: novo_valor} -- so as linhas cujo
+    preco realmente MUDOU em relacao ao valor vigente.
+    avisos: lista de strings sobre linhas problematicas (chave
+    desconhecida, preco vazio/invalido, item que sumiu da planilha).
+    """
+    itens_validos = {chave: preco for chave, _, _, preco in _itens_editaveis()}
+
+    wb = load_workbook(caminho_arquivo, data_only=True)
+    ws = wb.active
+
+    precos_atualizados = {}
+    avisos = []
+    chaves_vistas = set()
+
+    for linha in ws.iter_rows(min_row=2, values_only=True):
+        if not linha or linha[0] is None:
+            continue
+        chave = str(linha[0]).strip()
+        valor_bruto = linha[3] if len(linha) > 3 else None
+
+        if chave not in itens_validos:
+            avisos.append(f"Linha com chave desconhecida ignorada: '{chave}'. "
+                           f"Baixe o modelo mais recente e edite a partir dele.")
+            continue
+        chaves_vistas.add(chave)
+
+        if valor_bruto is None or valor_bruto == "":
+            avisos.append(f"'{chave}' está com o preço em branco — mantido o valor atual.")
+            continue
+        try:
+            novo_valor = float(valor_bruto)
+        except (TypeError, ValueError):
+            avisos.append(f"'{chave}' tem um valor não numérico ('{valor_bruto}') — ignorado.")
+            continue
+        if novo_valor <= 0:
+            avisos.append(f"'{chave}' tem um preço zero ou negativo ('{novo_valor}') — ignorado.")
+            continue
+
+        preco_atual = obter_preco(chave, itens_validos[chave])
+        if novo_valor != preco_atual.valor:
+            precos_atualizados[chave] = novo_valor
+
+    faltando = set(itens_validos) - chaves_vistas
+    if faltando:
+        exemplos = ", ".join(sorted(faltando)[:5]) + ("..." if len(faltando) > 5 else "")
+        avisos.append(f"{len(faltando)} item(ns) da tabela atual não apareceram na planilha enviada "
+                       f"(mantidos como estavam): {exemplos}")
+
+    return precos_atualizados, avisos
+
+
+def salvar_overrides(precos_atualizados):
+    """Persiste os precos customizados em disco (precos_customizados.json),
+    com a data do upload como nova data de referencia desses itens."""
+    hoje = datetime.now(tz=timezone.utc).date().strftime("%Y-%m-%d")
+    dados = carregar_overrides()
+    for chave, valor in precos_atualizados.items():
+        dados[chave] = {"valor": valor, "data_ref": hoje}
+    with open(CAMINHO_OVERRIDES, "w", encoding="utf-8") as f:
+        json.dump(dados, f, ensure_ascii=False, indent=2)
+    return dados
+
+
+def carregar_overrides():
+    """Le os precos customizados salvos em disco. Se o arquivo nao
+    existir ainda, retorna vazio (usa os precos padrao de
+    core/coeficientes.py em tudo)."""
+    if not os.path.exists(CAMINHO_OVERRIDES):
+        return {}
+    with open(CAMINHO_OVERRIDES, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def restaurar_padroes():
+    """Remove todos os overrides -- volta a usar os precos padrao de
+    core/coeficientes.py em tudo."""
+    if os.path.exists(CAMINHO_OVERRIDES):
+        os.remove(CAMINHO_OVERRIDES)
+
+
+def obter_preco(chave, preco_padrao):
+    """Retorna o Preco efetivo pra uma chave: o customizado (se o
+    usuario tiver subido uma planilha alterando esse item), ou o
+    padrao de core/coeficientes.py caso contrario."""
+    overrides = carregar_overrides()
+    if chave in overrides:
+        dado = overrides[chave]
+        return coef.Preco(
+            valor=dado["valor"],
+            fonte="Tabela de preços enviada pelo usuário",
+            data_ref=dado["data_ref"],
+        )
+    return preco_padrao
+</file>
+
+<file path="tests/test_calculator.py">
+"""Testes do motor de calculo (core/calculator.py).
+
+Dois tipos de caso:
+1. Contas fechadas a mao, com numeros redondos -- provam que a FORMULA
+   esta certa, nao so "deu igual a ultima vez".
+2. Um caso real completo, usado como sentinela de regressao -- se esse
+   total mudar sem voce ter alterado um preco/coeficiente de proposito
+   em core/coeficientes.py, este teste quebra e avisa.
+"""
+import pytest
+
+from core.calculator import calcular_mao_de_obra, calcular_materiais
+from core.coeficientes import (
+    CONSUMO_TIJOLO_POR_M2_PAREDE,
+    FATOR_REGIONAL_RR,
+    MARGEM_PERDA,
+    PRECO_BLOCO_CERAMICO,
+)
+from core.models import DadosExtracao
+
+
+def _item(itens, nome):
+    """Acha um item pelo nome exato do Material -- deixa os testes
+    legiveis sem depender da ordem da lista retornada."""
+    for it in itens:
+        if it["Material"] == nome:
+            return it
+    raise KeyError(f"item {nome!r} nao encontrado nos itens gerados")
+
+
+class TestCalcularMateriaisContaFechada:
+    def test_bloco_ceramico_bate_com_conta_manual(self):
+        # 10m lineares de parede x pe direito 2.8m = 28 m2 de parede
+        d = DadosExtracao(metros_parede=10)
+        itens = calcular_materiais(d, padrao="Médio")
+        item = _item(itens, "Bloco Cerâmico 14x19x29")
+
+        qtd_esperada = round(28 * CONSUMO_TIJOLO_POR_M2_PAREDE.valor * MARGEM_PERDA.valor)
+        assert item["Quantidade"] == qtd_esperada
+        # fator regional fixo de Roraima, unico estado atendido hoje
+        assert item["Preco_Unit"] == pytest.approx(PRECO_BLOCO_CERAMICO.valor * FATOR_REGIONAL_RR.valor, abs=0.001)
+
+    def test_portas_e_janelas_sao_unidade_inteira_sem_margem_de_perda(self):
+        # Nao faz sentido aplicar margem de perda de 10% em porta/janela
+        # (nao se "perde" meia porta) -- a quantidade deve ser exata.
+        d = DadosExtracao(portas_internas=3, portas_externas=1, janelas=5)
+        itens = calcular_materiais(d, padrao="Econômico")
+        assert _item(itens, "Porta Interna (Econômico)")["Quantidade"] == 3
+        assert _item(itens, "Porta Externa (Econômico)")["Quantidade"] == 1
+        assert _item(itens, "Janela (Econômico)")["Quantidade"] == 5
+
+    def test_area_piso_total_soma_as_tres_areas(self):
+        d = DadosExtracao(area_piso_seco=10, area_piso_molhado=5, area_piso_externo=3)
+        assert d.area_piso_total == 18
+
+
+class TestFaseObraBrutaAcabamento:
+    """A divisao Obra Bruta / Acabamento existe pra refletir a ordem
+    real da obra: eletrica e hidraulica embutidas tem que estar prontas
+    ANTES do acabamento comecar -- por isso viram 2 itens (nao 1)."""
+
+    def _dados(self):
+        return DadosExtracao(area_piso_seco=100, metros_parede=40, portas_internas=2, janelas=3)
+
+    def test_estrutura_e_sempre_obra_bruta(self):
+        itens = calcular_materiais(self._dados(), padrao="Médio")
+        for nome in ["Bloco Cerâmico 14x19x29", "Cimento (Fundação/Estrutura)", "Areia", "Brita", "Aço/Vergalhão"]:
+            assert _item(itens, nome)["Fase"] == "Obra Bruta", nome
+
+    def test_piso_e_pintura_sao_sempre_acabamento(self):
+        itens = calcular_materiais(self._dados(), padrao="Médio")
+        assert _item(itens, "Piso Interno - Área Seca (Médio)")["Fase"] == "Acabamento"
+        assert _item(itens, "Tinta Acrílica Premium")["Fase"] == "Acabamento"
+
+    def test_ponto_eletrico_vira_dois_itens_infra_e_acabamento(self):
+        itens = calcular_materiais(self._dados(), padrao="Médio")
+        infra = _item(itens, "Pontos Elétricos - Infraestrutura (Médio)")
+        acabamento = _item(itens, "Pontos Elétricos - Acabamento (Médio)")
+        assert infra["Fase"] == "Obra Bruta"
+        assert acabamento["Fase"] == "Acabamento"
+        # mesma quantidade de pontos nas duas partes (e o preco que se divide, nao a contagem)
+        assert infra["Quantidade"] == acabamento["Quantidade"]
+
+    def test_split_infra_60_acabamento_40_do_ponto_eletrico(self):
+        itens = calcular_materiais(self._dados(), padrao="Médio")
+        infra = _item(itens, "Pontos Elétricos - Infraestrutura (Médio)")
+        acabamento = _item(itens, "Pontos Elétricos - Acabamento (Médio)")
+        # 75 (infra) + 45 (acabamento) = 120 (preco original do ponto eletrico Medio split, antes do fator regional)
+        assert infra["Preco_Unit"] + acabamento["Preco_Unit"] == pytest.approx(
+            (75.0 + 45.0) * FATOR_REGIONAL_RR.valor, abs=0.01
+        )
+
+    def test_mao_de_obra_eletrica_tambem_divide_em_infra_e_acabamento(self):
+        itens = calcular_mao_de_obra(self._dados())
+        infra = _item(itens, "Instalação Elétrica - Infraestrutura")
+        acabamento = _item(itens, "Instalação Elétrica - Acabamento")
+        assert infra["Fase"] == "Obra Bruta"
+        assert acabamento["Fase"] == "Acabamento"
+
+    def test_dividir_ponto_em_dois_nao_muda_o_total_pago_por_ele(self):
+        # Girar o dial de 1 item pra 2 (infra+acabamento) e so reorganizacao
+        # -- a soma das duas partes tem que ser igual ao preco unico de antes.
+        itens = calcular_materiais(self._dados(), padrao="Alto Padrão")
+        infra = _item(itens, "Pontos Hidráulicos - Infraestrutura (Alto Padrão)")
+        acabamento = _item(itens, "Pontos Hidráulicos - Acabamento (Alto Padrão)")
+        # 140 (infra) + 85 (acabamento) = 225 (preco original split do Alto Padrao)
+        assert infra["Preco_Unit"] + acabamento["Preco_Unit"] == pytest.approx(
+            (140.0 + 85.0) * FATOR_REGIONAL_RR.valor, abs=0.01
+        )
+
+
+class TestCalcularMaoDeObraContaFechada:
+    def test_alvenaria_usa_area_de_parede_nao_metros_lineares(self):
+        d = DadosExtracao(metros_parede=10)  # => 28 m2 de parede
+        itens = calcular_mao_de_obra(d)
+        item = _item(itens, "Alvenaria (assentamento)")
+        assert item["Quantidade"] == pytest.approx(28.0, abs=0.001)
+
+
+class TestRegressaoCasoReal:
+    """Sentinela: caso completo com dados reais de uma planta ja
+    validada manualmente durante o desenvolvimento (Boa Vista/RR, unico
+    estado atendido). Se um preco em core/coeficientes.py mudar sem
+    intencao, este teste acusa.
+
+    NOTA: o valor de referencia foi atualizado em 2026-08 apos correcao
+    do coeficiente de cimento (de 7 sacos/m2 absurdo para 0.5 saco/m2
+    realista, conforme SINAPI)."""
+
+    def _dados(self):
+        return DadosExtracao(
+            area_piso_seco=50.60, area_piso_molhado=8.23, area_piso_externo=23.78,
+            metros_parede=60, portas_internas=8, portas_externas=2, janelas=6,
+        )
+
+    def test_total_material_medio_telhado(self):
+        materiais = calcular_materiais(self._dados(), padrao="Médio", tipo_cobertura="Telhado")
+        total = round(sum(i["Total"] for i in materiais), 2)
+        # Valor atualizado apos correcao do coeficiente de cimento (0.5 saco/m2)
+        assert total == pytest.approx(51599.95, abs=0.5)
+
+    def test_total_mao_de_obra_telhado(self):
+        mao_de_obra = calcular_mao_de_obra(self._dados(), tipo_cobertura="Telhado")
+        total = round(sum(i["Total"] for i in mao_de_obra), 2)
+        assert total == pytest.approx(21825.47, abs=0.5)
+</file>
+
+<file path="core/vision.py">
+import base64
+import json
+import os
+import tempfile
+import time
+
+import cv2
+import requests
+
+from config import DADOS_MOCK, GEMINI_API_KEYS, GEMINI_MODEL, MOCK_AI, USE_CACHE
+from core import cache
+from core.image_processing import melhorar_imagem
+
+
+class ErroExtracaoAmigavel(Exception):
+    """
+    Exceção personalizada para erros de extração da planta.
+    Permite exibir mensagens amigáveis ao usuário
+    sem expor detalhes técnicos diretamente.
+    """
+
+    def __init__(self, mensagem, detalhe_tecnico=None):
+        super().__init__(mensagem)
+        self.mensagem_amigavel = mensagem
+        self.detalhe_tecnico = detalhe_tecnico
+
+
+CAMPOS_AGREGADOS = (
+    "area_piso_seco", "area_piso_molhado", "area_piso_externo",
+    "metros_parede", "portas_internas", "portas_externas", "janelas",
+)
+
+
+def _redimensionar_para_max(imagem_cv, max_dim=1024):
+    """Reduz a imagem para que o lado maior tenha no máximo max_dim pixels.
+    Isso diminui o payload da API, acelera o upload e evita estourar
+    limites de tamanho do Gemini sem perder legibilidade de plantas."""
+    altura, largura = imagem_cv.shape[:2]
+    if max(altura, largura) <= max_dim:
+        return imagem_cv
+    escala = max_dim / max(altura, largura)
+    nova_largura = int(largura * escala)
+    nova_altura = int(altura * escala)
+    return cv2.resize(imagem_cv, (nova_largura, nova_altura), interpolation=cv2.INTER_AREA)
+
+
+def _preparar_imagem(caminho_arquivo):
+    """
+    Sempre devolve uma imagem JPEG otimizada para enviar ao Gemini.
+    PDFs e imagens passam pelo mesmo pré-processamento.
+    """
+
+    if caminho_arquivo.lower().endswith(".pdf"):
+        import fitz
+
+        with fitz.open(caminho_arquivo) as doc:
+            pagina = doc[0]
+            pix = pagina.get_pixmap(dpi=200)
+
+        with tempfile.NamedTemporaryFile(
+            suffix=".jpg",
+            delete=False
+        ) as temp:
+            imagem_temporaria = temp.name
+
+        try:
+            pix.save(imagem_temporaria)
+            imagem = melhorar_imagem(imagem_temporaria)
+        finally:
+            if os.path.exists(imagem_temporaria):
+                os.remove(imagem_temporaria)
+
+    else:
+        imagem = melhorar_imagem(caminho_arquivo)
+
+    # Reduz dimensão e comprime para diminuir payload da API
+    imagem = _redimensionar_para_max(imagem, max_dim=1024)
+    _, buffer = cv2.imencode(".jpg", imagem, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
+
+    return buffer.tobytes()
+
+
+def _montar_prompt():
+    return """
+    Analise esta imagem de planta baixa de engenharia/arquitetura.
+
+    Antes de responder, raciocine internamente assim, COMODO POR
+    COMODO (nao inclua esse raciocinio na resposta final, so o JSON
+    agregado no final):
+    0. Quando a planta não possuir quadro de áreas:
+        (a) utilize as cotas lineares disponíveis;
+        (b) identifique largura e comprimento de cada ambiente;
+        (c) calcule a área aproximada;
+        (d) informe confiança como "media";
+        (f) nunca invente área como se fosse leitura direta.
+    1. Liste cada comodo visivel na planta (sala, quarto, cozinha,
+       banheiro, area de servico, varanda, garagem, etc).
+    2. Para cada comodo, classifique o tipo de piso em uma das 3
+       categorias:
+       - "seco": ambientes sociais/intimos comuns (sala, quarto,
+         cozinha, corredor, escritorio) -- normalmente porcelanato.
+       - "molhado": ambientes com ponto de agua e caimento (banheiro,
+         area de servico, lavabo) -- normalmente ceramica.
+       - "externo": ambientes descobertos ou semi-descobertos (varanda,
+         garagem, area externa, quintal coberto) -- piso antiderrapante.
+    3. Determine a area (m2) de cada comodo. Existem DOIS jeitos
+       possiveis de chegar nesse numero, e voce deve saber qual deles
+       usou em cada comodo (isso importa para a etapa de confianca
+       mais abaixo):
+       (a) A planta tem uma cota de AREA ja pronta e escrita perto do
+           comodo (ex: um texto "A: 16,56 m²" ou "16,56 m²" dentro ou
+           proximo do comodo, geralmente vindo de um "Quadro de Areas").
+           Nesse caso, USE esse numero diretamente.
+       (b) A planta NAO tem area pronta pra aquele comodo -- so tem
+           cotas de comprimento nas bordas (ex: "3,85", "4,30" nas
+           réguas de medida externas). Nesse caso, voce PRECISA
+           multiplicar largura x altura do comodo pra estimar a area,
+           o que e uma estimativa por calculo, nao uma leitura direta.
+    4. **PAREDES (instrução crítica -- leia com atenção):**
+       Percorra o perimetro de cada comodo e some os comprimentos
+       lineares de TODOS os segmentos de parede. **IMPORTANTE:**
+       - Uma parede COMPARTILHADA entre dois comodos (ex: parede entre
+         sala e cozinha) deve ser contada APENAS UMA VEZ no total.
+       - Paredes EXTERNAS (fachada) contam sempre.
+       - Paredes INTERNAS (divisórias) contam uma vez cada, mesmo que
+         sejam usadas por dois cômodos adjacentes.
+       - NÃO subestime: o total de metros de parede tipicamente é
+         0,55 a 1,10 vezes a área total de piso. Se sua soma der menos
+         que 0,55x a área total, revise -- provavelmente esqueceu de
+         contar paredes internas ou externas.
+       - Para cada parede, use o comprimento linear (nao a area).
+    5. Para cada porta da planta (geralmente um arco de 1/4 de circulo),
+       classifique se ela e:
+       - "interna": conecta dois ambientes internos da casa.
+       - "externa": conecta um ambiente interno a area externa/rua
+         (porta de entrada, porta de fundos, porta pra varanda/quintal).
+    6. Conte, uma por uma, todas as janelas da planta (linhas paralelas
+       na espessura de parede externa). Janelas sao sempre tratadas
+       como elemento externo, nao precisam de classificacao adicional.
+
+    Depois de percorrer todos os comodos, SOME os resultados nas
+    seguintes 7 variaveis agregadas (essas sao as unicas que vao pro
+    JSON final):
+    - area_piso_seco: soma da area de todos os comodos "seco"
+    - area_piso_molhado: soma da area de todos os comodos "molhado"
+    - area_piso_externo: soma da area de todos os comodos "externo"
+    - metros_parede: soma de todos os segmentos de parede (passo 4)
+    - portas_internas: contagem total de portas internas (passo 5)
+    - portas_externas: contagem total de portas externas (passo 5)
+    - janelas: contagem total de janelas (passo 6)
+
+    Para CADA uma dessas 7 variaveis agregadas, avalie sua propria
+    confianca de acordo com esta regra objetiva (nao subjetiva) --
+    PRESTE ATENCAO ESPECIAL na diferenca entre "alta" e "media" pras
+    3 variaveis de area, que e uma fonte comum de erro:
+    - "alta": TODOS os comodos que compoem essa soma tinham uma cota
+      de AREA ja pronta e escrita na planta (metodo 3a acima) -- voce
+      LEU o numero, nao calculou ele. Se a planta tem um "Quadro de
+      Areas" com area por comodo, isso conta como alta. Pra
+      metros_parede, portas e janelas, "alta" significa que havia cota
+      de comprimento/contagem explicita e inequivoca cobrindo tudo.
+    - "media": PELO MENOS UM comodo que compoe essa soma NAO tinha area
+      pronta, e voce teve que calcular multiplicando cotas lineares
+      (metodo 3b), OU voce contou/mediu visualmente sem cota de texto
+      (ex: contando arcos de porta, ou somando segmentos de parede a
+      partir do desenho). Isso vale MESMO que voce tenha usado numeros
+      reais da planta (cotas lineares) -- calcular a partir deles ainda
+      e uma estimativa, nao uma leitura direta, entao NUNCA classifique
+      como "alta" so porque usou algum numero da planta.
+    - "baixa": a planta estava com baixa qualidade/resolucao, elementos
+      sobrepostos, cortados, ou ambiguos nessa categoria especifica, e
+      voce teve que chutar ou inferir sem base visual clara (isso
+      inclui casos onde a classificacao seco/molhado/externo ou
+      interna/externa de um elemento ficou incerta).
+    Para cada campo, inclua tambem um "motivo" de no maximo 12 palavras
+    explicando objetivamente o que embasou a confianca, e deixando
+    claro se foi LEITURA direta ou CALCULO/estimativa (ex: "cota de
+    area de 12m2 escrita no banheiro" para alta, ou "area calculada
+    multiplicando cotas lineares de 3,85 x 2,70" para media).
+
+    Retorne estritamente um JSON valido com a estrutura abaixo, sem
+    textos adicionais, explicacoes ou marcacoes de markdown -- so o JSON:
+    {
+        "area_piso_seco": <float>,
+        "area_piso_molhado": <float>,
+        "area_piso_externo": <float>,
+        "metros_parede": <float>,
+        "portas_internas": <int>,
+        "portas_externas": <int>,
+        "janelas": <int>,
+        "confianca": {
+            "area_piso_seco": {"nivel": "alta|media|baixa", "motivo": "<string curta>"},
+            "area_piso_molhado": {"nivel": "alta|media|baixa", "motivo": "<string curta>"},
+            "area_piso_externo": {"nivel": "alta|media|baixa", "motivo": "<string curta>"},
+            "metros_parede": {"nivel": "alta|media|baixa", "motivo": "<string curta>"},
+            "portas_internas": {"nivel": "alta|media|baixa", "motivo": "<string curta>"},
+            "portas_externas": {"nivel": "alta|media|baixa", "motivo": "<string curta>"},
+            "janelas": {"nivel": "alta|media|baixa", "motivo": "<string curta>"}
+        }
+    }
+    """
+
+
+def _chamar_gemini_com_uma_chave(chave, prompt, img_base64):
+    """Faz a chamada a API com UMA chave especifica, com ate 3
+    tentativas em caso de erro temporario (503 UNAVAILABLE).
+
+    Retorna (resultado_json, None) em caso de sucesso, ou
+    (None, info_erro) em caso de falha -- onde info_erro e um dict com
+    "status" (categoria do erro, ex: RESOURCE_EXHAUSTED) e "bruto"
+    (resposta completa da API, pra diagnostico).
+    """
+    url = (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        f"{GEMINI_MODEL}:generateContent?key={chave}"
+    )
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {"text": prompt},
+                    {"inlineData": {"mimeType": "image/jpeg", "data": img_base64}},
+                ]
+            }
+        ],
+        "generationConfig": {"responseMimeType": "application/json"},
+    }
+    headers = {"Content-Type": "application/json"}
+
+    max_tentativas = 3
+    espera_segundos = 5
+
+    for tentativa in range(1, max_tentativas + 1):
+        try:
+            resposta = requests.post(url, json=payload, headers=headers, timeout=60)
+            resultado = resposta.json()
+        except requests.exceptions.RequestException as e:
+            if tentativa < max_tentativas:
+                time.sleep(espera_segundos)
+                continue
+            return None, {"status": "ERRO_DE_REDE", "bruto": str(e)}
+        except ValueError:
+            if tentativa < max_tentativas:
+                time.sleep(espera_segundos)
+                continue
+            return None, {"status": "RESPOSTA_INVALIDA", "bruto": resposta.text[:500] if 'resposta' in dir() else ""}
+
+        if "candidates" in resultado:
+            return resultado, None
+
+        status_erro = resultado.get("error", {}).get("status", "")
+
+        if status_erro == "UNAVAILABLE" and tentativa < max_tentativas:
+            time.sleep(espera_segundos)
+            continue
+
+        return None, {"status": status_erro, "bruto": resultado}
+
+    return None, {"status": "UNAVAILABLE", "bruto": resultado}
+
+
+def extrair_dados_da_planta(caminho_arquivo):
+    # 1. Modo mock: nao gasta nenhuma chamada de API.
+    if MOCK_AI:
+        return DADOS_MOCK
+
+    # 2. Cache local: a mesma planta (mesmo arquivo) ja testada antes
+    #    nao dispara uma nova chamada de API.
+    if USE_CACHE:
+        resultado_em_cache = cache.buscar_cache(caminho_arquivo)
+        if resultado_em_cache is not None:
+            return resultado_em_cache
+
+    if not GEMINI_API_KEYS:
+        raise ErroExtracaoAmigavel(
+            "Nenhuma chave da API do Gemini está configurada. Defina "
+            "GEMINI_API_KEY (ou GEMINI_API_KEYS, para várias chaves) no "
+            "arquivo .env, ou ative MOCK_AI=true para testar a interface "
+            "sem consumir a API."
+        )
+
+    img_bytes = _preparar_imagem(caminho_arquivo)
+    img_base64 = base64.b64encode(img_bytes).decode("utf-8")
+    prompt = _montar_prompt()
+
+    erros_por_chave = []
+    for indice, chave in enumerate(GEMINI_API_KEYS, start=1):
+        resultado, erro = _chamar_gemini_com_uma_chave(chave, prompt, img_base64)
+
+        if resultado is not None:
+            break
+
+        erros_por_chave.append(f"Chave {indice}: {erro['status'] or 'erro desconhecido'}")
+        continue
+    else:
+        algum_erro_de_cota = any("RESOURCE_EXHAUSTED" in e for e in erros_por_chave)
+        if algum_erro_de_cota:
+            mensagem = (
+                "A cota de uso da IA foi atingida em todas as chaves configuradas "
+                "no momento. Tente novamente em alguns minutos, ou adicione outra "
+                "chave em GEMINI_API_KEYS no arquivo .env."
+            )
+        else:
+            mensagem = (
+                "Não foi possível analisar a planta agora — a IA não respondeu "
+                "corretamente. Tente novamente em instantes; se o problema "
+                "persistir, confira se a chave da API ainda é válida."
+            )
+        raise ErroExtracaoAmigavel(mensagem, detalhe_tecnico="; ".join(erros_por_chave))
+
+    texto_resposta = resultado["candidates"][0]["content"]["parts"][0]["text"]
+    texto_limpo = texto_resposta.replace("```json", "").replace("```", "").strip()
+
+    try:
+        dados = json.loads(texto_limpo)
+    except json.JSONDecodeError as e:
+        raise ErroExtracaoAmigavel(
+            "A IA retornou uma resposta em formato inesperado ao analisar essa "
+            "planta. Tente novamente — se persistir, tente com uma imagem de "
+            "melhor qualidade ou outro arquivo.",
+            detalhe_tecnico=f"JSONDecodeError: {e}. Texto bruto: {texto_resposta[:500]}",
+        )
+
+    # Defesa: garante que todos os 7 campos agregados existam, mesmo se
+    # o modelo esquecer algum (preenche com 0).
+    # ------------------------------------------------------------------
+    # FALLBACK: corrige metros de parede se a IA subestimou
+    # ------------------------------------------------------------------
+    area_total = (
+        dados.get("area_piso_seco", 0)
+        + dados.get("area_piso_molhado", 0)
+        + dados.get("area_piso_externo", 0)
+    )
+    mp = dados.get("metros_parede", 0)
+    if area_total > 0 and mp < area_total * 0.55:
+        sugestao = round(area_total * 0.75, 2)
+        dados["metros_parede"] = sugestao
+        if "confianca" not in dados:
+            dados["confianca"] = {}
+        dados["confianca"]["metros_parede"] = {
+            "nivel": "baixa",
+            "motivo": f"IA subestimou ({mp:.0f}m); corrigido automaticamente para {sugestao:.0f}m"
+        }
+    # ------------------------------------------------------------------
+
+    for campo in CAMPOS_AGREGADOS:
+        dados.setdefault(campo, 0)
+
+    if "confianca" not in dados:
+        dados["confianca"] = {}
+    for campo in CAMPOS_AGREGADOS:
+        dados["confianca"].setdefault(
+            campo, {"nivel": "media", "motivo": "Confiança não informada pela IA"}
+        )
+
+    if USE_CACHE:
+        cache.salvar_cache(caminho_arquivo, dados)
+
+    return dados
+</file>
+
+<file path="core/reporter.py">
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
+
+
+def gerar_excel(dados_orcamento, output_path, bdi_percentual=0):
+    xlsx_path = output_path.replace(".csv", ".xlsx")
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Orçamento"
+
+    fonte_padrao = "Arial"
+    azul_cabecalho = "1F4E78"
+    azul_secao = "4472A8"
+    verde_venda = "2E7D32"
+    cinza_claro = "F2F2F2"
+
+    # --- CABECALHO PRINCIPAL ---
+    # Aplica fill em TODAS as celulas ANTES do merge (openpyxl exige isso)
+    fill_cabecalho = PatternFill(start_color=azul_cabecalho, end_color=azul_cabecalho, fill_type="solid")
+    font_cabecalho = Font(name=fonte_padrao, size=14, bold=True, color="FFFFFF")
+    align_cabecalho = Alignment(horizontal="center", vertical="center")
+    for col in range(1, 5):
+        c = ws.cell(row=1, column=col)
+        c.fill = fill_cabecalho
+        c.font = font_cabecalho
+        c.alignment = align_cabecalho
+    ws.merge_cells("A1:D1")
+    ws["A1"] = "OrçaObra AI — Orçamento Estimado de Obra"
+    ws.row_dimensions[1].height = 26
+
+    # --- CABECALHO DA TABELA ---
+    linha_cabecalho = 3
+    colunas = ["Item", "Quantidade", "Preço Unitário (R$)", "Total (R$)"]
+    fill_header = PatternFill(start_color=azul_cabecalho, end_color=azul_cabecalho, fill_type="solid")
+    font_header = Font(name=fonte_padrao, size=11, bold=True, color="FFFFFF")
+    align_header = Alignment(horizontal="center", vertical="center")
+    for col_idx, titulo in enumerate(colunas, start=1):
+        celula = ws.cell(row=linha_cabecalho, column=col_idx, value=titulo)
+        celula.font = font_header
+        celula.fill = fill_header
+        celula.alignment = align_header
+
+    borda_fina = Border(
+        left=Side(style="thin", color="CCCCCC"),
+        right=Side(style="thin", color="CCCCCC"),
+        top=Side(style="thin", color="CCCCCC"),
+        bottom=Side(style="thin", color="CCCCCC"),
+    )
+
+    grupos = {}
+    ordem_grupos = []
+    for item in dados_orcamento:
+        tipo = item.get("Tipo", "Itens")
+        if tipo not in grupos:
+            grupos[tipo] = []
+            ordem_grupos.append(tipo)
+        grupos[tipo].append(item)
+
+    linha_atual = linha_cabecalho + 1
+    linhas_subtotal = []
+
+    for tipo in ordem_grupos:
+        itens_grupo = grupos[tipo]
+
+        # --- TITULO DA SECAO (ex: MATERIAL) ---
+        # Aplica fill em TODAS as celulas ANTES do merge
+        fill_secao = PatternFill(start_color=azul_secao, end_color=azul_secao, fill_type="solid")
+        font_secao = Font(name=fonte_padrao, size=11, bold=True, color="FFFFFF")
+        align_secao = Alignment(horizontal="left", vertical="center", indent=1)
+        for col in range(1, 5):
+            c = ws.cell(row=linha_atual, column=col)
+            c.fill = fill_secao
+            c.font = font_secao
+            c.alignment = align_secao
+        ws.merge_cells(f"A{linha_atual}:D{linha_atual}")
+        ws.cell(row=linha_atual, column=1, value=tipo.upper())
+        linha_atual += 1
+
+        _primeira_linha_grupo = linha_atual
+        for i, item in enumerate(itens_grupo):
+            zebra = cinza_claro if i % 2 == 1 else "FFFFFF"
+            fill_zebra = PatternFill(start_color=zebra, end_color=zebra, fill_type="solid")
+
+            total_calculado = round(item["Quantidade"] * item["Preco_Unit"], 2)
+
+            ws.cell(row=linha_atual, column=1, value=item["Material"])
+            ws.cell(row=linha_atual, column=2, value=item["Quantidade"])
+            ws.cell(row=linha_atual, column=3, value=item["Preco_Unit"])
+            ws.cell(row=linha_atual, column=4, value=total_calculado)
+
+            for col_idx in range(1, 5):
+                celula = ws.cell(row=linha_atual, column=col_idx)
+                celula.font = Font(name=fonte_padrao, size=10, color="000000")
+                celula.fill = fill_zebra
+                celula.border = borda_fina
+                if col_idx in (3, 4):
+                    celula.number_format = 'R$ #,##0.00'
+                if col_idx == 2:
+                    celula.alignment = Alignment(horizontal="center")
+
+            linha_atual += 1
+
+        _ultima_linha_grupo = linha_atual - 1
+
+        subtotal_valor = round(sum(
+            it["Quantidade"] * it["Preco_Unit"] for it in itens_grupo
+        ), 2)
+
+        # --- SUBTOTAL ---
+        ws.merge_cells(f"A{linha_atual}:C{linha_atual}")
+        font_sub = Font(name=fonte_padrao, size=10, bold=True, italic=True, color="000000")
+        align_sub = Alignment(horizontal="right", vertical="center")
+        for col in range(1, 4):
+            c = ws.cell(row=linha_atual, column=col)
+            c.font = font_sub
+            c.alignment = align_sub
+        ws.cell(row=linha_atual, column=1, value=f"Subtotal — {tipo}")
+        celula_subtotal = ws.cell(row=linha_atual, column=4, value=subtotal_valor)
+        celula_subtotal.font = Font(name=fonte_padrao, size=10, bold=True, color="000000")
+        celula_subtotal.number_format = 'R$ #,##0.00'
+        linhas_subtotal.append(linha_atual)
+        linha_atual += 2
+
+    # --- CUSTO DIRETO ---
+    linha_custo_direto = linha_atual
+    label_custo = "CUSTO DIRETO" if bdi_percentual else "TOTAL ESTIMADO"
+    # Aplica fill em TODAS as celulas ANTES do merge
+    fill_custo = PatternFill(start_color=azul_cabecalho, end_color=azul_cabecalho, fill_type="solid")
+    font_custo = Font(name=fonte_padrao, size=12, bold=True, color="FFFFFF")
+    align_custo = Alignment(horizontal="right", vertical="center")
+    for col in range(1, 4):
+        c = ws.cell(row=linha_custo_direto, column=col)
+        c.fill = fill_custo
+        c.font = font_custo
+        c.alignment = align_custo
+    ws.merge_cells(f"A{linha_custo_direto}:C{linha_custo_direto}")
+    ws.cell(row=linha_custo_direto, column=1, value=label_custo)
+
+    custo_direto_valor = 0.0
+    for tipo in ordem_grupos:
+        custo_direto_valor += round(sum(
+            it["Quantidade"] * it["Preco_Unit"] for it in grupos[tipo]
+        ), 2)
+
+    celula_custo_direto = ws.cell(row=linha_custo_direto, column=4, value=custo_direto_valor)
+    celula_custo_direto.font = font_custo
+    celula_custo_direto.fill = fill_custo
+    celula_custo_direto.number_format = 'R$ #,##0.00'
+    ws.row_dimensions[linha_custo_direto].height = 22
+
+    linha_preco_venda = linha_custo_direto
+
+    if bdi_percentual:
+        # --- BDI ---
+        linha_bdi = linha_custo_direto + 1
+        ws.merge_cells(f"A{linha_bdi}:C{linha_bdi}")
+        font_bdi = Font(name=fonte_padrao, size=10, italic=True, color="000000")
+        align_bdi = Alignment(horizontal="right", vertical="center")
+        for col in range(1, 4):
+            c = ws.cell(row=linha_bdi, column=col)
+            c.font = font_bdi
+            c.alignment = align_bdi
+        ws.cell(row=linha_bdi, column=1,
+                value=f"BDI ({bdi_percentual:g}%) — administração, lucro, impostos e imprevistos")
+        bdi_valor = round(custo_direto_valor * bdi_percentual / 100, 2)
+        celula_bdi_valor = ws.cell(row=linha_bdi, column=4, value=bdi_valor)
+        celula_bdi_valor.font = Font(name=fonte_padrao, size=10, color="000000")
+        celula_bdi_valor.number_format = 'R$ #,##0.00'
+
+        # --- PRECO DE VENDA ---
+        linha_preco_venda = linha_bdi + 1
+        # Aplica fill em TODAS as celulas ANTES do merge
+        fill_venda = PatternFill(start_color=verde_venda, end_color=verde_venda, fill_type="solid")
+        font_venda = Font(name=fonte_padrao, size=12, bold=True, color="FFFFFF")
+        align_venda = Alignment(horizontal="right", vertical="center")
+        for col in range(1, 4):
+            c = ws.cell(row=linha_preco_venda, column=col)
+            c.fill = fill_venda
+            c.font = font_venda
+            c.alignment = align_venda
+        ws.merge_cells(f"A{linha_preco_venda}:C{linha_preco_venda}")
+        ws.cell(row=linha_preco_venda, column=1, value="PREÇO DE VENDA")
+
+        preco_venda_valor = round(custo_direto_valor + bdi_valor, 2)
+        celula_venda_valor = ws.cell(row=linha_preco_venda, column=4, value=preco_venda_valor)
+        celula_venda_valor.font = font_venda
+        celula_venda_valor.fill = fill_venda
+        celula_venda_valor.number_format = 'R$ #,##0.00'
+        ws.row_dimensions[linha_preco_venda].height = 22
+
+    # --- LARGURAS ---
+    larguras = {1: 34, 2: 14, 3: 20, 4: 18}
+    for col_idx, largura in larguras.items():
+        ws.column_dimensions[get_column_letter(col_idx)].width = largura
+
+    # --- RODAPE ---
+    linha_rodape = linha_preco_venda + 2
+    ws.merge_cells(f"A{linha_rodape}:D{linha_rodape}")
+    font_rodape = Font(name=fonte_padrao, size=8, italic=True, color="666666")
+    align_rodape = Alignment(horizontal="left", vertical="center")
+    for col in range(1, 5):
+        c = ws.cell(row=linha_rodape, column=col)
+        c.font = font_rodape
+        c.alignment = align_rodape
+    ws.cell(row=linha_rodape, column=1,
+            value="Nota: os totais são calculados automaticamente (Quantidade x Preço Unitário).")
+
+    wb.save(xlsx_path)
+    return xlsx_path
+</file>
+
+<file path=".gitignore">
+.env
+.cache_ia/
+historico.db
+orcamentos_salvos/
+perfil_empresa.json
+perfil_empresa/
+precos_customizados.json
+venv/
+.venv*/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+coverage.xml
+data/
+*.pyc
+temp_planta.*
+Orcamento_Gerado.csv
+Orcamento_Gerado.xlsx
+# Scripts temporários de manutenção
+aplicar_*.py
+corrigir_*.py
+limpar_*.py
+remover_*.py
+adicionar_*.py
+
+# Logs (gerados por core/logger.py em tempo de execução)
+logs/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+</file>
+
+<file path="app.py">
+import os
+
+import streamlit as st
+
+from core import orcamento_service, paths, tabela_precos
+from core.calculator import calcular_mao_de_obra, calcular_materiais
+from core.historico import (
+    excluir_orcamento,
+    inicializar_db,
+    listar_orcamentos,
+    salvar_orcamento,
+)
+from core.models import DadosExtracao
+from core.perfil_empresa import carregar_perfil, salvar_perfil
+from core.proposta_pdf import gerar_pdf_proposta
+from core.reporter import gerar_excel
+from core.validacao import validar_dados
+from core.vision import ErroExtracaoAmigavel, extrair_dados_da_planta
+
+st.set_page_config(page_title="OrçaObra AI", page_icon="🏗️", layout="centered")
+
+inicializar_db()
+
+paths.garantir_diretorios()
+PASTA_ORCAMENTOS = paths.PASTA_ORCAMENTOS
+PASTA_PERFIL = paths.PASTA_PERFIL
+
+CONFIANCA_VISUAL = {
+    "alta": {"emoji": "🟢", "label": "Confiança alta"},
+    "media": {"emoji": "🟡", "label": "Confiança média"},
+    "baixa": {"emoji": "🔴", "label": "Confiança baixa — revise"},
+}
+
+CAMPOS_EXTRACAO = (
+    "area_piso_seco", "area_piso_molhado", "area_piso_externo",
+    "metros_parede", "portas_internas", "portas_externas", "janelas",
+)
+
+
+def badge_confianca(campo, confianca):
+    info = (confianca or {}).get(campo, {"nivel": "media", "motivo": ""})
+    nivel = info.get("nivel", "media")
+    visual = CONFIANCA_VISUAL.get(nivel, CONFIANCA_VISUAL["media"])
+    return visual, info.get("motivo", "")
+
+
+def mostrar_badge(campo, confianca):
+    visual, motivo = badge_confianca(campo, confianca)
+    st.caption(f"{visual['emoji']} {visual['label']}" + (f" — {motivo}" if motivo else ""))
+
+
+def validar_proporcao_parede(area_piso_total, metros_parede):
+    avisos = []
+    sugestao = None
+    if area_piso_total <= 0 or metros_parede <= 0:
+        return avisos, sugestao
+
+    razao = metros_parede / area_piso_total
+    minimo_razao = 0.55
+    maximo_razao = 1.10
+    minimo_esperado = round(area_piso_total * minimo_razao)
+    maximo_esperado = round(area_piso_total * maximo_razao)
+    sugestao_tipica = round(area_piso_total * 0.75)
+
+    if razao < minimo_razao:
+        sugestao = sugestao_tipica
+        avisos.append(
+            f"🧱 ATENÇÃO: Metros de parede SUBESTIMADOS\n\n"
+            f"A IA leu **{metros_parede:.0f} m** de parede para **{area_piso_total:.0f} m²** de área. "
+            f"O mínimo esperado é **{minimo_esperado} m** (máximo: {maximo_esperado} m).\n\n"
+            f"👉 Sugestão: ajuste para ~{sugestao_tipica} m de parede, que é o típico para uma casa "
+            f"de {area_piso_total:.0f} m² com quartos, banheiros, sala e cozinha.\n\n"
+            f"_Se não ajustar, o orçamento ficará R$ {round((sugestao_tipica - metros_parede) * 2.8 * 40):,} "
+            f"a R$ {round((sugestao_tipica - metros_parede) * 2.8 * 55):,} mais barato do que deveria "
+            f"(impacto em blocos, tinta e mão de obra)._"
+        )
+    elif razao > maximo_razao:
+        avisos.append(
+            f"🧱 ATENÇÃO: Metros de parede SUPESTIMADOS\n\n"
+            f"A IA leu **{metros_parede:.0f} m** de parede para **{area_piso_total:.0f} m²** de área. "
+            f"O máximo esperado é **{maximo_esperado} m**. Confira se nenhuma parede foi contada duas vezes."
+        )
+
+    return avisos, sugestao
+
+
+st.title("🏗️ OrçaObra AI")
+st.subheader("Transforme plantas baixas em orçamentos em segundos")
+
+perfil = carregar_perfil()
+
+with st.expander("⚙️ Configurações da Proposta (nome, logo, contato)", expanded=not perfil["nome_empresa"]):
+    st.caption("Esses dados aparecem no cabeçalho do PDF enviado ao cliente. Preencha uma vez — fica salvo.")
+
+    col_p1, col_p2 = st.columns(2)
+    with col_p1:
+        nome_empresa_input = st.text_input(
+            "Nome da Empresa / Profissional",
+            value=perfil["nome_empresa"], placeholder="Ex.: João Silva Engenharia",
+            key="input_nome_empresa"
+        )
+        registro_input = st.text_input(
+            "Registro (CREA/CAU)", value=perfil["registro"], placeholder="Ex.: CREA-CE 123456",
+            key="input_registro"
+        )
+    with col_p2:
+        contato_input = st.text_input(
+            "Contato", value=perfil["contato"], placeholder="Ex.: (85) 99999-9999",
+            key="input_contato"
+        )
+        logo_upload = st.file_uploader("Logo (opcional)", type=["png", "jpg", "jpeg"], key="upload_logo")
+
+    if perfil["caminho_logo"] and os.path.exists(perfil["caminho_logo"]) and not logo_upload:
+        st.image(perfil["caminho_logo"], width=100, caption="Logo atual")
+
+    if st.button("💾 Salvar Configurações", key="btn_salvar_perfil"):
+        caminho_logo_final = perfil["caminho_logo"]
+        if logo_upload is not None:
+            extensao = os.path.splitext(logo_upload.name)[1]
+            caminho_logo_final = os.path.join(PASTA_PERFIL, f"logo{extensao}")
+            with open(caminho_logo_final, "wb") as f:
+                f.write(logo_upload.getbuffer())
+
+        perfil = salvar_perfil(
+            nome_empresa=nome_empresa_input,
+            contato=contato_input,
+            registro=registro_input,
+            caminho_logo=caminho_logo_final,
+        )
+        st.success("Configurações salvas!")
+        st.rerun()
+
+st.write("---")
+
+with st.expander("💲 Personalizar Tabela de Preços (avançado)"):
+    st.caption(
+        "Os preços de material e mão de obra usados no cálculo vêm de uma tabela interna "
+        "(SINAPI/IBGE e pesquisa de mercado), que fica desatualizada com o tempo. "
+        "Baixe o modelo, edite os preços que quiser na coluna **Preço (R$)** e envie de volta "
+        "— o app passa a usar seus valores em todos os orçamentos seguintes."
+    )
+
+    caminho_modelo = os.path.join(PASTA_PERFIL, "modelo_tabela_precos.xlsx")
+    tabela_precos.gerar_modelo_excel(caminho_modelo)
+    with open(caminho_modelo, "rb") as f:
+        st.download_button(
+            "📥 Baixar modelo com os preços atuais",
+            data=f.read(),
+            file_name="tabela_precos_orcaobra.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key="btn_download_modelo"
+        )
+
+    arquivo_precos = st.file_uploader(
+        "📤 Enviar planilha de preços atualizada", type=["xlsx"], key="upload_tabela_precos"
+    )
+    if arquivo_precos is not None:
+        caminho_temp_precos = os.path.join(PASTA_PERFIL, "temp_tabela_precos.xlsx")
+        with open(caminho_temp_precos, "wb") as f:
+            f.write(arquivo_precos.getbuffer())
+
+        atualizados, avisos = tabela_precos.importar_tabela_excel(caminho_temp_precos)
+
+        for aviso in avisos:
+            st.warning(aviso)
+
+        if atualizados:
+            st.info(f"{len(atualizados)} preço(s) serão atualizados.")
+            if st.button("✅ Aplicar estes novos preços", key="btn_aplicar_precos"):
+                tabela_precos.salvar_overrides(atualizados)
+                st.success("Tabela de preços atualizada! Ela já vale para os próximos orçamentos.")
+                st.rerun()
+        elif not avisos:
+            st.info("Nenhum preço foi alterado em relação ao que já está em uso.")
+
+    overrides_atuais = tabela_precos.carregar_overrides()
+    if overrides_atuais:
+        st.caption(f"📌 {len(overrides_atuais)} preço(s) customizado(s) em uso atualmente.")
+        if st.button("↩️ Restaurar preços padrão (desfazer todas as customizações)", key="btn_restaurar_precos"):
+            tabela_precos.restaurar_padroes()
+            st.success("Preços padrão restaurados.")
+            st.rerun()
+
+st.write("---")
+st.write("### 🛠️ Configurações da Obra")
+st.caption("📍 Atendimento disponível para Boa Vista/RR neste momento.")
+
+nome_projeto = st.text_input(
+    "Nome do Projeto / Cliente",
+    placeholder="Ex.: Residência Sr. João - Rua das Flores, 123",
+    key="input_nome_projeto"
+)
+
+LOCAL_OBRA = "Boa Vista/RR"
+
+col_pad, col_est = st.columns(2)
+with col_pad:
+    padrao = st.selectbox("Padrão de Acabamento", ["Econômico", "Médio", "Alto Padrão"], key="select_padrao")
+with col_est:
+    estrutura = st.selectbox("Tipo de Cobertura", ["Telhado", "Laje"], key="select_estrutura")
+
+st.write("---")
+
+st.write("### 📂 Upload do Projeto")
+st.caption(
+    "💡 Dica: plantas com um **Quadro de Áreas** (tabela com a área em m² de cada cômodo) "
+    "dão resultados mais precisos que plantas só com cotas lineares nas bordas."
+)
+arquivo_pdf = st.file_uploader("Arraste ou selecione o PDF da planta baixa", type=["pdf", "jpg", "jpeg", "png"], key="upload_planta")
+
+if arquivo_pdf is not None:
+    st.success("Planta carregada com sucesso!")
+
+    extensao = os.path.splitext(arquivo_pdf.name)[1]
+    arquivo_temp = f"temp_planta{extensao}"
+
+    with open(arquivo_temp, "wb") as f:
+        f.write(arquivo_pdf.getbuffer())
+
+    if st.button("🔍 Analisar Planta", key="btn_analisar"):
+        with st.spinner("Analisando planta com IA..."):
+            try:
+                dados_extraidos = extrair_dados_da_planta(arquivo_temp)
+                st.session_state["dados_extraidos"] = dados_extraidos
+                # Descarta valores editados/calculados da planta ANTERIOR
+                # (campos de área/portas/janelas e as tabelas de materiais
+                # e mão de obra), para que a tela mostre os dados recém
+                # extraídos em vez de repetir a última planta analisada.
+                for chave_para_limpar in (
+                    "input_area_seca", "input_area_molhada", "input_area_externa",
+                    "input_metros_parede", "input_portas_internas",
+                    "input_portas_externas", "input_janelas",
+                    "materiais_editados", "mao_de_obra_editada",
+                    "orcamento_assinatura",
+                ):
+                    st.session_state.pop(chave_para_limpar, None)
+            except ErroExtracaoAmigavel as e:
+                st.error(f"⚠️ {e.mensagem_amigavel}")
+                if e.detalhe_tecnico:
+                    with st.expander("Detalhes técnicos (para diagnóstico)"):
+                        st.code(e.detalhe_tecnico)
+                st.session_state.pop("dados_extraidos", None)
+            except (ValueError, KeyError, RuntimeError) as e:
+                st.error("⚠️ Ocorreu um erro inesperado ao analisar a planta.")
+                with st.expander("Detalhes técnicos"):
+                    st.code(str(e))
+                st.session_state.pop("dados_extraidos", None)
+            finally:
+                if os.path.exists(arquivo_temp):
+                    os.remove(arquivo_temp)
+
+    if "dados_extraidos" in st.session_state:
+        dados = st.session_state["dados_extraidos"]
+        confianca = dados.get("confianca", {})
+
+        st.write("### 📊 Dados Extraídos do Projeto")
+        st.caption(
+            "Confira os valores lidos pela IA, já separados por tipo de ambiente. O indicador "
+            "abaixo de cada campo mostra a confiança da IA — 🟢 achou uma cota escrita na planta, "
+            "🟡 estimou visualmente, 🔴 teve pouca base pra decidir. Corrija antes de gerar o orçamento."
+        )
+
+        st.write("**Piso, por tipo de ambiente**")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            area_piso_seco = st.number_input(
+                "Área Seca — m² (sala, quarto, cozinha)",
+                value=float(dados.get("area_piso_seco", 0)), step=0.5, min_value=0.0,
+                key="input_area_seca"
+            )
+            mostrar_badge("area_piso_seco", confianca)
+        with col2:
+            area_piso_molhado = st.number_input(
+                "Área Molhada — m² (banheiro, área de serviço)",
+                value=float(dados.get("area_piso_molhado", 0)), step=0.5, min_value=0.0,
+                key="input_area_molhada"
+            )
+            mostrar_badge("area_piso_molhado", confianca)
+        with col3:
+            area_piso_externo = st.number_input(
+                "Área Externa — m² (varanda, garagem)",
+                value=float(dados.get("area_piso_externo", 0)), step=0.5, min_value=0.0,
+                key="input_area_externa"
+            )
+            mostrar_badge("area_piso_externo", confianca)
+
+        st.write("**Paredes, portas e janelas**")
+        col4, col5 = st.columns(2)
+        with col4:
+            metros_parede = st.number_input(
+                "Paredes Lineares (m)",
+                value=float(dados["metros_parede"]), step=0.5, min_value=0.0,
+                key="input_metros_parede"
+            )
+            mostrar_badge("metros_parede", confianca)
+
+            portas_internas = st.number_input(
+                "Portas Internas (un)",
+                value=int(dados.get("portas_internas", 0)), step=1, min_value=0,
+                key="input_portas_internas"
+            )
+            mostrar_badge("portas_internas", confianca)
+        with col5:
+            janelas = st.number_input(
+                "Janelas (un)",
+                value=int(dados.get("janelas", 0)), step=1, min_value=0,
+                key="input_janelas"
+            )
+            mostrar_badge("janelas", confianca)
+
+            portas_externas = st.number_input(
+                "Portas Externas (un)",
+                value=int(dados.get("portas_externas", 0)), step=1, min_value=0,
+                key="input_portas_externas"
+            )
+            mostrar_badge("portas_externas", confianca)
+
+        campos_baixa_confianca = [
+            campo for campo in CAMPOS_EXTRACAO
+            if confianca.get(campo, {}).get("nivel") == "baixa"
+        ]
+        if campos_baixa_confianca:
+            st.warning(
+                "🔴 A IA teve baixa confiança em algum(ns) campo(s) acima. "
+                "Recomendamos conferir esses valores direto na planta antes de prosseguir."
+            )
+
+        dados_extracao = DadosExtracao(
+            area_piso_seco=area_piso_seco,
+            area_piso_molhado=area_piso_molhado,
+            area_piso_externo=area_piso_externo,
+            metros_parede=metros_parede,
+            portas_internas=portas_internas,
+            portas_externas=portas_externas,
+            janelas=janelas,
+        )
+        area_piso_total = dados_extracao.area_piso_total
+
+        # =====================================================================
+        # VALIDAÇÃO DE PROPORÇÃO PAREDE vs ÁREA
+        # =====================================================================
+        avisos_parede, sugestao_parede = validar_proporcao_parede(area_piso_total, metros_parede)
+        for aviso in avisos_parede:
+            st.error(aviso)
+
+        if sugestao_parede and sugestao_parede != metros_parede:
+            col_ajuste1, col_ajuste2 = st.columns([1, 3])
+            with col_ajuste1:
+                if st.button(f"⚡ Ajustar para {sugestao_parede} m", key="btn_ajuste_parede"):
+                    st.session_state["dados_extraidos"]["metros_parede"] = sugestao_parede
+                    # O campo "Paredes Lineares" tem key própria
+                    # (input_metros_parede) desde a correção do bug de
+                    # planta nova -- por causa disso, o widget passa a
+                    # ignorar o "value=" recalculado e mantém o que já
+                    # estava guardado nessa key. Sem remover a key aqui,
+                    # o clique atualizava dados_extraidos por baixo dos
+                    # panos, mas a tela continuava mostrando o valor
+                    # antigo. Também limpa a assinatura do orçamento
+                    # para que Materiais/Mão de Obra recalculem com o
+                    # novo valor de parede.
+                    st.session_state.pop("input_metros_parede", None)
+                    st.session_state.pop("orcamento_assinatura", None)
+                    st.rerun()
+            with col_ajuste2:
+                st.caption("Clique para aplicar a sugestão automaticamente (pode editar depois).")
+        # =====================================================================
+
+        avisos = validar_dados({"area_piso": area_piso_total, "metros_parede": metros_parede,
+                                 "portas": dados_extracao.portas_total, "janelas": janelas})
+        if avisos:
+            st.warning(
+                "⚠️ Alguns valores parecem incomuns. Confira antes de gerar o orçamento:\n\n"
+                + "\n".join(f"- {aviso}" for aviso in avisos)
+            )
+
+        st.write("---")
+
+        # Assinatura de tudo que influencia QUANTIDADES no orçamento. Se
+        # qualquer um desses valores mudar (edição manual de área/portas,
+        # troca de padrão de acabamento ou de tipo de cobertura), as
+        # tabelas de materiais e mão de obra são recalculadas do zero --
+        # do contrário elas continuariam mostrando quantidades da
+        # combinação anterior, mesmo com os campos acima já atualizados.
+        # Edições manuais de PREÇO feitas antes da mudança são perdidas
+        # de propósito, já que a lista de itens/quantidades é outra.
+        assinatura_atual = (
+            padrao, estrutura, area_piso_seco, area_piso_molhado,
+            area_piso_externo, metros_parede, portas_internas,
+            portas_externas, janelas,
+        )
+        if st.session_state.get("orcamento_assinatura") != assinatura_atual:
+            st.session_state.pop("materiais_editados", None)
+            st.session_state.pop("mao_de_obra_editada", None)
+            st.session_state["orcamento_assinatura"] = assinatura_atual
+
+        st.write("### 📦 Materiais")
+        st.caption(
+            "Quantidades calculadas a partir da planta e do padrão de acabamento escolhido. "
+            "Edite o preço unitário conforme seu fornecedor."
+        )
+
+        materiais_sugeridos = calcular_materiais(dados_extracao, padrao, estrutura)
+
+        chave_mat = "materiais_editados"
+        if chave_mat not in st.session_state:
+            st.session_state[chave_mat] = materiais_sugeridos
+
+        tabela_mat = st.data_editor(
+            st.session_state[chave_mat],
+            column_config={
+                "Tipo": None,
+                "Material": st.column_config.TextColumn("Material", disabled=True),
+                "Quantidade": st.column_config.NumberColumn("Quantidade", disabled=True),
+                "Preco_Unit": st.column_config.NumberColumn("Preço Unit. (R$)", min_value=0.0, step=0.5),
+                "Total": st.column_config.NumberColumn("Total (R$)", disabled=True),
+            },
+            hide_index=True,
+            use_container_width=True,
+            key="editor_materiais",
+        )
+
+        materiais_final = []
+        for item in tabela_mat:
+            item = dict(item)
+            item["Total"] = round(item["Quantidade"] * item["Preco_Unit"], 2)
+            materiais_final.append(item)
+        st.session_state[chave_mat] = materiais_final
+
+        total_materiais = sum(item["Total"] for item in materiais_final)
+        st.caption(f"Total de materiais: R$ {total_materiais:,.2f}")
+
+        st.write("---")
+
+        st.write("### 👷 Mão de Obra")
+        st.caption(
+            "Valores sugeridos com base em composições SINAPI aproximadas. "
+            "Edite livremente conforme o preço da sua equipe."
+        )
+
+        mao_de_obra_sugerida = calcular_mao_de_obra(dados_extracao, estrutura)
+
+        chave_mo = "mao_de_obra_editada"
+        if chave_mo not in st.session_state:
+            st.session_state[chave_mo] = mao_de_obra_sugerida
+
+        tabela_mo = st.data_editor(
+            st.session_state[chave_mo],
+            column_config={
+                "Tipo": None,
+                "Material": st.column_config.TextColumn("Serviço", disabled=True),
+                "Quantidade": st.column_config.NumberColumn("Quantidade", disabled=True),
+                "Preco_Unit": st.column_config.NumberColumn("Preço Unit. (R$)", min_value=0.0, step=0.5),
+                "Total": st.column_config.NumberColumn("Total (R$)", disabled=True),
+            },
+            hide_index=True,
+            use_container_width=True,
+            key="editor_mao_de_obra",
+        )
+
+        mao_de_obra_final = []
+        for item in tabela_mo:
+            item = dict(item)
+            item["Total"] = round(item["Quantidade"] * item["Preco_Unit"], 2)
+            mao_de_obra_final.append(item)
+        st.session_state[chave_mo] = mao_de_obra_final
+
+        total_mao_de_obra = sum(item["Total"] for item in mao_de_obra_final)
+        st.caption(f"Total de mão de obra: R$ {total_mao_de_obra:,.2f}")
+
+        st.write("---")
+
+        st.write("### 💰 BDI (Benefícios e Despesas Indiretas)")
+        st.caption(
+            "Percentual aplicado sobre o custo direto para cobrir administração, "
+            "lucro, impostos e imprevistos. Defina como 0% se quiser ver apenas o custo direto."
+        )
+        bdi_percentual = st.number_input(
+            "BDI (%)", min_value=0.0, max_value=100.0, value=25.0, step=1.0,
+            key="input_bdi"
+        )
+
+        st.write("---")
+
+        if st.button("🚀 Gerar Orçamento Completo", key="btn_gerar_orcamento"):
+            if not nome_projeto.strip():
+                st.error("Informe o nome do projeto/cliente antes de gerar o orçamento (campo no topo da página).")
+            else:
+                with st.spinner("Calculando insumos e gerando documentos..."):
+                    orcamento_final = orcamento_service.montar_orcamento_completo(
+                        materiais_final, mao_de_obra_final
+                    )
+                    custo_direto, preco_venda = orcamento_service.calcular_custo_e_preco(
+                        orcamento_final, bdi_percentual
+                    )
+
+                    base_nome = orcamento_service.nome_arquivo_seguro(nome_projeto)
+                    excel_path = os.path.join(PASTA_ORCAMENTOS, f"{base_nome}.xlsx")
+                    pdf_path = os.path.join(PASTA_ORCAMENTOS, f"{base_nome}.pdf")
+
+                    caminho_excel = gerar_excel(orcamento_final, excel_path, bdi_percentual)
+
+                    caminho_pdf = gerar_pdf_proposta(
+                        orcamento_final, pdf_path,
+                        nome_projeto=nome_projeto,
+                        estado_uf=LOCAL_OBRA, padrao=padrao,
+                        tipo_cobertura=estrutura, area_piso=area_piso_total,
+                        bdi_percentual=bdi_percentual,
+                        nome_empresa=perfil["nome_empresa"] or "OrçaObra AI",
+                        contato=perfil["contato"],
+                        registro=perfil["registro"],
+                        caminho_logo=perfil["caminho_logo"],
+                    )
+
+                    salvar_orcamento(
+                        nome_projeto=nome_projeto,
+                        estado_uf=LOCAL_OBRA,
+                        padrao=padrao,
+                        tipo_cobertura=estrutura,
+                        area_piso=area_piso_total,
+                        custo_direto=round(custo_direto, 2),
+                        bdi_percentual=bdi_percentual,
+                        preco_venda=preco_venda,
+                        caminho_excel=caminho_excel,
+                        caminho_pdf=caminho_pdf,
+                    )
+
+                    st.balloons()
+
+                    st.write("### 📊 Resumo do Orçamento")
+                    col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+                    col_m1.metric("Área Total", f"{area_piso_total:.0f} m²")
+                    col_m2.metric("Paredes", f"{metros_parede:.0f} m")
+                    col_m3.metric("Portas + Janelas", f"{portas_internas + portas_externas + janelas} un")
+                    col_m4.metric("Preço de Venda", f"R$ {preco_venda:,.2f}")
+
+                    col_dl1, col_dl2 = st.columns(2)
+                    with col_dl1, open(caminho_excel, "rb") as file:
+                            st.download_button(
+                                label="📊 Baixar Excel (uso interno)",
+                                data=file,
+                                file_name=os.path.basename(caminho_excel),
+                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                use_container_width=True,
+                                key="btn_download_excel"
+                            )
+                    with col_dl2, open(caminho_pdf, "rb") as file:
+                        st.download_button(
+                            label="📄 Baixar PDF (proposta ao cliente)",
+                            data=file,
+                            file_name=os.path.basename(caminho_pdf),
+                            mime="application/pdf",
+                            use_container_width=True,
+                            key="btn_download_pdf"
+                        )
+
+st.write("---")
+
+st.write("### 📁 Histórico de Orçamentos")
+
+orcamentos_salvos = listar_orcamentos()
+if not orcamentos_salvos:
+    st.caption("Nenhum orçamento gerado ainda. Seus orçamentos aparecerão aqui automaticamente.")
+else:
+    for registro in orcamentos_salvos:
+        with st.expander(
+            f"{registro['nome_projeto']} — {registro['data_criacao']} — "
+            f"R$ {registro['preco_venda']:,.2f}"
+        ):
+            col_a, col_b, col_c = st.columns(3)
+            col_a.metric("Área", f"{registro['area_piso']:.0f} m²")
+            col_b.metric("Custo Direto", f"R$ {registro['custo_direto']:,.2f}")
+            col_c.metric("Preço de Venda", f"R$ {registro['preco_venda']:,.2f}")
+            st.caption(
+                f"Padrão: {registro['padrao']} · "
+                f"Cobertura: {registro['tipo_cobertura']} · BDI: {registro['bdi_percentual']:g}%"
+            )
+
+            col_x, col_y = st.columns(2)
+            with col_x:
+                if registro["caminho_excel"] and os.path.exists(registro["caminho_excel"]):
+                    with open(registro["caminho_excel"], "rb") as file:
+                        st.download_button(
+                            label="📊 Baixar Excel",
+                            data=file,
+                            file_name=os.path.basename(registro["caminho_excel"]),
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            key=f"download_excel_{registro['id']}",
+                            use_container_width=True,
+                        )
+                else:
+                    st.caption("⚠️ Excel não encontrado no disco.")
+            with col_y:
+                if registro.get("caminho_pdf") and os.path.exists(registro["caminho_pdf"]):
+                    with open(registro["caminho_pdf"], "rb") as file:
+                        st.download_button(
+                            label="📄 Baixar PDF",
+                            data=file,
+                            file_name=os.path.basename(registro["caminho_pdf"]),
+                            mime="application/pdf",
+                            key=f"download_pdf_{registro['id']}",
+                            use_container_width=True,
+                        )
+                else:
+                    st.caption("⚠️ PDF não disponível (orçamento anterior a essa função).")
+
+            st.write("")
+            chave_confirmar = f"confirmar_exclusao_{registro['id']}"
+            if st.session_state.get(chave_confirmar):
+                st.warning(
+                    "Tem certeza que deseja excluir este orçamento do histórico? "
+                    "Os arquivos Excel/PDF salvos em disco não são apagados, só o registro na lista."
+                )
+                col_conf1, col_conf2 = st.columns(2)
+                with col_conf1:
+                    if st.button("✅ Sim, excluir", key=f"btn_confirma_excluir_{registro['id']}",
+                                 use_container_width=True):
+                        excluir_orcamento(registro["id"])
+                        st.session_state.pop(chave_confirmar, None)
+                        st.rerun()
+                with col_conf2:
+                    if st.button("↩️ Cancelar", key=f"btn_cancela_excluir_{registro['id']}",
+                                 use_container_width=True):
+                        st.session_state.pop(chave_confirmar, None)
+                        st.rerun()
+            else:
+                if st.button("🗑️ Excluir do histórico", key=f"btn_excluir_{registro['id']}",
+                             use_container_width=True):
+                    st.session_state[chave_confirmar] = True
+                    st.rerun()
+</file>
+
+</files>

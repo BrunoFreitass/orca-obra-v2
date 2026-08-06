@@ -83,3 +83,6 @@ DADOS_MOCK = {
         "janelas": {"nivel": "baixa", "motivo": "Planta mock, sem base visual real"},
     },
 }
+
+# Local padrão da obra (usado em PDF e histórico)
+LOCAL_OBRA = os.environ.get("LOCAL_OBRA", "Boa Vista/RR")

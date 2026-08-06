@@ -78,7 +78,6 @@ def gerar_excel(dados_orcamento, output_path, bdi_percentual=0):
         ws.cell(row=linha_atual, column=1, value=tipo.upper())
         linha_atual += 1
 
-        _primeira_linha_grupo = linha_atual
         for i, item in enumerate(itens_grupo):
             zebra = cinza_claro if i % 2 == 1 else "FFFFFF"
             fill_zebra = PatternFill(start_color=zebra, end_color=zebra, fill_type="solid")
@@ -102,7 +101,6 @@ def gerar_excel(dados_orcamento, output_path, bdi_percentual=0):
 
             linha_atual += 1
 
-        _ultima_linha_grupo = linha_atual - 1
 
         subtotal_valor = round(sum(
             it["Quantidade"] * it["Preco_Unit"] for it in itens_grupo

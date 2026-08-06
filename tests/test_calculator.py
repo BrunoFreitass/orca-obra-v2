@@ -16,6 +16,7 @@ from core.coeficientes import (
     MARGEM_PERDA,
     PRECO_BLOCO_CERAMICO,
 )
+from core import tabela_precos
 from core.models import DadosExtracao
 
 
@@ -27,6 +28,14 @@ def _item(itens, nome):
             return it
     raise KeyError(f"item {nome!r} nao encontrado nos itens gerados")
 
+
+
+@pytest.fixture(autouse=True)
+def sem_overrides():
+    """Garante que os testes rodem com precos padrao."""
+    tabela_precos.restaurar_padroes()
+    yield
+    tabela_precos.restaurar_padroes()
 
 class TestCalcularMateriaisContaFechada:
     def test_bloco_ceramico_bate_com_conta_manual(self):

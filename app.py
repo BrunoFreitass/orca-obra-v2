@@ -1,4 +1,5 @@
 import os
+import tempfile
 
 import streamlit as st
 
@@ -15,6 +16,7 @@ from core.perfil_empresa import carregar_perfil, salvar_perfil
 from core.proposta_pdf import gerar_pdf_proposta
 from core.reporter import gerar_excel
 from core.validacao import validar_dados
+from config import LOCAL_OBRA
 from core.vision import ErroExtracaoAmigavel, extrair_dados_da_planta
 
 st.set_page_config(page_title="OrçaObra AI", page_icon="🏗️", layout="centered")
@@ -155,11 +157,12 @@ with st.expander("💲 Personalizar Tabela de Preços (avançado)"):
         "📤 Enviar planilha de preços atualizada", type=["xlsx"], key="upload_tabela_precos"
     )
     if arquivo_precos is not None:
-        caminho_temp_precos = os.path.join(PASTA_PERFIL, "temp_tabela_precos.xlsx")
-        with open(caminho_temp_precos, "wb") as f:
-            f.write(arquivo_precos.getbuffer())
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
+            tmp.write(arquivo_precos.getbuffer())
+            caminho_temp_precos = tmp.name
 
-        atualizados, avisos = tabela_precos.importar_tabela_excel(caminho_temp_precos)
+        try:
+            atualizados, avisos = tabela_precos.importar_tabela_excel(caminho_temp_precos)
 
         for aviso in avisos:
             st.warning(aviso)
@@ -172,6 +175,10 @@ with st.expander("💲 Personalizar Tabela de Preços (avançado)"):
                 st.rerun()
         elif not avisos:
             st.info("Nenhum preço foi alterado em relação ao que já está em uso.")
+
+        finally:
+            if os.path.exists(caminho_temp_precos):
+                os.remove(caminho_temp_precos)
 
     overrides_atuais = tabela_precos.carregar_overrides()
     if overrides_atuais:
@@ -191,7 +198,6 @@ nome_projeto = st.text_input(
     key="input_nome_projeto"
 )
 
-LOCAL_OBRA = "Boa Vista/RR"
 
 col_pad, col_est = st.columns(2)
 with col_pad:
@@ -212,10 +218,9 @@ if arquivo_pdf is not None:
     st.success("Planta carregada com sucesso!")
 
     extensao = os.path.splitext(arquivo_pdf.name)[1]
-    arquivo_temp = f"temp_planta{extensao}"
-
-    with open(arquivo_temp, "wb") as f:
-        f.write(arquivo_pdf.getbuffer())
+    with tempfile.NamedTemporaryFile(delete=False, suffix=extensao) as tmp:
+        tmp.write(arquivo_pdf.getbuffer())
+        arquivo_temp = tmp.name
 
     if st.button("🔍 Analisar Planta", key="btn_analisar"):
         with st.spinner("Analisando planta com IA..."):
@@ -265,21 +270,21 @@ if arquivo_pdf is not None:
         with col1:
             area_piso_seco = st.number_input(
                 "Área Seca — m² (sala, quarto, cozinha)",
-                value=float(dados.get("area_piso_seco", 0)), step=0.5, min_value=0.0,
+                value=float(dados.get("area_piso_seco") or 0), step=0.5, min_value=0.0,
                 key="input_area_seca"
             )
             mostrar_badge("area_piso_seco", confianca)
         with col2:
             area_piso_molhado = st.number_input(
                 "Área Molhada — m² (banheiro, área de serviço)",
-                value=float(dados.get("area_piso_molhado", 0)), step=0.5, min_value=0.0,
+                value=float(dados.get("area_piso_molhado") or 0), step=0.5, min_value=0.0,
                 key="input_area_molhada"
             )
             mostrar_badge("area_piso_molhado", confianca)
         with col3:
             area_piso_externo = st.number_input(
                 "Área Externa — m² (varanda, garagem)",
-                value=float(dados.get("area_piso_externo", 0)), step=0.5, min_value=0.0,
+                value=float(dados.get("area_piso_externo") or 0), step=0.5, min_value=0.0,
                 key="input_area_externa"
             )
             mostrar_badge("area_piso_externo", confianca)
@@ -289,28 +294,28 @@ if arquivo_pdf is not None:
         with col4:
             metros_parede = st.number_input(
                 "Paredes Lineares (m)",
-                value=float(dados["metros_parede"]), step=0.5, min_value=0.0,
+                value=float(dados.get("metros_parede") or 0), step=0.5, min_value=0.0,
                 key="input_metros_parede"
             )
             mostrar_badge("metros_parede", confianca)
 
             portas_internas = st.number_input(
                 "Portas Internas (un)",
-                value=int(dados.get("portas_internas", 0)), step=1, min_value=0,
+                value=int(dados.get("portas_internas") or 0), step=1, min_value=0,
                 key="input_portas_internas"
             )
             mostrar_badge("portas_internas", confianca)
         with col5:
             janelas = st.number_input(
                 "Janelas (un)",
-                value=int(dados.get("janelas", 0)), step=1, min_value=0,
+                value=int(dados.get("janelas") or 0), step=1, min_value=0,
                 key="input_janelas"
             )
             mostrar_badge("janelas", confianca)
 
             portas_externas = st.number_input(
                 "Portas Externas (un)",
-                value=int(dados.get("portas_externas", 0)), step=1, min_value=0,
+                value=int(dados.get("portas_externas") or 0), step=1, min_value=0,
                 key="input_portas_externas"
             )
             mostrar_badge("portas_externas", confianca)

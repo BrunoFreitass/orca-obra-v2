@@ -30,58 +30,7 @@ CAMPOS_AGREGADOS = (
     "metros_parede", "portas_internas", "portas_externas", "janelas",
 )
 
-
-def _redimensionar_para_max(imagem_cv, max_dim=1024):
-    """Reduz a imagem para que o lado maior tenha no máximo max_dim pixels.
-    Isso diminui o payload da API, acelera o upload e evita estourar
-    limites de tamanho do Gemini sem perder legibilidade de plantas."""
-    altura, largura = imagem_cv.shape[:2]
-    if max(altura, largura) <= max_dim:
-        return imagem_cv
-    escala = max_dim / max(altura, largura)
-    nova_largura = int(largura * escala)
-    nova_altura = int(altura * escala)
-    return cv2.resize(imagem_cv, (nova_largura, nova_altura), interpolation=cv2.INTER_AREA)
-
-
-def _preparar_imagem(caminho_arquivo):
-    """
-    Sempre devolve uma imagem JPEG otimizada para enviar ao Gemini.
-    PDFs e imagens passam pelo mesmo pré-processamento.
-    """
-
-    if caminho_arquivo.lower().endswith(".pdf"):
-        import fitz
-
-        with fitz.open(caminho_arquivo) as doc:
-            pagina = doc[0]
-            pix = pagina.get_pixmap(dpi=200)
-
-        with tempfile.NamedTemporaryFile(
-            suffix=".jpg",
-            delete=False
-        ) as temp:
-            imagem_temporaria = temp.name
-
-        try:
-            pix.save(imagem_temporaria)
-            imagem = melhorar_imagem(imagem_temporaria)
-        finally:
-            if os.path.exists(imagem_temporaria):
-                os.remove(imagem_temporaria)
-
-    else:
-        imagem = melhorar_imagem(caminho_arquivo)
-
-    # Reduz dimensão e comprime para diminuir payload da API
-    imagem = _redimensionar_para_max(imagem, max_dim=1024)
-    _, buffer = cv2.imencode(".jpg", imagem, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
-
-    return buffer.tobytes()
-
-
-def _montar_prompt():
-    return """
+PROMPT_EXTRACAO = """
     Analise esta imagem de planta baixa de engenharia/arquitetura.
 
     Antes de responder, raciocine internamente assim, COMODO POR
@@ -199,6 +148,62 @@ def _montar_prompt():
         }
     }
     """
+
+def _montar_prompt():
+    return PROMPT_EXTRACAO
+
+
+
+def _redimensionar_para_max(imagem_cv, max_dim=1024):
+    """Reduz a imagem para que o lado maior tenha no máximo max_dim pixels.
+    Isso diminui o payload da API, acelera o upload e evita estourar
+    limites de tamanho do Gemini sem perder legibilidade de plantas."""
+    altura, largura = imagem_cv.shape[:2]
+    if max(altura, largura) <= max_dim:
+        return imagem_cv
+    escala = max_dim / max(altura, largura)
+    nova_largura = int(largura * escala)
+    nova_altura = int(altura * escala)
+    return cv2.resize(imagem_cv, (nova_largura, nova_altura), interpolation=cv2.INTER_AREA)
+
+
+def _preparar_imagem(caminho_arquivo):
+    """
+    Sempre devolve uma imagem JPEG otimizada para enviar ao Gemini.
+    PDFs e imagens passam pelo mesmo pré-processamento.
+    """
+
+    if caminho_arquivo.lower().endswith(".pdf"):
+        import fitz
+
+        with fitz.open(caminho_arquivo) as doc:
+            pagina = doc[0]
+            pix = pagina.get_pixmap(dpi=200)
+
+        with tempfile.NamedTemporaryFile(
+            suffix=".jpg",
+            delete=False
+        ) as temp:
+            imagem_temporaria = temp.name
+
+        try:
+            pix.save(imagem_temporaria)
+            imagem = melhorar_imagem(imagem_temporaria)
+        finally:
+            if os.path.exists(imagem_temporaria):
+                os.remove(imagem_temporaria)
+
+    else:
+        imagem = melhorar_imagem(caminho_arquivo)
+
+    # Reduz dimensão e comprime para diminuir payload da API
+    imagem = _redimensionar_para_max(imagem, max_dim=1024)
+    _, buffer = cv2.imencode(".jpg", imagem, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
+
+    return buffer.tobytes()
+
+
+
 
 
 def _chamar_gemini_com_uma_chave(chave, prompt, img_base64):
@@ -321,17 +326,21 @@ def extrair_dados_da_planta(caminho_arquivo):
             detalhe_tecnico=f"JSONDecodeError: {e}. Texto bruto: {texto_resposta[:500]}",
         )
 
-    # Defesa: garante que todos os 7 campos agregados existam, mesmo se
-    # o modelo esquecer algum (preenche com 0).
+    # Defesa: garante que todos os 7 campos agregados existam e nunca
+    # sejam None (a Gemini as vezes retorna null em vez de omitir).
+    for campo in CAMPOS_AGREGADOS:
+        if dados.get(campo) is None:
+            dados[campo] = 0
+
     # ------------------------------------------------------------------
     # FALLBACK: corrige metros de parede se a IA subestimou
     # ------------------------------------------------------------------
     area_total = (
-        dados.get("area_piso_seco", 0)
-        + dados.get("area_piso_molhado", 0)
-        + dados.get("area_piso_externo", 0)
+        (dados.get("area_piso_seco") or 0)
+        + (dados.get("area_piso_molhado") or 0)
+        + (dados.get("area_piso_externo") or 0)
     )
-    mp = dados.get("metros_parede", 0)
+    mp = dados.get("metros_parede") or 0
     if area_total > 0 and mp < area_total * 0.55:
         sugestao = round(area_total * 0.75, 2)
         dados["metros_parede"] = sugestao
@@ -344,7 +353,8 @@ def extrair_dados_da_planta(caminho_arquivo):
     # ------------------------------------------------------------------
 
     for campo in CAMPOS_AGREGADOS:
-        dados.setdefault(campo, 0)
+        if campo not in dados or dados[campo] is None:
+            dados[campo] = 0
 
     if "confianca" not in dados:
         dados["confianca"] = {}
