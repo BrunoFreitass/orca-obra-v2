@@ -349,7 +349,9 @@ def extrair_dados_da_planta(caminho_arquivo):
             dados[campo] = 0
 
     # ------------------------------------------------------------------
-    # FALLBACK INTELIGENTE: corrige metros de parede se a IA subestimou
+    # VALIDAÇÃO: marca confiança como baixa se metros de parede parecer
+    # subestimado, mas NÃO substitui automaticamente — deixa o engenheiro
+    # decidir na tela de revisão.
     # ------------------------------------------------------------------
     area_total = (
         (dados.get("area_piso_seco") or 0)
@@ -357,21 +359,17 @@ def extrair_dados_da_planta(caminho_arquivo):
         + (dados.get("area_piso_externo") or 0)
     )
     mp = dados.get("metros_parede") or 0
-    portas_internas = dados.get("portas_internas") or 0
 
     if area_total > 0 and mp < area_total * 0.55:
-        # Heuristica: mais portas internas = mais divisoes = mais paredes
-        # Fator base 0.55 (studio/open space) ate 1.10 (muitas divisoes)
-        fator_complexidade = 0.55 + min(portas_internas * 0.05, 0.55)
-        fator_complexidade = max(0.55, min(fator_complexidade, 1.10))
-        sugestao = round(area_total * fator_complexidade, 2)
-        dados["metros_parede"] = sugestao
         if "confianca" not in dados:
             dados["confianca"] = {}
-        dados["confianca"]["metros_parede"] = {
-            "nivel": "baixa",
-            "motivo": f"IA subestimou ({mp:.0f}m); corrigido automaticamente para {sugestao:.0f}m (fator {fator_complexidade:.2f}x)"
-        }
+        # Só alerta se a confiança já não for baixa
+        conf_atual = dados["confianca"].get("metros_parede", {}).get("nivel", "media")
+        if conf_atual != "baixa":
+            dados["confianca"]["metros_parede"] = {
+                "nivel": "baixa",
+                "motivo": f"IA leu {mp:.0f}m — abaixo do esperado ({area_total*0.55:.0f}m). Revise na tela seguinte."
+            }
     # ------------------------------------------------------------------
 
     for campo in CAMPOS_AGREGADOS:

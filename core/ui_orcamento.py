@@ -95,7 +95,8 @@ def _bdi_input():
 
 
 def _gerar_documentos(orcamento_final, bdi_percentual, nome_projeto, padrao, estrutura,
-                       area_piso_total, metros_parede, portas_internas, portas_externas, janelas):
+                       area_piso_total, metros_parede, portas_internas, portas_externas, janelas,
+                       area_piso_seco, area_piso_molhado, area_piso_externo):
     """Gera Excel, PDF, salva no histórico e renderiza os botões de download."""
     st.divider()
     if not st.button("🚀 Gerar Orçamento Completo", type="primary", use_container_width=True):
@@ -149,6 +150,13 @@ def _gerar_documentos(orcamento_final, bdi_percentual, nome_projeto, padrao, est
             padrao=padrao,
             tipo_cobertura=estrutura,
             area_piso=area_piso_total,
+            area_piso_seco=area_piso_seco,
+            area_piso_molhado=area_piso_molhado,
+            area_piso_externo=area_piso_externo,
+            metros_parede=metros_parede,
+            portas_internas=portas_internas,
+            portas_externas=portas_externas,
+            janelas=janelas,
             custo_direto=round(custo_direto, 2),
             bdi_percentual=bdi_percentual,
             preco_venda=preco_venda,
@@ -203,4 +211,7 @@ def renderizar_orcamento(dados_extracao, config: dict):
         portas_internas=dados_extracao.portas_internas,
         portas_externas=dados_extracao.portas_externas,
         janelas=dados_extracao.janelas,
+        area_piso_seco=dados_extracao.area_piso_seco,
+        area_piso_molhado=dados_extracao.area_piso_molhado,
+        area_piso_externo=dados_extracao.area_piso_externo,
     )

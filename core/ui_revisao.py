@@ -18,16 +18,60 @@ CAMPOS_EXTRACAO = (
     "metros_parede", "portas_internas", "portas_externas", "janelas",
 )
 
+# Pesos para cálculo do índice global de confiança
+PESO_CONFIANCA = {"alta": 3, "media": 2, "baixa": 1}
+
+
+def _calcular_indice_confianca(confianca: dict) -> dict:
+    """Calcula o índice global de confiança (0–100%) com base nos 7 campos.
+    Retorna dict com: percentual, nivel, cor, emoji, mensagem."""
+    if not confianca:
+        return {
+            "percentual": 50,
+            "nivel": "media",
+            "cor": "#F9A825",
+            "emoji": "🟡",
+            "mensagem": "Confiança não avaliada pela IA",
+        }
+
+    total_pontos = 0
+    maximo_pontos = 0
+    for campo in CAMPOS_EXTRACAO:
+        info = confianca.get(campo, {"nivel": "media"})
+        nivel = info.get("nivel", "media")
+        total_pontos += PESO_CONFIANCA.get(nivel, 2)
+        maximo_pontos += 3  # máximo = alta (3)
+
+    percentual = round((total_pontos / maximo_pontos) * 100) if maximo_pontos > 0 else 50
+
+    if percentual >= 90:
+        return {
+            "percentual": percentual,
+            "nivel": "alta",
+            "cor": "#2E7D32",
+            "emoji": "🟢",
+            "mensagem": f"Confiabilidade da extração: {percentual}% — dados altamente confiáveis",
+        }
+    elif percentual >= 70:
+        return {
+            "percentual": percentual,
+            "nivel": "media",
+            "cor": "#F9A825",
+            "emoji": "🟡",
+            "mensagem": f"Confiabilidade da extração: {percentual}% — revise os campos em amarelo/vermelho",
+        }
+    else:
+        return {
+            "percentual": percentual,
+            "nivel": "baixa",
+            "cor": "#C62828",
+            "emoji": "🔴",
+            "mensagem": f"Confiabilidade da extração: {percentual}% — recomendamos revisar todos os dados na planta",
+        }
+
 
 def _chave_metros_parede():
-    """Retorna a key atual do widget de metros de parede. É uma key
-    dinâmica (versionada) de propósito: usar sempre a mesma key fixa
-    e torcer pra Streamlit reaplicar o "value=" depois de um
-    st.session_state.pop(...) se mostrou frágil na prática (o widget
-    às vezes reaparece com o valor antigo). Ao MUDAR o nome da key
-    (incrementando a versão), forçamos o Streamlit a tratar o campo
-    como um widget novo, que nunca existiu em session_state antes —
-    isso garante que o "value=" passado seja sempre respeitado."""
+    """Retorna a key atual do widget de metros de parede."""
     versao = st.session_state.get("parede_key_versao", 0)
     return f"input_metros_parede_v{versao}"
 
@@ -197,6 +241,27 @@ def renderizar_revisao(dados_extraidos: dict, padrao: str, estrutura: str, local
     st.header("📊 Revisão dos Dados Extraídos")
     st.caption("Confira os valores lidos pela IA antes de gerar o orçamento. Ajuste se necessário.")
 
+    # =====================================================================
+    # ÍNDICE GLOBAL DE CONFIANÇA
+    # =====================================================================
+    indice = _calcular_indice_confianca(confianca)
+    st.markdown(
+        f"""
+        <div style="
+            background-color: {indice['cor']}15;
+            border-left: 4px solid {indice['cor']};
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        ">
+            <span style="font-size: 1.1rem; font-weight: 600; color: {indice['cor']};">
+                {indice['emoji']} {indice['mensagem']}
+            </span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     # KPIs
     col_kpi1, col_kpi2, col_kpi3 = st.columns(3)
     with col_kpi1:
@@ -291,11 +356,6 @@ def renderizar_revisao(dados_extraidos: dict, padrao: str, estrutura: str, local
         with col_ajuste1:
             if st.button(f"⚡ Ajustar para {sugestao_parede:.0f} m", key="btn_ajuste_parede"):
                 st.session_state["dados_extraidos"]["metros_parede"] = sugestao_parede
-                # Em vez de popar a key fixa (frágil — o campo às vezes voltava
-                # com o valor antigo mesmo assim), trocamos o NOME da key
-                # incrementando a versão. Isso força o Streamlit a criar um
-                # widget genuinamente novo, que nunca existiu em
-                # session_state, então o "value=" novo é sempre respeitado.
                 st.session_state["parede_key_versao"] = st.session_state.get("parede_key_versao", 0) + 1
                 st.session_state.pop("orcamento_assinatura", None)
                 st.session_state["dados_revisao_confirmados"] = False
@@ -311,10 +371,8 @@ def renderizar_revisao(dados_extraidos: dict, padrao: str, estrutura: str, local
         "janelas": janelas,
     })
     if avisos:
-        st.warning(
-            "⚠️ Alguns valores parecem incomuns. Confira antes de gerar o orçamento:\n\n"
-            + "\n".join(f"- {aviso}" for aviso in avisos)
-        )
+        msg = "\n".join(f"- {aviso}" for aviso in avisos)
+        st.warning(f"⚠️ Alguns valores parecem incomuns. Confira antes de gerar o orçamento:\n\n{msg}")
 
     # Botão de confirmar (só aparece se não confirmado)
     if not confirmado:

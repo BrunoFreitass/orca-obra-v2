@@ -18,19 +18,49 @@ def renderizar_historico():
         return
 
     for registro in orcamentos_salvos:
+        # Título do expander com versão dos coeficientes (se houver)
+        versao = registro.get("versao_coeficientes", "")
+        sufixo_versao = f" · 📋 v{versao}" if versao else ""
+
         with st.expander(
             f"{registro['nome_projeto']} — {registro['data_criacao']} — "
-            f"R$ {registro['preco_venda']:,.2f}"
+            f"R$ {registro['preco_venda']:,.2f}{sufixo_versao}"
         ):
+            # Métricas principais
             col_a, col_b, col_c = st.columns(3)
             col_a.metric("Área", f"{registro['area_piso']:.0f} m²")
             col_b.metric("Custo Direto", f"R$ {registro['custo_direto']:,.2f}")
             col_c.metric("Preço de Venda", f"R$ {registro['preco_venda']:,.2f}")
+
+            # Detalhes de quantitativos (novos campos)
             st.caption(
                 f"Padrão: {registro['padrao']} · "
                 f"Cobertura: {registro['tipo_cobertura']} · BDI: {registro['bdi_percentual']:g}%"
             )
 
+            # Se tiver os novos campos, mostra em grid
+            tem_detalhes = any(
+                registro.get(k, 0) not in (0, 0.0, None, "")
+                for k in ["area_piso_seco", "area_piso_molhado", "area_piso_externo",
+                          "metros_parede", "portas_internas", "portas_externas", "janelas"]
+            )
+            if tem_detalhes:
+                with st.container(border=True):
+                    st.markdown("**📐 Quantitativos da Planta**")
+                    c1, c2, c3, c4 = st.columns(4)
+                    with c1:
+                        st.metric("Área Seca", f"{registro.get('area_piso_seco', 0):.1f} m²")
+                        st.metric("Área Molhada", f"{registro.get('area_piso_molhado', 0):.1f} m²")
+                    with c2:
+                        st.metric("Área Externa", f"{registro.get('area_piso_externo', 0):.1f} m²")
+                        st.metric("Paredes", f"{registro.get('metros_parede', 0):.0f} m")
+                    with c3:
+                        st.metric("Portas Int.", f"{registro.get('portas_internas', 0)} un")
+                        st.metric("Portas Ext.", f"{registro.get('portas_externas', 0)} un")
+                    with c4:
+                        st.metric("Janelas", f"{registro.get('janelas', 0)} un")
+
+            # Botões de download
             col_x, col_y = st.columns(2)
             with col_x:
                 if registro["caminho_excel"] and os.path.exists(registro["caminho_excel"]):

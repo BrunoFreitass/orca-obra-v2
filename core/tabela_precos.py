@@ -148,16 +148,41 @@ def importar_tabela_excel(caminho_arquivo):
     return precos_atualizados, avisos
 
 
-def salvar_overrides(precos_atualizados):
-    """Persiste os precos customizados em disco (precos_customizados.json),
-    com a data do upload como nova data de referencia desses itens."""
-    hoje = datetime.now(tz=UTC).strftime("%Y-%m")
+def salvar_overrides(precos_atualizados, fonte=None, data_ref=None):
+    """Persiste os precos customizados em disco (precos_customizados.json).
+
+    fonte: string livre identificando a origem (ex: "SINAPI oficial
+    (CAIXA/IBGE) - ref. 2026-07"). Se None, mantém o comportamento
+    anterior (override manual via planilha).
+    data_ref: "AAAA-MM" a usar como data de referência. Se None, usa
+    o mês corrente (comportamento anterior, para overrides manuais
+    onde não faz sentido "ref." nenhuma senão a data do upload).
+    """
+    data_ref = data_ref or datetime.now(tz=UTC).strftime("%Y-%m")
     dados = carregar_overrides()
     for chave, valor in precos_atualizados.items():
-        dados[chave] = {"valor": valor, "data_ref": hoje}
+        entrada = {"valor": valor, "data_ref": data_ref}
+        if fonte:
+            entrada["fonte"] = fonte
+        dados[chave] = entrada
     with open(CAMINHO_OVERRIDES, "w", encoding="utf-8") as f:
         json.dump(dados, f, ensure_ascii=False, indent=2)
     return dados
+
+
+def obter_preco(chave, preco_padrao):
+    """Retorna o Preco efetivo pra uma chave: o customizado (se o
+    usuario tiver subido uma planilha ou importado do SINAPI alterando
+    esse item), ou o padrao de core/coeficientes.py caso contrario."""
+    overrides = carregar_overrides()
+    if chave in overrides:
+        dado = overrides[chave]
+        return coef.Preco(
+            valor=dado["valor"],
+            fonte=dado.get("fonte", "Tabela de preços enviada pelo usuário"),
+            data_ref=dado["data_ref"],
+        )
+    return preco_padrao
 
 
 def carregar_overrides():
@@ -177,16 +202,3 @@ def restaurar_padroes():
         os.remove(CAMINHO_OVERRIDES)
 
 
-def obter_preco(chave, preco_padrao):
-    """Retorna o Preco efetivo pra uma chave: o customizado (se o
-    usuario tiver subido uma planilha alterando esse item), ou o
-    padrao de core/coeficientes.py caso contrario."""
-    overrides = carregar_overrides()
-    if chave in overrides:
-        dado = overrides[chave]
-        return coef.Preco(
-            valor=dado["valor"],
-            fonte="Tabela de preços enviada pelo usuário",
-            data_ref=dado["data_ref"],
-        )
-    return preco_padrao
