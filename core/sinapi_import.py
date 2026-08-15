@@ -169,12 +169,14 @@ def importar(arquivos: list[Path], mes_referencia: str | None = None) -> tuple[d
                            f"({mapeamento.tipo}).")
             continue
 
-        if mapeamento.unidade_esperada and dado["unidade"]:
-            if mapeamento.unidade_esperada.lower() not in dado["unidade"].lower() and \
-               dado["unidade"].lower() not in mapeamento.unidade_esperada.lower():
-                avisos.append(f"'{chave}' (código {mapeamento.codigo}): unidade no SINAPI é "
-                               f"'{dado['unidade']}', esperava algo como "
-                               f"'{mapeamento.unidade_esperada}' -- confira antes de confiar no valor.")
+        unidades_incompativeis = (
+            mapeamento.unidade_esperada.lower() not in dado["unidade"].lower()
+            and dado["unidade"].lower() not in mapeamento.unidade_esperada.lower()
+        )
+        if mapeamento.unidade_esperada and dado["unidade"] and unidades_incompativeis:
+            avisos.append(f"'{chave}' (código {mapeamento.codigo}): unidade no SINAPI é "
+                           f"'{dado['unidade']}', esperava algo como "
+                           f"'{mapeamento.unidade_esperada}' -- confira antes de confiar no valor.")
 
         valor_convertido = dado["preco"] * mapeamento.fator_conversao
         if mapeamento.fator_conversao != 1.0:

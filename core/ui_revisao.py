@@ -6,7 +6,6 @@ import streamlit as st
 from core.models import DadosExtracao
 from core.validacao import validar_dados
 
-
 CONFIANCA_VISUAL = {
     "alta": {"emoji": "🟢", "label": "Confiança alta"},
     "media": {"emoji": "🟡", "label": "Confiança média"},

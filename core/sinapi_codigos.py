@@ -73,21 +73,40 @@ def _grupo(padroes: dict[str, str]) -> dict[str, CodigoSinapi]:
 # ---------------------------------------------------------------------
 MATERIAIS_SIMPLES: dict[str, CodigoSinapi] = {
     # ATENÇÃO -- ver bloco de notas logo abaixo desta tabela antes de
-    # confiar nestes 5 códigos em produção. Foram encontrados por
+    # confiar nestes 7 códigos em produção. Foram encontrados por
     # pesquisa (não extraídos diretamente da planilha oficial por
     # mim), então cada um deve ser conferido uma vez contra o arquivo
     # real antes do primeiro uso.
-    "bloco_ceramico": CodigoSinapi(None,   "insumo", "un"),          # NÃO preenchido -- ver nota 1 abaixo
-    "argamassa":      CodigoSinapi("34353", "insumo", "kg"),          # "Argamassa Colante AC II" -- confiança alta
-    "tinta":          CodigoSinapi("7356",  "insumo", "l"),           # "Tinta Látex Acrílica Premium, cor branco fosco" -- confiança alta
-    "cimento":        CodigoSinapi(None,   "insumo", "saco 50kg", fator_conversao=50),  # NÃO preenchido -- ver nota 2 abaixo
-    "areia":          CodigoSinapi("370",   "insumo", "m3"),          # "Areia média - posto jazida/fornecedor" -- confiança alta (preço de RR já visto: R$68,33/m³)
-    "brita":          CodigoSinapi("4721",  "insumo", "m3"),          # "Pedra britada n. 1 (9,5 a 19mm) posto pedreira/fornecedor" -- confiança alta
-    "aco":            CodigoSinapi("32",    "insumo", "kg"),          # "Aço CA-50, 6,3mm, vergalhão" -- já era a fonte citada em coeficientes.py (PRECO_ACO_RR), agora confirmado por fonte independente
+    "bloco_ceramico": CodigoSinapi("103361", "composicao", "m2"),
+    # SINAPI 103361 -- "Alvenaria de vedação de blocos cerâmicos
+    # furados na horizontal de 14x19x29cm (espessura 14cm), argamassa
+    # de assentamento com preparo manual" -- bate com a dimensão
+    # 14x19x29 já usada no rótulo do item (ver nota 1 abaixo: ISSO
+    # RESOLVE a dúvida de typo que havia). ATENÇÃO: é uma COMPOSIÇÃO
+    # (m2 de parede pronta, já com argamassa e mão de obra), não um
+    # insumo puro de bloco -- se usar este código, o item deixa de
+    # precisar de CONSUMO_TIJOLO_POR_M2_PAREDE em coeficientes.py
+    # separado, porque a mão de obra de assentamento já vem embutida.
+    "argamassa":      CodigoSinapi("34353", "insumo", "kg"),
+    # "Argamassa Colante AC II" -- confiança alta
+    "tinta":          CodigoSinapi("7356",  "insumo", "l"),
+    # "Tinta Látex Acrílica Premium, cor branco fosco" -- confiança alta
+    "cimento":        CodigoSinapi("1379", "insumo", "kg", fator_conversao=50),
+    # SINAPI 1379 -- "Cimento Portland Composto CP II-32", medido por
+    # KG (fator_conversao=50 converte pra preço por saco de 50kg
+    # automaticamente). Confirmado por 2 fontes independentes.
+    "areia":          CodigoSinapi("370",   "insumo", "m3"),
+    # "Areia média - posto jazida/fornecedor" -- confiança alta
+    # (preço de RR já visto: R$68,33/m³)
+    "brita":          CodigoSinapi("4721",  "insumo", "m3"),
+    # "Pedra britada n. 1 (9,5 a 19mm) posto pedreira/fornecedor" -- confiança alta
+    "aco":            CodigoSinapi("32",    "insumo", "kg"),
+    # "Aço CA-50, 6,3mm, vergalhão" -- já era a fonte citada em
+    # coeficientes.py (PRECO_ACO_RR), agora confirmado por fonte independente
 }
 
 # ---------------------------------------------------------------------
-# NOTAS IMPORTANTES sobre os 5 códigos acima -- leia antes de usar
+# NOTAS IMPORTANTES sobre os códigos acima -- leia antes de usar
 # ---------------------------------------------------------------------
 # Estes códigos vieram de pesquisa em sites que reproduzem a base
 # SINAPI (orcamentor.com, buscadorsinapi.com.br), NÃO de abrir o
@@ -96,29 +115,16 @@ MATERIAIS_SIMPLES: dict[str, CodigoSinapi] = {
 # lugar, mas ainda merecem 1 conferência rápida (Ctrl+F pelo código na
 # planilha baixada) antes do primeiro uso real.
 #
-# NOTA 1 -- bloco_ceramico ainda None de propósito. As pesquisas só
-# acharam blocos cerâmicos SINAPI nas dimensões 9x9x19, 9x14x19,
-# 9x19x19 e 9x19x29 cm. O rótulo usado hoje em
-# core/tabela_precos.py._itens_editaveis() é "Bloco Cerâmico
-# 14x19x29" -- 14x19x29 NÃO é uma dimensão padrão SINAPI que eu
-# encontrei. Duas possibilidades: (a) é uma medida de mercado real que
-# o SINAPI simplesmente não cobre (aí mantém a pesquisa de mercado
-# como fonte, sem forçar código); ou (b) é um "29" que devia ser "19"
-# ou um "14" que devia ser "9" -- um typo antigo que sobreviveu desde
-# a criação do projeto. Vale conferir com quem definiu esse valor
-# originalmente antes de mexer.
+# NOTA 1 -- bloco_ceramico RESOLVIDO: SINAPI 103361 cobre exatamente
+# a dimensão 14x19x29cm que o projeto já usava no rótulo -- não era
+# typo, é uma composição real (AF_12/2021). É uma COMPOSIÇÃO (m2 de
+# parede pronta), não um insumo de bloco avulso -- ver comentário
+# junto ao código acima sobre o impacto disso em coeficientes.py.
 #
-# NOTA 2 -- cimento ainda com codigo=None de propósito, mas agora já
-# preparado com fator_conversao=50 pra quando o código for confirmado.
-# O candidato mais provável encontrado por pesquisa foi o insumo 1379
-# ("Cimento Portland Composto CP II-32"), medido "por KG" no SINAPI --
-# não "por saco de 50kg" como core/coeficientes.py espera. Como não
-# consigo abrir o arquivo oficial da Caixa daqui pra confirmar esse
-# código com 100% de certeza, deixei o valor em None. Quando alguém
-# confirmar o código certo na planilha real, é só preencher
-# codigo="1379" (ou o que for confirmado) -- o fator_conversao=50 já
-# está pronto pra transformar "preço por kg" em "preço por saco de
-# 50kg" automaticamente, sem precisar mexer no importador.
+# NOTA 2 -- cimento RESOLVIDO: SINAPI 1379 ("Cimento Portland
+# Composto CP II-32"), medido "por KG" -- o fator_conversao=50 já
+# transforma isso em "preço por saco de 50kg" automaticamente, sem
+# precisar mexer no importador.
 
 # ---------------------------------------------------------------------
 # 2. ITENS POR PADRÃO DE ACABAMENTO (Econômico / Médio / Alto Padrão)
@@ -152,7 +158,11 @@ COBERTURA: dict[str, dict[str, CodigoSinapi]] = {
 # SINAPI de verdade. Chave final: "mao_de_obra__{servico}".
 # ---------------------------------------------------------------------
 MAO_DE_OBRA: dict[str, CodigoSinapi] = {
-    "Alvenaria (assentamento)":               CodigoSinapi(None, "composicao", "m2_parede"),  # já tem pista: composição 89290 citada em coeficientes.py -- confirmar e trazer pra cá
+    "Alvenaria (assentamento)":               CodigoSinapi(None, "composicao", "m2_parede"),
+    # Já tem pista: composição 89290 citada em coeficientes.py --
+    # confirmar e trazer pra cá. NOTA: se "bloco_ceramico" acima
+    # (103361) for adotado como composição completa, este item de
+    # mão de obra pode ficar redundante -- decidir um dos dois.
     "Assentamento de Piso (Área Seca)":       CodigoSinapi(None, "composicao", "m2_piso_seco"),
     "Assentamento de Piso (Área Molhada)":    CodigoSinapi(None, "composicao", "m2_piso_molhado"),
     "Assentamento de Piso (Área Externa)":    CodigoSinapi(None, "composicao", "m2_piso_externo"),
