@@ -10,9 +10,11 @@ import requests
 from config import DADOS_MOCK, GEMINI_API_KEYS, GEMINI_MODEL, MOCK_AI, USE_CACHE
 from core import cache
 from core.image_processing import melhorar_imagem
+from core.logger import get_logger
 from core.monitor_api import inicializar_tabela_monitor, registrar_chamada
 
 inicializar_tabela_monitor()
+logger = get_logger(__name__)
 
 
 class ErroExtracaoAmigavel(Exception):
@@ -296,6 +298,7 @@ def extrair_dados_da_planta(caminho_arquivo):
 
         if resultado is not None:
             duracao = int((time.time() - inicio) * 1000)
+            logger.info("Extração OK — chave %d/%d, %dms", indice, len(GEMINI_API_KEYS), duracao)
             registrar_chamada(
                 status="OK",
                 modelo=GEMINI_MODEL,
@@ -305,6 +308,10 @@ def extrair_dados_da_planta(caminho_arquivo):
             )
             break
 
+        logger.warning(
+            "Chave %d/%d falhou: %s", indice, len(GEMINI_API_KEYS),
+            erro.get("status") or "erro desconhecido",
+        )
         erros_por_chave.append(f"Chave {indice}: {erro['status'] or 'erro desconhecido'}")
         registrar_chamada(
             status="ERRO",
@@ -315,6 +322,10 @@ def extrair_dados_da_planta(caminho_arquivo):
         continue
     else:
         algum_erro_de_cota = any("RESOURCE_EXHAUSTED" in e for e in erros_por_chave)
+        logger.error(
+            "Todas as %d chaves falharam. Cota esgotada: %s",
+            len(GEMINI_API_KEYS), algum_erro_de_cota,
+        )
         if algum_erro_de_cota:
             mensagem = (
                 "A cota de uso da IA foi atingida em todas as chaves configuradas "

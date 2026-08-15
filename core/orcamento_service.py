@@ -9,6 +9,10 @@ de mostrar o resultado na tela.
 
 from datetime import UTC, datetime
 
+from core.logger import get_logger
+
+logger = get_logger(__name__)
+
 
 def nome_arquivo_seguro(nome_projeto: str, limite: int = 40) -> str:
     """Gera um nome de arquivo unico e seguro a partir do nome do
@@ -33,4 +37,10 @@ def montar_orcamento_completo(materiais_editados: list, mao_de_obra_editada: lis
     """Junta os materiais e a mao de obra (ambos ja editados pelo usuario
     na tela) num unico orcamento -- lista de dicts no formato que
     reporter.py e proposta_pdf.py esperam."""
-    return materiais_editados + mao_de_obra_editada
+    orcamento = materiais_editados + mao_de_obra_editada
+    total = round(sum(item.get("Total", 0) for item in orcamento), 2)
+    logger.info(
+        "Orçamento montado: %d itens (%d material, %d mão de obra), custo direto R$%.2f",
+        len(orcamento), len(materiais_editados), len(mao_de_obra_editada), total,
+    )
+    return orcamento
