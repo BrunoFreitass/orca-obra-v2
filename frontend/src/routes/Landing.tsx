@@ -1,5 +1,5 @@
-import { ChevronDown, ChevronRight, Download, FileText, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { Building2, ChevronDown, ChevronRight, Download, FileText, Trash2 } from 'lucide-react'
+import { Fragment, useState } from 'react'
 
 import { ConfirmarExclusaoDialog } from '@/components/ConfirmarExclusaoDialog'
 import { Button } from '@/components/ui/button'
@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/table'
 import { useExcluirOrcamento, useHistorico } from '@/hooks/use-historico'
 import { urlDownload } from '@/lib/api-client'
+import { useExtracaoStore } from '@/lib/extracao-store'
 import type { OrcamentoHistorico } from '@/lib/types'
 
 function formatarMoeda(valor: number): string {
@@ -49,11 +50,28 @@ function LinhaQuantitativos({ registro }: { registro: OrcamentoHistorico }) {
 export function Landing() {
   const { data: orcamentos, isLoading, isError } = useHistorico()
   const excluir = useExcluirOrcamento()
+  const dadosOriginais = useExtracaoStore((s) => s.dadosOriginais)
   const [expandidoId, setExpandidoId] = useState<number | null>(null)
   const [paraExcluir, setParaExcluir] = useState<OrcamentoHistorico | null>(null)
 
   return (
     <div className="flex flex-col gap-3">
+      {!dadosOriginais && (
+        <div className="flex flex-col items-start gap-2 border border-border bg-card p-6">
+          <div className="flex items-center gap-2 text-primary">
+            <Building2 className="size-5" />
+            <span className="font-mono text-sm uppercase tracking-widest">OrçaObra AI</span>
+          </div>
+          <p className="text-base font-medium">
+            Transforme plantas baixas em orçamentos detalhados em segundos.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Configure sua empresa e o projeto na barra lateral, depois envie a planta baixa em
+            "Planta Baixa" para começar.
+          </p>
+        </div>
+      )}
+
       <h1 className="font-mono text-sm uppercase tracking-wider text-muted-foreground">
         Histórico de Orçamentos
       </h1>
@@ -89,7 +107,7 @@ export function Landing() {
               {orcamentos.map((registro) => {
                 const expandido = expandidoId === registro.id
                 return (
-                  <>
+                  <Fragment key={registro.id}>
                     <TableRow
                       key={registro.id}
                       className="cursor-pointer"
@@ -147,7 +165,7 @@ export function Landing() {
                       </TableCell>
                     </TableRow>
                     {expandido && <LinhaQuantitativos key={`${registro.id}-detalhe`} registro={registro} />}
-                  </>
+                  </Fragment>
                 )
               })}
             </TableBody>

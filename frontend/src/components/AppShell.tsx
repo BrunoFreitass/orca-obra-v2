@@ -10,8 +10,9 @@ import { ProjetoPanel } from '@/components/ProjetoPanel'
 import { SinapiPanel } from '@/components/SinapiPanel'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { cn } from '@/lib/utils'
+import { useExtracaoStore } from '@/lib/extracao-store'
 import { useThemeStore } from '@/lib/theme-store'
+import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Histórico' },
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
 export function AppShell() {
   const tema = useThemeStore((s) => s.tema)
   const alternarTema = useThemeStore((s) => s.alternarTema)
+  const dadosOriginais = useExtracaoStore((s) => s.dadosOriginais)
 
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
@@ -31,21 +33,26 @@ export function AppShell() {
           OrçaObra AI
         </span>
         <nav className="flex items-center gap-1">
-          {NAV_ITEMS.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/'}
-              className={({ isActive }) =>
-                cn(
-                  'rounded-sm px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                  isActive && 'bg-accent text-accent-foreground',
-                )
-              }
-            >
-              {item.label}
-            </NavLink>
-          ))}
+          {NAV_ITEMS.map((item) => {
+            const indisponivel = item.to !== '/' && !dadosOriginais
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.to === '/'}
+                title={indisponivel ? 'Envie uma planta baixa primeiro' : undefined}
+                className={({ isActive }) =>
+                  cn(
+                    'rounded-sm px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                    isActive && 'bg-accent text-accent-foreground',
+                    indisponivel && 'opacity-50',
+                  )
+                }
+              >
+                {item.label}
+              </NavLink>
+            )
+          })}
         </nav>
         <div className="flex-1" />
         <MonitorBadge />
