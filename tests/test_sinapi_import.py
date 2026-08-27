@@ -3,6 +3,7 @@ SINAPI, incluindo o formato de pacote nacional consolidado (cabecalho
 de duas linhas nas abas de composicao, codigo real so na aba
 Analitico, varias abas com o mesmo formato para regimes diferentes de
 encargos)."""
+import pytest
 from openpyxl import Workbook
 
 from core import sinapi_import as si
@@ -159,3 +160,47 @@ class TestPrecoZerado:
         encontrados = si.ler_planilha_sinapi(caminho)
 
         assert "103361" not in encontrados
+
+
+class TestImportarCompensaFatorRegional:
+    """core/calculator.py multiplica TODO preco por FATOR_REGIONAL_RR na
+    hora do calculo -- correto pros valores padrao de coeficientes.py
+    (medias nacionais), mas os valores que vem do SINAPI ja sao a
+    coluna RR (ja regionais). importar() precisa gravar o valor
+    dividido por FATOR_REGIONAL_RR pra nao aplicar o fator 2x."""
+
+    def test_cimento_grava_valor_dividido_pelo_fator_regional(self, tmp_path):
+        from core.coeficientes import FATOR_REGIONAL_RR
+
+        wb = Workbook()
+        wb.remove(wb.active)
+        _sheet_insumos_simples(wb, titulo="ISD", codigo=1379, preco_rr=1.62)
+        caminho = tmp_path / "sinapi.xlsx"
+        wb.save(caminho)
+
+        precos, _avisos, _mes = si.importar([caminho], mes_referencia="2026-07")
+
+        # 1.62 (preco bruto) x 50 (fator_conversao do cimento, kg -> saco
+        # de 50kg) / 1.070 (fator regional, compensado na gravacao).
+        # Tolerancia mais larga por causa do arredondamento pra 2 casas
+        # decimais na gravacao (round(valor_final, 2) em importar()).
+        esperado = (1.62 * 50) / FATOR_REGIONAL_RR.valor
+        assert precos["cimento"]["valor"] == pytest.approx(esperado, abs=0.01)
+        # conferencia: multiplicar de volta pelo fator regional (como
+        # calculator.py faz) tem que devolver o preco real da planilha
+        assert precos["cimento"]["valor"] * FATOR_REGIONAL_RR.valor == pytest.approx(81.0, abs=0.01)
+
+    def test_aco_grava_valor_sem_compensar_fator_regional(self, tmp_path):
+        # "aco" e' excecao: seu consumo em calculator.py nunca aplica o
+        # fator regional (PRECO_ACO_RR, o padrao dela, ja era um valor
+        # de RR antes deste importador existir) -- dividir aqui deixaria
+        # o preco final baixo demais.
+        wb = Workbook()
+        wb.remove(wb.active)
+        _sheet_insumos_simples(wb, titulo="ISD", codigo=32, preco_rr=9.47)
+        caminho = tmp_path / "sinapi.xlsx"
+        wb.save(caminho)
+
+        precos, _avisos, _mes = si.importar([caminho], mes_referencia="2026-07")
+
+        assert precos["aco"]["valor"] == pytest.approx(9.47, abs=0.001)

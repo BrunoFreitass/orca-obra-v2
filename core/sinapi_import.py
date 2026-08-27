@@ -48,7 +48,20 @@ from pathlib import Path
 import openpyxl
 
 from core import tabela_precos as tp
+from core.coeficientes import FATOR_REGIONAL_RR
 from core.sinapi_codigos import MAPEAMENTO_SINAPI, UF_COLUNA_ALVOS
+
+# core/calculator.py multiplica TODO preço por FATOR_REGIONAL_RR na hora
+# de calcular o orçamento -- correto para os valores padrão de
+# coeficientes.py (médias nacionais que precisam do ajuste pra virar
+# preço de RR), mas os valores que vêm daqui já são a coluna RR da
+# planilha oficial, ou seja, já são o preço de Roraima. Sem compensar
+# isso na gravação, o cálculo aplicaria o fator regional 2x (preço 7%
+# maior que o real). "aco" é a única chave que foge da regra: seu
+# consumo em calculator.py NUNCA aplica o fator regional (PRECO_ACO_RR,
+# o padrão dela, já era um valor de RR antes deste importador existir),
+# então gravar sem compensar é o comportamento certo só pra ela.
+_CHAVES_SEM_FATOR_REGIONAL = {"aco"}
 
 
 def _normalizar(texto) -> str:
@@ -267,8 +280,15 @@ def importar(arquivos: list[Path], mes_referencia: str | None = None) -> tuple[d
                            f"R$ {dado['preco']:.2f} convertido para R$ {valor_convertido:.2f} "
                            f"(fator ×{mapeamento.fator_conversao}) -- confira se a conversão faz sentido.")
 
+        chave_base = chave.split("__", 1)[0]
+        valor_final = round(
+            valor_convertido if chave_base in _CHAVES_SEM_FATOR_REGIONAL
+            else valor_convertido / FATOR_REGIONAL_RR.valor,
+            2,
+        )
+
         precos_para_gravar[chave] = {
-            "valor": valor_convertido,
+            "valor": valor_final,
             "descricao": dado["descricao"],
         }
 

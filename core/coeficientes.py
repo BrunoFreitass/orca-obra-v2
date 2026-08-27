@@ -47,7 +47,6 @@ efetiva de um orcamento inteiro (ver data_mais_antiga() abaixo)."""
 # COEFICIENTES DE CONSUMO FISICO (quanto material por m2/ml) -- nao
 # variam por estado, so o PRECO do material varia regionalmente.
 # =====================================================================
-CONSUMO_TIJOLO_POR_M2_PAREDE = Preco(27, "SINAPI - composição alvenaria bloco cerâmico 14x19x29", "2026-06")
 CONSUMO_CIMENTO_SACO_POR_M2 = Preco(0.5, "SINAPI - composição contrapiso", "2026-06")
 CONSUMO_AREIA_M3_POR_M2 = Preco(0.5, "SINAPI - composição contrapiso", "2026-06")
 CONSUMO_BRITA_M3_POR_M2 = Preco(0.3, "SINAPI - composição concreto estrutural", "2026-06")
@@ -133,7 +132,15 @@ PRECOS_COBERTURA = {
 # =====================================================================
 # PRECOS FIXOS (nao variam por padrao de acabamento)
 # =====================================================================
-PRECO_BLOCO_CERAMICO = Preco(1.25, "Pesquisa de mercado - bloco cerâmico 14x19x29", "2026-06")
+# R$/m² de parede pronta (material + mão de obra de assentamento), não
+# R$/tijolo -- desde 2026-08 esta chave pode ser sobrescrita pela
+# composição SINAPI completa "bloco_ceramico" (ver core/sinapi_codigos.py),
+# que já embute os dois. O padrão abaixo soma as duas estimativas
+# antigas (pesquisa de mercado: R$1,25/tijolo × 27 tijolos/m² ≈ R$33,75
+# de material + R$37,86 de mão de obra que existia como item separado)
+# pra manter o mesmo total de antes da mudança de unidade, só que numa
+# unidade consistente com o que calcular.py de fato multiplica.
+PRECO_BLOCO_CERAMICO = Preco(71.61, "Pesquisa de mercado - bloco cerâmico 14x19x29, m² de parede pronta", "2026-06")
 PRECO_ARGAMASSA_KG = Preco(1.80, "Pesquisa de mercado - argamassa AC-II", "2026-06")
 PRECO_TINTA_L = Preco(22.00, "Pesquisa de mercado - tinta acrílica premium", "2026-06")
 PRECO_CIMENTO_SACO = Preco(44.00, "SINAPI/IBGE - média nacional, 1º bimestre/2026", "2026-06")
@@ -224,7 +231,7 @@ mais velho usado no motor de calculo esta."""
     datas_mao_de_obra = [info["preco"].data_ref for info in MAO_DE_OBRA_POR_SERVICO.values()]
     return min([
         _mais_antiga(
-            CONSUMO_TIJOLO_POR_M2_PAREDE, CONSUMO_CIMENTO_SACO_POR_M2,
+            CONSUMO_CIMENTO_SACO_POR_M2,
             CONSUMO_AREIA_M3_POR_M2, CONSUMO_BRITA_M3_POR_M2, CONSUMO_ACO_KG_POR_M2,
             CONSUMO_ARGAMASSA_KG_POR_M2, CONSUMO_TINTA_L_POR_M2,
             M2_POR_PONTO_ELETRICO, M2_POR_PONTO_HIDRAULICO, MARGEM_PERDA,

@@ -4,7 +4,6 @@ from core.coeficientes import (
     CONSUMO_ARGAMASSA_KG_POR_M2,
     CONSUMO_BRITA_M3_POR_M2,
     CONSUMO_CIMENTO_SACO_POR_M2,
-    CONSUMO_TIJOLO_POR_M2_PAREDE,
     CONSUMO_TINTA_L_POR_M2,
     FATOR_REGIONAL_RR,
     M2_POR_PONTO_ELETRICO,
@@ -52,8 +51,13 @@ def calcular_materiais(dados, padrao, tipo_cobertura="Telhado"):
 
     itens = [
         # === OBRA BRUTA ===
+        # Quantidade em m² de parede (não nº de tijolos): PRECO_BLOCO_CERAMICO
+        # e a composição SINAPI "bloco_ceramico" já são preço por m² de
+        # parede pronta (material + mão de obra de assentamento), não
+        # preço por tijolo -- ver comentário de PRECO_BLOCO_CERAMICO em
+        # coeficientes.py.
         ItemOrcamento("Material", "Bloco Cerâmico 14x19x29",
-                      round(d.area_parede * CONSUMO_TIJOLO_POR_M2_PAREDE.valor * margem),
+                      round(d.area_parede * margem, 2),
                       obter_preco("bloco_ceramico", PRECO_BLOCO_CERAMICO).valor * fator_regional,
                       fase="Obra Bruta"),
         ItemOrcamento("Material", f"Piso Interno - Área Seca ({padrao})",

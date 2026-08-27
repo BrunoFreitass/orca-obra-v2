@@ -12,7 +12,6 @@ import pytest
 from core import tabela_precos
 from core.calculator import calcular_mao_de_obra, calcular_materiais
 from core.coeficientes import (
-    CONSUMO_TIJOLO_POR_M2_PAREDE,
     FATOR_REGIONAL_RR,
     MARGEM_PERDA,
     PRECO_BLOCO_CERAMICO,
@@ -39,13 +38,17 @@ def sem_overrides():
 
 class TestCalcularMateriaisContaFechada:
     def test_bloco_ceramico_bate_com_conta_manual(self):
-        # 10m lineares de parede x pe direito 2.8m = 28 m2 de parede
+        # 10m lineares de parede x pe direito 2.8m = 28 m2 de parede.
+        # Quantidade em m² de parede pronta, nao em nº de tijolos --
+        # PRECO_BLOCO_CERAMICO e' preco por m² (material + mao de obra
+        # de assentamento), igual a composicao SINAPI que pode
+        # sobrescreve-lo.
         d = DadosExtracao(metros_parede=10)
         itens = calcular_materiais(d, padrao="Médio")
         item = _item(itens, "Bloco Cerâmico 14x19x29")
 
-        qtd_esperada = round(28 * CONSUMO_TIJOLO_POR_M2_PAREDE.valor * MARGEM_PERDA.valor)
-        assert item["Quantidade"] == qtd_esperada
+        qtd_esperada = round(28 * MARGEM_PERDA.valor, 2)
+        assert item["Quantidade"] == pytest.approx(qtd_esperada, abs=0.001)
         # fator regional fixo de Roraima, unico estado atendido hoje
         assert item["Preco_Unit"] == pytest.approx(PRECO_BLOCO_CERAMICO.valor * FATOR_REGIONAL_RR.valor, abs=0.001)
 
@@ -165,7 +168,14 @@ class TestRegressaoCasoReal:
     em 2026-08 -- nao e' regressao, e' a remocao intencional dos
     servicos que duplicavam mao de obra ja embutida nas composicoes
     SINAPI completas de material (ver
-    TestMaoDeObraSemDuplicarComposicaoSinapiCompleta acima)."""
+    TestMaoDeObraSemDuplicarComposicaoSinapiCompleta acima).
+
+    NOTA 3: total_material_medio_telhado subiu de R$51.599,95 pra
+    R$59.085,69 em 2026-08 -- correcao de bug: "Bloco Ceramico" media
+    quantidade em nº de tijolos mas PRECO_BLOCO_CERAMICO (e a
+    composicao SINAPI que pode sobrescreve-lo) sempre foi preco por m²
+    de parede pronta, nao por tijolo. Ver comentario de
+    PRECO_BLOCO_CERAMICO em coeficientes.py."""
 
     def _dados(self):
         return DadosExtracao(
@@ -176,8 +186,9 @@ class TestRegressaoCasoReal:
     def test_total_material_medio_telhado(self):
         materiais = calcular_materiais(self._dados(), padrao="Médio", tipo_cobertura="Telhado")
         total = round(sum(i["Total"] for i in materiais), 2)
-        # Valor atualizado apos correcao do coeficiente de cimento (0.5 saco/m2)
-        assert total == pytest.approx(51599.95, abs=0.5)
+        # Valor atualizado apos correcao da unidade do Bloco Ceramico (m² de
+        # parede, nao nº de tijolos) -- ver NOTA 3 na docstring da classe.
+        assert total == pytest.approx(59085.69, abs=0.5)
 
     def test_total_mao_de_obra_telhado(self):
         mao_de_obra = calcular_mao_de_obra(self._dados(), tipo_cobertura="Telhado")
