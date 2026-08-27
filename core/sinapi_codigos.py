@@ -129,48 +129,155 @@ MATERIAIS_SIMPLES: dict[str, CodigoSinapi] = {
 # ---------------------------------------------------------------------
 # 2. ITENS POR PADRÃO DE ACABAMENTO (Econômico / Médio / Alto Padrão)
 # Chave final: "{prefixo}__{padrao}", igual ao usado em tabela_precos.py
+#
+# Os códigos preenchidos abaixo foram conferidos em 2026-08 contra o
+# arquivo oficial da Caixa (pacote SINAPI_Referência, ref. 2026-07,
+# coluna RR) -- preço e unidade batem com a planilha real, não só
+# pesquisa em site terceiro (ver MATERIAIS_SIMPLES acima pro caso
+# antigo). Onde não achei uma composição SINAPI que capture bem a
+# diferença de padrão, ou a unidade não bate com o que o motor de
+# cálculo usa hoje, o item ficou codigo=None de propósito -- forçar um
+# código errado alimentaria o cálculo com preço errado silenciosamente
+# (ver aviso no topo do arquivo). O motivo de cada None está comentado
+# ao lado.
 # ---------------------------------------------------------------------
 _TRES_PADROES_M2 = {"Econômico": "m2", "Médio": "m2", "Alto Padrão": "m2"}
 _TRES_PADROES_UN = {"Econômico": "un", "Médio": "un", "Alto Padrão": "un"}
 
 GRUPOS_POR_PADRAO: dict[str, dict[str, CodigoSinapi]] = {
-    "piso_seco":                    _grupo(_TRES_PADROES_M2),
-    "piso_molhado":                 _grupo(_TRES_PADROES_M2),
-    "piso_externo":                 _grupo(_TRES_PADROES_M2),
-    "porta_interna":                _grupo(_TRES_PADROES_UN),
-    "porta_externa":                _grupo(_TRES_PADROES_UN),
-    "janela":                       _grupo(_TRES_PADROES_UN),
-    "ponto_eletrico_infra":         _grupo(_TRES_PADROES_UN),
-    "ponto_eletrico_acabamento":    _grupo(_TRES_PADROES_UN),
-    "ponto_hidraulico_infra":       _grupo(_TRES_PADROES_UN),
-    "ponto_hidraulico_acabamento":  _grupo(_TRES_PADROES_UN),
+    # Revestimento cerâmico de piso, ambiente > 10m² -- tamanho de
+    # cômodo mais comum (sala/quarto/cozinha) entre as faixas que o
+    # SINAPI usa (< 5m² / 5-10m² / > 10m²).
+    "piso_seco": {
+        "Econômico":   CodigoSinapi("87248", "composicao", "m2"),
+        # Revest. cerâmico esmaltado 35x35cm, ambiente >10m² -- R$69,52/m2 (RR, 2026-07)
+        "Médio":       CodigoSinapi("87257", "composicao", "m2"),
+        # Revest. cerâmico esmaltado 60x60cm, ambiente >10m² -- R$80,66/m2 (RR, 2026-07)
+        "Alto Padrão": CodigoSinapi("87263", "composicao", "m2"),
+        # Revest. cerâmico porcelanato 60x60cm, ambiente >10m² -- R$155,26/m2 (RR, 2026-07)
+    },
+    # Mesmas famílias do piso_seco, mas na faixa de ambiente < 5m² --
+    # perfil típico de banheiro/área de serviço.
+    "piso_molhado": {
+        "Econômico":   CodigoSinapi("87246", "composicao", "m2"),
+        # Revest. cerâmico esmaltado 35x35cm, ambiente <5m² -- R$88,98/m2 (RR, 2026-07)
+        "Médio":       CodigoSinapi("87255", "composicao", "m2"),
+        # Revest. cerâmico esmaltado 60x60cm, ambiente <5m² -- R$108,68/m2 (RR, 2026-07)
+        "Alto Padrão": CodigoSinapi("87261", "composicao", "m2"),
+        # Revest. cerâmico porcelanato 60x60cm, ambiente <5m² -- R$185,17/m2 (RR, 2026-07)
+    },
+    # Não achei, no relatório de RR, uma composição de piso de área
+    # externa (antiderrapante/intertravado) com preço coletado -- as
+    # únicas com "piso externo" na descrição eram sobre mobiliário
+    # urbano ou pavimentação de rua, não bateram com o item real.
+    "piso_externo": _grupo(_TRES_PADROES_M2),
+    # Kits de porta de madeira (fornecimento + batente + instalação),
+    # ~70cm de largura -- tamanho padrão de porta interna. O SINAPI já
+    # rotula "Popular"/"Médio", batendo direto com os 2 primeiros
+    # padrões daqui; Alto Padrão usa porta maciça (mais pesada/robusta,
+    # com fechadura) em vez de semi-oca.
+    "porta_interna": {
+        "Econômico":   CodigoSinapi("91331", "composicao", "un"),
+        # Kit porta semi-oca leve/média, padrão popular, 70x210cm, sem fechadura -- R$794,57 (RR, 2026-07)
+        "Médio":       CodigoSinapi("90848", "composicao", "un"),
+        # Kit porta semi-oca leve/média, padrão médio, 70x210cm, sem fechadura -- R$845,14 (RR, 2026-07)
+        "Alto Padrão": CodigoSinapi("90846", "composicao", "un"),
+        # Kit porta maciça (pesada/superpesada), padrão médio, 90x210cm, com fechadura -- R$1.335,80 (RR, 2026-07)
+    },
+    # Mesma família de kits de madeira pros 2 primeiros padrões (prática
+    # comum -- porta externa residencial simples também costuma ser de
+    # madeira); Alto Padrão troca pra porta de alumínio com vidro,
+    # comum em entrada principal/varanda de padrão alto.
+    "porta_externa": {
+        "Econômico":   CodigoSinapi("91318", "composicao", "un"),
+        # Kit porta semi-oca leve/média p/ pintura, padrão popular, 60x210cm, sem fechadura -- R$752,64 (RR, 2026-07)
+        "Médio":       CodigoSinapi("90849", "composicao", "un"),
+        # Kit porta semi-oca leve/média p/ pintura, padrão médio, 80x210cm, sem fechadura -- R$869,83 (RR, 2026-07)
+        "Alto Padrão": CodigoSinapi("94805", "composicao", "un"),
+        # Porta de alumínio de abrir p/ vidro, 87x210cm, com vidro -- R$919,79 (RR, 2026-07)
+    },
+    # SINAPI precifica janela por m² (varia com o tamanho real do vão),
+    # mas o motor de cálculo hoje trata janela como unidade (contagem)
+    # -- unidade incompatível, forçar um código aqui alimentaria o
+    # cálculo com preço errado. Precisa decidir: ou o motor passa a
+    # pedir m² por janela, ou o item continua pesquisa de mercado.
+    "janela": _grupo(_TRES_PADROES_UN),
+    # SINAPI só tem "ponto elétrico"/"ponto hidráulico" como componente
+    # avulso de instalação (ex: caixa/suporte por altura de montagem --
+    # alto/médio/baixo), não como pacote "infraestrutura completa" ou
+    # "acabamento completo" por padrão de acabamento que dê pra separar
+    # em Econômico/Médio/Alto Padrão.
+    "ponto_eletrico_infra":        _grupo(_TRES_PADROES_UN),
+    "ponto_eletrico_acabamento":   _grupo(_TRES_PADROES_UN),
+    "ponto_hidraulico_infra":      _grupo(_TRES_PADROES_UN),
+    "ponto_hidraulico_acabamento": _grupo(_TRES_PADROES_UN),
 }
 
 # Cobertura tem uma camada extra (tipo x padrão): "cobertura_{tipo}__{padrao}"
 COBERTURA: dict[str, dict[str, CodigoSinapi]] = {
-    "cobertura_Telhado": _grupo(_TRES_PADROES_M2),
-    "cobertura_Laje":    _grupo(_TRES_PADROES_M2),
+    "cobertura_Telhado": {
+        "Econômico":   CodigoSinapi("94195", "composicao", "m2"),
+        # Telhamento c/ telha cerâmica de encaixe tipo portuguesa, até 2 águas -- R$52,60/m2 (RR, 2026-07)
+        "Médio":       CodigoSinapi("94207", "composicao", "m2"),
+        # Telhamento c/ telha ondulada de fibrocimento e=6mm, até 2 águas -- R$84,72/m2 (RR, 2026-07)
+        "Alto Padrão": CodigoSinapi("94216", "composicao", "m2"),
+        # Telhamento c/ telha metálica termoacústica e=30mm, até 2 águas -- R$222,78/m2 (RR, 2026-07)
+    },
+    # Nenhuma composição de impermeabilização/acabamento de laje como
+    # cobertura, com preço coletado pra RR, apareceu no relatório --
+    # mantido pesquisa de mercado.
+    "cobertura_Laje": _grupo(_TRES_PADROES_M2),
 }
 
 # ---------------------------------------------------------------------
-# 3. MÃO DE OBRA POR SERVIÇO -- prioridade alta pra preencher: hoje
-# quase tudo aqui é estimativa ("não coletado item a item"), não
-# SINAPI de verdade. Chave final: "mao_de_obra__{servico}".
+# 3. MÃO DE OBRA POR SERVIÇO -- hoje quase tudo aqui é estimativa ("não
+# coletado item a item"), não SINAPI de verdade. Chave final:
+# "mao_de_obra__{servico}".
+#
+# NENHUM item abaixo foi mapeado, por um motivo estrutural (não falta
+# de tempo): o SINAPI quase sempre embute material E mão de obra numa
+# única composição (confirmado em 2026-08 contra o arquivo oficial --
+# ex: "PINTURA LÁTEX ACRÍLICA PREMIUM, APLICAÇÃO MANUAL" já inclui a
+# tinta). O motor de cálculo deste app, porém, já cobra o material
+# separado (PRECO_TINTA_L, PRECO_BLOCO_CERAMICO etc. em
+# coeficientes.py, ou os GRUPOS_POR_PADRAO acima). Colar um código de
+# composição SINAPI aqui, do jeito que MAO_DE_OBRA_POR_SERVICO é usado
+# hoje, contaria o material 2x -- 1x no preço do material, 1x embutido
+# no preço "de mão de obra". Ver nota do "Alvenaria (assentamento)"
+# abaixo pro caso já confirmado; os outros seguem o mesmo padrão por
+# amostragem (Pintura, Execução de Cobertura).
+#
+# Pra preencher isso direito no futuro é preciso decidir a arquitetura
+# primeiro: OU estes itens somem e o preço do material (PRECOS_* /
+# MATERIAIS_SIMPLES) passa a usar a composição SINAPI completa (que já
+# tem a mão de obra embutida), OU alguém isola manualmente só a parcela
+# de mão de obra de dentro da composição (ex: horas de
+# pedreiro/servente com encargos, códigos tipo 4750/6111 em
+# core/sinapi_import ISD) -- mais trabalhoso, mas evita o dado colado.
 # ---------------------------------------------------------------------
 MAO_DE_OBRA: dict[str, CodigoSinapi] = {
     "Alvenaria (assentamento)":               CodigoSinapi(None, "composicao", "m2_parede"),
-    # Já tem pista: composição 89290 citada em coeficientes.py --
-    # confirmar e trazer pra cá. NOTA: se "bloco_ceramico" acima
-    # (103361) for adotado como composição completa, este item de
-    # mão de obra pode ficar redundante -- decidir um dos dois.
+    # Confirmado: "bloco_ceramico" (103361) já é uma composição
+    # completa (blocos + argamassa + mão de obra de assentamento, R$95,40/m2
+    # em RR) -- colar um código aqui duplicaria essa mão de obra.
     "Assentamento de Piso (Área Seca)":       CodigoSinapi(None, "composicao", "m2_piso_seco"),
+    # Mesmo problema: "piso_seco" acima (87248/87257/87263) já é
+    # revestimento cerâmico completo com mão de obra de assentamento.
     "Assentamento de Piso (Área Molhada)":    CodigoSinapi(None, "composicao", "m2_piso_molhado"),
+    # Idem, via "piso_molhado" acima.
     "Assentamento de Piso (Área Externa)":    CodigoSinapi(None, "composicao", "m2_piso_externo"),
     "Pintura":                                CodigoSinapi(None, "composicao", "m2_parede"),
+    # Composições de pintura do SINAPI (ex: 88489, "pintura látex
+    # acrílica premium, parede") já incluem a tinta -- duplicaria
+    # PRECO_TINTA_L.
     "Instalação de Porta Interna":            CodigoSinapi(None, "composicao", "unidade"),
+    # Idem: os kits mapeados em "porta_interna" acima já incluem
+    # fornecimento + montagem + instalação.
     "Instalação de Porta Externa":            CodigoSinapi(None, "composicao", "unidade"),
     "Instalação de Janela":                   CodigoSinapi(None, "composicao", "unidade"),
     "Execução de Cobertura":                  CodigoSinapi(None, "composicao", "m2_cobertura"),
+    # Composições de telhamento (ex: 94207) já incluem material da
+    # telha + mão de obra de instalação.
     "Estrutura (fundação/armação)":           CodigoSinapi(None, "composicao", "m2_area"),
     "Instalação Elétrica":                    CodigoSinapi(None, "composicao", "unidade"),
     "Instalação Hidráulica":                  CodigoSinapi(None, "composicao", "unidade"),

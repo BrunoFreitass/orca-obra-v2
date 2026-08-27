@@ -85,6 +85,20 @@ def _achar_colunas(cabecalho_valores):
     return idx
 
 
+def _achar_coluna_preco_multilinha(ws, linha_cab: int) -> int | None:
+    """Em relatórios de composição (CSD/CCD/CSE), o cabeçalho é de duas
+    linhas: o rótulo da UF (ex: 'RR') fica numa linha acima da linha
+    com 'Código da Composição'/'Custo (R$)', mas alinhado na mesma
+    coluna (célula âncora da mesclagem). _achar_colunas() sozinho não
+    enxerga isso porque só olha a linha do 'código'. Usado como
+    alternativa quando essa linha não tem a UF diretamente."""
+    for linha in range(max(linha_cab - 3, 1), linha_cab):
+        for cell in next(ws.iter_rows(min_row=linha, max_row=linha)):
+            if cell.value is not None and _normalizar(cell.value) in UF_COLUNA_ALVOS:
+                return cell.column - 1
+    return None
+
+
 def _extrair_mes_referencia(caminho: Path) -> str | None:
     """Tenta adivinhar o mês de referência (AAAA-MM) a partir do nome
     do arquivo baixado da Caixa. Se não conseguir, o chamador deve
@@ -95,6 +109,59 @@ def _extrair_mes_referencia(caminho: Path) -> str | None:
     return None
 
 
+def _sheet_e_sem_desoneracao(ws) -> bool:
+    """O pacote nacional consolidado do SINAPI ('SINAPI_Referência')
+    traz várias abas com o mesmo formato (ISD/ICD/ISE para insumos,
+    CSD/CCD/CSE para composições) -- uma para cada regime de encargos
+    (SEM/COM desoneração, SEM encargos). Sem filtrar por isso, ler
+    todas as abas colidiria códigos repetidos com preços de regimes
+    diferentes, e o último a ser lido venceria silenciosamente."""
+    for row in ws.iter_rows(min_row=1, max_row=3, max_col=6):
+        for cell in row:
+            if cell.value and "sem desoneração" in _normalizar(cell.value):
+                return True
+    return False
+
+
+def _mapa_codigos_por_descricao(wb) -> dict[tuple[str, str], str]:
+    """Resolve código real de composição via descrição+unidade, usando
+    a aba 'Analítico' (Relatório Analítico de Composições) quando ela
+    existir no workbook.
+
+    Necessário porque o pacote nacional consolidado do SINAPI zera a
+    coluna 'Código da Composição' nas abas de custo (CSD/CCD/CSE) --
+    o código de verdade só aparece na aba Analítico, na linha-resumo de
+    cada composição (identificada por não ter 'Tipo Item' preenchido)."""
+    for nome in wb.sheetnames:
+        if "anal" not in _normalizar(nome):
+            continue
+        ws = wb[nome]
+        linha_cab, valores_cab = _achar_cabecalho(ws)
+        if linha_cab is None:
+            continue
+        colunas = _achar_colunas(valores_cab)
+        if "codigo" not in colunas or "descricao" not in colunas or "unidade" not in colunas:
+            continue
+        idx_tipo = next((i for i, v in enumerate(valores_cab) if "tipo" in v), None)
+
+        mapa = {}
+        for row in ws.iter_rows(min_row=linha_cab + 1):
+            tipo_cel = row[idx_tipo].value if idx_tipo is not None and idx_tipo < len(row) else None
+            if tipo_cel not in (None, ""):
+                continue  # linha de sub-item (insumo/mão de obra da composição), não a linha-resumo
+            codigo_cel = row[colunas["codigo"]].value if colunas["codigo"] < len(row) else None
+            if codigo_cel is None:
+                continue
+            codigo = str(codigo_cel).strip()
+            if not codigo or not codigo.replace(".", "", 1).isdigit() or codigo == "0":
+                continue
+            descricao = row[colunas["descricao"]].value if colunas["descricao"] < len(row) else None
+            unidade = row[colunas["unidade"]].value if colunas["unidade"] < len(row) else None
+            mapa[(_normalizar(descricao), _normalizar(unidade))] = codigo
+        return mapa
+    return {}
+
+
 def ler_planilha_sinapi(caminho: Path) -> dict[str, dict]:
     """Lê um arquivo .xlsx oficial do SINAPI e retorna
     {codigo_sinapi: {"preco": float, "descricao": str, "unidade": str}}
@@ -103,11 +170,19 @@ def ler_planilha_sinapi(caminho: Path) -> dict[str, dict]:
     wb = openpyxl.load_workbook(caminho, data_only=True)
     encontrados = {}
 
-    for ws in wb.worksheets:
+    sheets_sem_desoneracao = [ws for ws in wb.worksheets if _sheet_e_sem_desoneracao(ws)]
+    sheets_para_ler = sheets_sem_desoneracao or wb.worksheets
+    mapa_codigos = _mapa_codigos_por_descricao(wb)
+
+    for ws in sheets_para_ler:
         linha_cab, valores_cab = _achar_cabecalho(ws)
         if linha_cab is None:
             continue
         colunas = _achar_colunas(valores_cab)
+        if "preco" not in colunas:
+            col_preco = _achar_coluna_preco_multilinha(ws, linha_cab)
+            if col_preco is not None:
+                colunas["preco"] = col_preco
         if "codigo" not in colunas or "preco" not in colunas:
             continue
 
@@ -126,9 +201,17 @@ def ler_planilha_sinapi(caminho: Path) -> dict[str, dict]:
                 preco = float(preco_cel)
             except (TypeError, ValueError):
                 continue
+            if preco <= 0:
+                continue  # "0"/hífen = sem coleta de preço pra este estado, não um preço real
 
             descricao = row[colunas["descricao"]].value if "descricao" in colunas else ""
             unidade = row[colunas["unidade"]].value if "unidade" in colunas else ""
+
+            if codigo == "0":
+                codigo_real = mapa_codigos.get((_normalizar(descricao), _normalizar(unidade)))
+                if codigo_real is None:
+                    continue
+                codigo = codigo_real
 
             encontrados[codigo] = {
                 "preco": preco,
