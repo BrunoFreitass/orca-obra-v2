@@ -64,3 +64,42 @@ class MonitorStatus(BaseModel):
     sucessos: int
     falhas: int
     caches: int
+
+
+# --- Fase 2: Preços customizados ----------------------------------------
+
+class ItemPreco(BaseModel):
+    chave: str
+    categoria: str
+    rotulo: str
+    valor: float
+    fonte: str
+    data_ref: str
+    customizado: bool
+
+
+class PrecosImportarResponse(BaseModel):
+    atualizados: dict[str, float]
+    avisos: list[str]
+
+
+class PrecosAplicarRequest(BaseModel):
+    valores: dict[str, float]
+
+
+# --- Fase 2: Importação SINAPI -------------------------------------------
+
+class SinapiItemPreco(BaseModel):
+    valor: float
+    descricao: str
+
+
+class SinapiImportarResponse(BaseModel):
+    precos: dict[str, SinapiItemPreco]
+    avisos: list[str]
+    mes_ref: str | None
+
+
+class SinapiAplicarRequest(BaseModel):
+    valores: dict[str, float]
+    mes_ref: str

@@ -40,6 +40,16 @@ export async function apiPut<T>(caminho: string, corpo: unknown): Promise<T> {
   )
 }
 
+export async function apiPost<T>(caminho: string, corpo: unknown): Promise<T> {
+  return tratarResposta<T>(
+    await fetch(`/api${caminho}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(corpo),
+    }),
+  )
+}
+
 export async function apiPostFormData<T>(caminho: string, formData: FormData): Promise<T> {
   return tratarResposta<T>(await fetch(`/api${caminho}`, { method: 'POST', body: formData }))
 }

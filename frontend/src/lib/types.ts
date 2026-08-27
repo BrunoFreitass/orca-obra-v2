@@ -46,3 +46,32 @@ export interface MonitorStatus {
   falhas: number
   caches: number
 }
+
+export interface ItemPreco {
+  chave: string
+  categoria: string
+  rotulo: string
+  valor: number
+  fonte: string
+  data_ref: string
+  customizado: boolean
+}
+
+export interface PrecosImportarResponse {
+  atualizados: Record<string, number>
+  avisos: string[]
+}
+
+export interface SinapiItemPreco {
+  valor: number
+  descricao: string
+}
+
+export interface SinapiImportarResponse {
+  precos: Record<string, SinapiItemPreco>
+  avisos: string[]
+  mes_ref: string | null
+}
+
+export type Padrao = 'Econômico' | 'Médio' | 'Alto Padrão'
+export type TipoCobertura = 'Telhado' | 'Laje'

@@ -2,7 +2,11 @@ import { Moon, Sun } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
 
 import { MonitorBadge } from '@/components/MonitorBadge'
+import { PainelColapsavel } from '@/components/PainelColapsavel'
 import { PerfilPanel } from '@/components/PerfilPanel'
+import { PrecosPanel } from '@/components/PrecosPanel'
+import { ProjetoPanel } from '@/components/ProjetoPanel'
+import { SinapiPanel } from '@/components/SinapiPanel'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
@@ -50,15 +54,21 @@ export function AppShell() {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Painel lateral persistente -- empresa (Fase 1), projeto/preços/
-        SINAPI chegam na Fase 2. */}
+        {/* Painel lateral persistente -- empresa, projeto, preços e SINAPI. */}
         <aside className="w-64 shrink-0 overflow-y-auto border-r border-border bg-sidebar p-3">
           <PerfilPanel />
           <Separator className="my-3" />
-          <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-            Projeto · Preços · SINAPI
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">Chegam na Fase 2.</p>
+          <PainelColapsavel titulo="Projeto" abertoPorPadrao>
+            <ProjetoPanel />
+          </PainelColapsavel>
+          <Separator className="my-1" />
+          <PainelColapsavel titulo="Preços Customizados">
+            <PrecosPanel />
+          </PainelColapsavel>
+          <Separator className="my-1" />
+          <PainelColapsavel titulo="Importar SINAPI oficial">
+            <SinapiPanel />
+          </PainelColapsavel>
         </aside>
 
         <main className="flex-1 overflow-y-auto p-6">
