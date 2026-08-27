@@ -22,6 +22,17 @@ from api.routers import (
     sinapi,
 )
 from api.schemas import HealthResponse
+from core import paths
+from core.historico import inicializar_db
+from core.monitor_api import inicializar_tabela_monitor
+
+# Mesma inicialização que app.py faz pro Streamlit -- os dois processos
+# apontam pro mesmo historico.db/diretórios (core/paths.py), então
+# rodar aqui de novo é idempotente e garante que a API funciona mesmo
+# se for o primeiro processo a subir.
+inicializar_db()
+inicializar_tabela_monitor()
+paths.garantir_diretorios()
 
 app = FastAPI(title="OrçaObra AI API")
 

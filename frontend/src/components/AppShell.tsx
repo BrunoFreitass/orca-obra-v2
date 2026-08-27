@@ -1,7 +1,10 @@
 import { Moon, Sun } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
 
+import { MonitorBadge } from '@/components/MonitorBadge'
+import { PerfilPanel } from '@/components/PerfilPanel'
 import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import { useThemeStore } from '@/lib/theme-store'
 
@@ -40,21 +43,22 @@ export function AppShell() {
           ))}
         </nav>
         <div className="flex-1" />
+        <MonitorBadge />
         <Button variant="ghost" size="icon" className="size-7" onClick={alternarTema}>
           {tema === 'claro' ? <Moon className="size-4" /> : <Sun className="size-4" />}
         </Button>
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Painel lateral persistente -- empresa/projeto/preços/SINAPI/monitor
-        (Fases 1-2). Placeholder por enquanto. */}
+        {/* Painel lateral persistente -- empresa (Fase 1), projeto/preços/
+        SINAPI chegam na Fase 2. */}
         <aside className="w-64 shrink-0 overflow-y-auto border-r border-border bg-sidebar p-3">
+          <PerfilPanel />
+          <Separator className="my-3" />
           <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-            Painel lateral
+            Projeto · Preços · SINAPI
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Empresa, projeto, preços e SINAPI chegam nas Fases 1–2.
-          </p>
+          <p className="mt-1 text-xs text-muted-foreground">Chegam na Fase 2.</p>
         </aside>
 
         <main className="flex-1 overflow-y-auto p-6">
