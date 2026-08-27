@@ -118,12 +118,37 @@ class TestFaseObraBrutaAcabamento:
         )
 
 
-class TestCalcularMaoDeObraContaFechada:
-    def test_alvenaria_usa_area_de_parede_nao_metros_lineares(self):
-        d = DadosExtracao(metros_parede=10)  # => 28 m2 de parede
-        itens = calcular_mao_de_obra(d)
-        item = _item(itens, "Alvenaria (assentamento)")
-        assert item["Quantidade"] == pytest.approx(28.0, abs=0.001)
+class TestMaoDeObraSemDuplicarComposicaoSinapiCompleta:
+    """Servicos cujo material ja e' uma composicao SINAPI completa
+    (material + mao de obra) nao devem gerar linha de mao de obra em
+    paralelo -- ver core/sinapi_codigos.py secao 3."""
+
+    def _dados(self):
+        return DadosExtracao(
+            metros_parede=10, area_piso_seco=20, area_piso_molhado=5,
+            portas_internas=2, portas_externas=1,
+        )
+
+    def test_itens_cobertos_por_composicao_sinapi_completa_nao_aparecem(self):
+        itens = calcular_mao_de_obra(self._dados(), tipo_cobertura="Telhado")
+        nomes = {it["Material"] for it in itens}
+        redundantes = {
+            "Alvenaria (assentamento)",
+            "Assentamento de Piso (Área Seca)",
+            "Assentamento de Piso (Área Molhada)",
+            "Instalação de Porta Interna",
+            "Instalação de Porta Externa",
+        }
+        assert not (nomes & redundantes)
+
+    def test_execucao_de_cobertura_some_so_para_telhado(self):
+        # cobertura_Telhado ja e' composicao SINAPI completa (94195/
+        # 94207/94216); cobertura_Laje ainda nao tem equivalente, entao
+        # continua precisando da mao de obra em separado.
+        itens_telhado = calcular_mao_de_obra(self._dados(), tipo_cobertura="Telhado")
+        itens_laje = calcular_mao_de_obra(self._dados(), tipo_cobertura="Laje")
+        assert "Execução de Cobertura" not in {it["Material"] for it in itens_telhado}
+        assert "Execução de Cobertura" in {it["Material"] for it in itens_laje}
 
 
 class TestRegressaoCasoReal:
@@ -134,7 +159,13 @@ class TestRegressaoCasoReal:
 
     NOTA: o valor de referencia foi atualizado em 2026-08 apos correcao
     do coeficiente de cimento (de 7 sacos/m2 absurdo para 0.5 saco/m2
-    realista, conforme SINAPI)."""
+    realista, conforme SINAPI).
+
+    NOTA 2: total_mao_de_obra_telhado caiu de R$21.825,47 pra R$8.041,72
+    em 2026-08 -- nao e' regressao, e' a remocao intencional dos
+    servicos que duplicavam mao de obra ja embutida nas composicoes
+    SINAPI completas de material (ver
+    TestMaoDeObraSemDuplicarComposicaoSinapiCompleta acima)."""
 
     def _dados(self):
         return DadosExtracao(
@@ -151,4 +182,4 @@ class TestRegressaoCasoReal:
     def test_total_mao_de_obra_telhado(self):
         mao_de_obra = calcular_mao_de_obra(self._dados(), tipo_cobertura="Telhado")
         total = round(sum(i["Total"] for i in mao_de_obra), 2)
-        assert total == pytest.approx(21825.47, abs=0.5)
+        assert total == pytest.approx(8041.72, abs=0.5)

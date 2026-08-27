@@ -159,37 +159,19 @@ PRECO_ACO_RR = Preco(
 # =====================================================================
 # MAO DE OBRA POR SERVICO (valores medios de referencia nacional --
 # SEMPRE editaveis pelo usuario na tela antes de gerar o orcamento)
+#
+# "Alvenaria (assentamento)", "Assentamento de Piso (Área Seca/
+# Molhada)" e "Instalação de Porta Interna/Externa" foram removidos
+# daqui em 2026-08: o material equivalente (bloco_ceramico, piso_seco,
+# piso_molhado, porta_interna, porta_externa) já usa uma composição
+# SINAPI completa com mão de obra embutida -- ver
+# core/sinapi_codigos.py e core/calculator.py:calcular_mao_de_obra().
+# Manter os dois contaria a mão de obra 2x.
 # =====================================================================
 _FONTE_MAO_DE_OBRA = "Aproximação a partir da parcela de mão de obra das composições SINAPI (ainda não coletado item a item)"
 _DATA_MAO_DE_OBRA = "2026-06"
 
 MAO_DE_OBRA_POR_SERVICO = {
-    "Alvenaria (assentamento)": {
-        "preco": Preco(
-            37.86,
-            (
-                "SINAPI RR - composição 89290 "
-                "(servente 0,43×R$23,36 + pedreiro 0,86×R$32,36), "
-                "alvenaria estrutural blocos cerâmicos 14x19x29 -- "
-                "vedação cerâmica equivalente não localizada, "
-                "usado como melhor referência disponível"
-            ),
-            "2026-06",
-        ),
-        "unidade": "m2_parede",
-    },
-    "Assentamento de Piso (Área Seca)": {
-        "preco": Preco(
-            22.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA
-        ),
-        "unidade": "m2_piso_seco",
-    },
-    "Assentamento de Piso (Área Molhada)": {
-        "preco": Preco(
-            32.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA
-        ),
-        "unidade": "m2_piso_molhado",
-    },
     "Assentamento de Piso (Área Externa)": {
         "preco": Preco(
             26.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA
@@ -201,18 +183,6 @@ MAO_DE_OBRA_POR_SERVICO = {
             12.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA
         ),
         "unidade": "m2_parede",
-    },
-    "Instalação de Porta Interna": {
-        "preco": Preco(
-            80.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA
-        ),
-        "unidade": "unidade",
-    },
-    "Instalação de Porta Externa": {
-        "preco": Preco(
-            115.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA
-        ),
-        "unidade": "unidade",
     },
     "Instalação de Janela": {
         "preco": Preco(

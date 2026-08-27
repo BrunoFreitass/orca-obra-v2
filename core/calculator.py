@@ -137,7 +137,16 @@ def calcular_materiais(dados, padrao, tipo_cobertura="Telhado"):
 
 
 def calcular_mao_de_obra(dados, tipo_cobertura="Telhado"):
-    """Gera as linhas de MAO DE OBRA por servico."""
+    """Gera as linhas de MAO DE OBRA por servico.
+
+    Servicos cujo material equivalente ja e' uma composicao SINAPI
+    completa (material + mao de obra embutidos -- ver GRUPOS_POR_PADRAO
+    e MATERIAIS_SIMPLES em core/sinapi_codigos.py) NAO geram linha
+    aqui, pra nao contar a mao de obra 2x: 1x embutida no preco do
+    material, 1x aqui como estimativa separada. "Execução de Cobertura"
+    e' condicional -- so' fica redundante quando tipo_cobertura="Telhado"
+    (cobertura_Laje ainda nao tem composicao SINAPI mapeada, entao
+    continua precisando da mao de obra em separado)."""
     d = _dados_extracao(dados)
     fator_regional = FATOR_REGIONAL_RR.valor
     area_cobertura = d.area_cobertura(tipo_cobertura)
@@ -146,17 +155,13 @@ def calcular_mao_de_obra(dados, tipo_cobertura="Telhado"):
 
     # Mapeamento de servico -> (quantidade, fase)
     servicos_base = {
-        "Alvenaria (assentamento)": (d.area_parede, "Obra Bruta"),
-        "Assentamento de Piso (Área Seca)": (d.area_piso_seco, "Acabamento"),
-        "Assentamento de Piso (Área Molhada)": (d.area_piso_molhado, "Acabamento"),
         "Assentamento de Piso (Área Externa)": (d.area_piso_externo, "Acabamento"),
         "Pintura": (d.area_parede, "Acabamento"),
-        "Instalação de Porta Interna": (d.portas_internas, "Acabamento"),
-        "Instalação de Porta Externa": (d.portas_externas, "Acabamento"),
         "Instalação de Janela": (d.janelas, "Acabamento"),
-        "Execução de Cobertura": (area_cobertura, "Obra Bruta"),
         "Estrutura (fundação/armação)": (d.area_piso_total, "Obra Bruta"),
     }
+    if tipo_cobertura != "Telhado":
+        servicos_base["Execução de Cobertura"] = (area_cobertura, "Obra Bruta")
 
     itens = []
     for servico, (qtd, fase) in servicos_base.items():

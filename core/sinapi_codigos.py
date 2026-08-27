@@ -234,50 +234,35 @@ COBERTURA: dict[str, dict[str, CodigoSinapi]] = {
 # coletado item a item"), não SINAPI de verdade. Chave final:
 # "mao_de_obra__{servico}".
 #
-# NENHUM item abaixo foi mapeado, por um motivo estrutural (não falta
-# de tempo): o SINAPI quase sempre embute material E mão de obra numa
-# única composição (confirmado em 2026-08 contra o arquivo oficial --
-# ex: "PINTURA LÁTEX ACRÍLICA PREMIUM, APLICAÇÃO MANUAL" já inclui a
-# tinta). O motor de cálculo deste app, porém, já cobra o material
-# separado (PRECO_TINTA_L, PRECO_BLOCO_CERAMICO etc. em
-# coeficientes.py, ou os GRUPOS_POR_PADRAO acima). Colar um código de
-# composição SINAPI aqui, do jeito que MAO_DE_OBRA_POR_SERVICO é usado
-# hoje, contaria o material 2x -- 1x no preço do material, 1x embutido
-# no preço "de mão de obra". Ver nota do "Alvenaria (assentamento)"
-# abaixo pro caso já confirmado; os outros seguem o mesmo padrão por
-# amostragem (Pintura, Execução de Cobertura).
+# DECISÃO (2026-08, princípio "só dado SINAPI, sem pesquisa de mercado
+# paralela"): sempre que o material equivalente já é uma composição
+# SINAPI completa (material + mão de obra embutidos -- confirmado
+# contra o arquivo oficial, ex: "PINTURA LÁTEX ACRÍLICA PREMIUM,
+# APLICAÇÃO MANUAL" já inclui a tinta), o item de mão de obra
+# correspondente SOME daqui em vez de ficar com codigo=None -- ver
+# core/calculator.py:calcular_mao_de_obra() pra onde isso é aplicado.
+# Manter os dois (preço do material via SINAPI completo + estimativa de
+# mão de obra em paralelo) duplicaria o custo. Removidos por esse
+# motivo: "Alvenaria (assentamento)" (coberto por bloco_ceramico,
+# 103361), "Assentamento de Piso (Área Seca/Molhada)" (piso_seco/
+# piso_molhado), "Instalação de Porta Interna/Externa" (porta_interna/
+# porta_externa).
 #
-# Pra preencher isso direito no futuro é preciso decidir a arquitetura
-# primeiro: OU estes itens somem e o preço do material (PRECOS_* /
-# MATERIAIS_SIMPLES) passa a usar a composição SINAPI completa (que já
-# tem a mão de obra embutida), OU alguém isola manualmente só a parcela
-# de mão de obra de dentro da composição (ex: horas de
-# pedreiro/servente com encargos, códigos tipo 4750/6111 em
-# core/sinapi_import ISD) -- mais trabalhoso, mas evita o dado colado.
+# Os itens abaixo continuam com codigo=None porque não há composição
+# SINAPI com preço coletado pra RR que os cubra (ainda são
+# estimativa/pesquisa de mercado, e por ora ficam assim -- decisão
+# tomada em 2026-08: nenhum outro dado de terceiros até achar SINAPI
+# real).
 # ---------------------------------------------------------------------
 MAO_DE_OBRA: dict[str, CodigoSinapi] = {
-    "Alvenaria (assentamento)":               CodigoSinapi(None, "composicao", "m2_parede"),
-    # Confirmado: "bloco_ceramico" (103361) já é uma composição
-    # completa (blocos + argamassa + mão de obra de assentamento, R$95,40/m2
-    # em RR) -- colar um código aqui duplicaria essa mão de obra.
-    "Assentamento de Piso (Área Seca)":       CodigoSinapi(None, "composicao", "m2_piso_seco"),
-    # Mesmo problema: "piso_seco" acima (87248/87257/87263) já é
-    # revestimento cerâmico completo com mão de obra de assentamento.
-    "Assentamento de Piso (Área Molhada)":    CodigoSinapi(None, "composicao", "m2_piso_molhado"),
-    # Idem, via "piso_molhado" acima.
     "Assentamento de Piso (Área Externa)":    CodigoSinapi(None, "composicao", "m2_piso_externo"),
     "Pintura":                                CodigoSinapi(None, "composicao", "m2_parede"),
-    # Composições de pintura do SINAPI (ex: 88489, "pintura látex
-    # acrílica premium, parede") já incluem a tinta -- duplicaria
-    # PRECO_TINTA_L.
-    "Instalação de Porta Interna":            CodigoSinapi(None, "composicao", "unidade"),
-    # Idem: os kits mapeados em "porta_interna" acima já incluem
-    # fornecimento + montagem + instalação.
-    "Instalação de Porta Externa":            CodigoSinapi(None, "composicao", "unidade"),
     "Instalação de Janela":                   CodigoSinapi(None, "composicao", "unidade"),
     "Execução de Cobertura":                  CodigoSinapi(None, "composicao", "m2_cobertura"),
-    # Composições de telhamento (ex: 94207) já incluem material da
-    # telha + mão de obra de instalação.
+    # Só ainda é usado pra cobertura_Laje (sem composição SINAPI) --
+    # pra Telhado, cobertura_Telhado (94195/94207/94216) já cobre
+    # material + mão de obra, então este item nem entra no cálculo
+    # quando tipo_cobertura="Telhado" (ver calcular_mao_de_obra()).
     "Estrutura (fundação/armação)":           CodigoSinapi(None, "composicao", "m2_area"),
     "Instalação Elétrica":                    CodigoSinapi(None, "composicao", "unidade"),
     "Instalação Hidráulica":                  CodigoSinapi(None, "composicao", "unidade"),
