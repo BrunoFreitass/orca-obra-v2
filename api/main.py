@@ -1,10 +1,6 @@
 """Ponto de entrada da API do OrçaObra AI -- camada fina sobre core/,
-pensada pra rodar em paralelo ao app Streamlit existente (app.py)
-durante a transição pro front-end em React. Nada aqui modifica core/*.py
-além do que já foi explicitamente movido (core/confianca.py,
-core/orcamento_service.py:gerar_orcamento_completo).
-
-Ver plano completo em C:\\Users\\bruno\\.claude\\plans\\immutable-rolling-volcano.md.
+servindo tanto as rotas /api/* quanto o build estático do frontend
+(frontend/dist) em produção.
 """
 import os
 
@@ -26,10 +22,6 @@ from core import paths
 from core.historico import inicializar_db
 from core.monitor_api import inicializar_tabela_monitor
 
-# Mesma inicialização que app.py faz pro Streamlit -- os dois processos
-# apontam pro mesmo historico.db/diretórios (core/paths.py), então
-# rodar aqui de novo é idempotente e garante que a API funciona mesmo
-# se for o primeiro processo a subir.
 inicializar_db()
 inicializar_tabela_monitor()
 paths.garantir_diretorios()
@@ -57,8 +49,7 @@ def health() -> HealthResponse:
     return HealthResponse(status="ok")
 
 
-# Build estático do frontend (gerado por `npm run build` em frontend/) --
-# só existe a partir da Fase 6 (ou antes, se alguém rodar o build local).
+# Build estático do frontend (gerado por `npm run build` em frontend/).
 # Montado por último pra não sombrear as rotas /api/*.
 _CAMINHO_FRONTEND_BUILD = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
 if os.path.isdir(_CAMINHO_FRONTEND_BUILD):

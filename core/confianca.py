@@ -1,6 +1,6 @@
 """Pontuação de confiança da extração e heurística de plausibilidade da
 metragem de parede -- lógica pura, sem dependência de UI, reaproveitável
-por qualquer front-end (Streamlit hoje, API/React no futuro).
+por qualquer front-end.
 
 Realocado de core/ui_revisao.py em 2026-08 -- mesma lógica, sem mudança
 de comportamento."""

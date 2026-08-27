@@ -21,7 +21,7 @@ def _diretorio_base():
         if os.path.exists(candidato) and os.access(candidato, os.W_OK):
             return candidato
 
-    # Ambiente local: pasta raiz do projeto (onde está app.py)
+    # Ambiente local: pasta raiz do projeto
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 

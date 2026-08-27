@@ -3,8 +3,8 @@
 Reune regras de negocio que antes viviam misturadas com codigo de
 interface (Streamlit) dentro de app.py -- geracao de nome de arquivo,
 soma de custo direto e calculo do preco de venda com BDI. Nenhuma
-funcao aqui importa streamlit; app.py chama estas funcoes e so cuida
-de mostrar o resultado na tela.
+funcao aqui importa UI; quem chama (hoje, a API) so cuida de mostrar
+o resultado na tela.
 """
 
 import os
@@ -60,9 +60,8 @@ def gerar_orcamento_completo(
     local_obra: str,
 ) -> dict:
     """Calcula custo/preço, gera Excel + PDF em disco e persiste no
-    histórico -- mesma sequência que core/ui_orcamento.py:_gerar_documentos
-    executa hoje pela tela do Streamlit, extraída aqui pra ser chamada
-    também por um front-end sem Streamlit (ex: uma API).
+    histórico -- chamada pela API (api/routers/orcamento.py) ao gerar
+    um orçamento completo.
 
     Retorna {custo_direto, preco_venda, caminho_excel, caminho_pdf,
     historico_id} -- não faz nenhuma renderização, quem chamar decide
