@@ -4,6 +4,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { MonitorBadge } from '@/components/MonitorBadge'
 import { PainelColapsavel } from '@/components/PainelColapsavel'
 import { PerfilPanel } from '@/components/PerfilPanel'
+import { PlantaPanel } from '@/components/PlantaPanel'
 import { PrecosPanel } from '@/components/PrecosPanel'
 import { ProjetoPanel } from '@/components/ProjetoPanel'
 import { SinapiPanel } from '@/components/SinapiPanel'
@@ -62,6 +63,8 @@ export function AppShell() {
             <ProjetoPanel />
           </PainelColapsavel>
           <Separator className="my-1" />
+          <PlantaPanel />
+          <Separator className="my-3" />
           <PainelColapsavel titulo="Preços Customizados">
             <PrecosPanel />
           </PainelColapsavel>

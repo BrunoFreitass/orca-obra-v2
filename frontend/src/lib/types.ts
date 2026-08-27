@@ -75,3 +75,59 @@ export interface SinapiImportarResponse {
 
 export type Padrao = 'Econômico' | 'Médio' | 'Alto Padrão'
 export type TipoCobertura = 'Telhado' | 'Laje'
+
+// --- Fase 3: Extração e Revisão ------------------------------------------
+
+export type NivelConfianca = 'alta' | 'media' | 'baixa'
+
+export interface ConfiancaCampo {
+  nivel: NivelConfianca
+  motivo: string
+}
+
+export const CAMPOS_EXTRACAO = [
+  'area_piso_seco',
+  'area_piso_molhado',
+  'area_piso_externo',
+  'metros_parede',
+  'portas_internas',
+  'portas_externas',
+  'janelas',
+] as const
+
+export type CampoExtracao = (typeof CAMPOS_EXTRACAO)[number]
+
+export interface DadosRevisao {
+  area_piso_seco: number
+  area_piso_molhado: number
+  area_piso_externo: number
+  metros_parede: number
+  portas_internas: number
+  portas_externas: number
+  janelas: number
+}
+
+export interface DadosExtraidos extends DadosRevisao {
+  confianca: Partial<Record<CampoExtracao, ConfiancaCampo>>
+}
+
+export interface ErroExtracaoDetalhe {
+  mensagem_amigavel: string
+  detalhe_tecnico: string | null
+}
+
+export interface IndiceConfianca {
+  percentual: number
+  nivel: NivelConfianca
+  cor: string
+  emoji: string
+  mensagem: string
+}
+
+export interface RevisaoAvaliarResponse {
+  area_piso_total: number
+  indice_confianca: IndiceConfianca
+  avisos_parede: string[]
+  sugestao_parede: number | null
+  avisos_gerais: string[]
+}

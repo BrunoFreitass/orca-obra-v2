@@ -103,3 +103,53 @@ class SinapiImportarResponse(BaseModel):
 class SinapiAplicarRequest(BaseModel):
     valores: dict[str, float]
     mes_ref: str
+
+
+# --- Fase 3: Extração e Revisão ------------------------------------------
+
+class ConfiancaCampo(BaseModel):
+    nivel: str = "media"
+    motivo: str = ""
+
+
+class DadosExtraidos(BaseModel):
+    area_piso_seco: float = 0
+    area_piso_molhado: float = 0
+    area_piso_externo: float = 0
+    metros_parede: float = 0
+    portas_internas: int = 0
+    portas_externas: int = 0
+    janelas: int = 0
+    confianca: dict[str, ConfiancaCampo] = {}
+
+
+class ErroExtracao(BaseModel):
+    mensagem_amigavel: str
+    detalhe_tecnico: str | None = None
+
+
+class IndiceConfianca(BaseModel):
+    percentual: int
+    nivel: str
+    cor: str
+    emoji: str
+    mensagem: str
+
+
+class RevisaoAvaliarRequest(BaseModel):
+    confianca: dict[str, ConfiancaCampo] = {}
+    area_piso_seco: float = 0
+    area_piso_molhado: float = 0
+    area_piso_externo: float = 0
+    metros_parede: float = 0
+    portas_internas: int = 0
+    portas_externas: int = 0
+    janelas: int = 0
+
+
+class RevisaoAvaliarResponse(BaseModel):
+    area_piso_total: float
+    indice_confianca: IndiceConfianca
+    avisos_parede: list[str]
+    sugestao_parede: float | None
+    avisos_gerais: list[str]

@@ -5,11 +5,17 @@
 
 export class ApiError extends Error {
   status: number
+  /** api/*.py às vezes manda um detail estruturado (dict), não só
+   * string (ex: /extracao manda {mensagem_amigavel, detalhe_tecnico}).
+   * Guardado bruto aqui pra quem precisar dos campos, sem round-trip
+   * de JSON.stringify/parse pela `message` (que é sempre string). */
+  detail: unknown
 
-  constructor(status: number, message: string) {
-    super(message)
+  constructor(status: number, detail: unknown) {
+    super(typeof detail === 'string' ? detail : JSON.stringify(detail))
     this.name = 'ApiError'
     this.status = status
+    this.detail = detail
   }
 }
 
