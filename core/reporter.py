@@ -102,9 +102,7 @@ def gerar_excel(dados_orcamento, output_path, bdi_percentual=0):
             linha_atual += 1
 
 
-        subtotal_valor = round(sum(
-            it["Quantidade"] * it["Preco_Unit"] for it in itens_grupo
-        ), 2)
+        subtotal_valor = round(sum(it["Total"] for it in itens_grupo), 2)
 
         # --- SUBTOTAL ---
         ws.merge_cells(f"A{linha_atual}:C{linha_atual}")
@@ -136,11 +134,7 @@ def gerar_excel(dados_orcamento, output_path, bdi_percentual=0):
     ws.merge_cells(f"A{linha_custo_direto}:C{linha_custo_direto}")
     ws.cell(row=linha_custo_direto, column=1, value=label_custo)
 
-    custo_direto_valor = 0.0
-    for tipo in ordem_grupos:
-        custo_direto_valor += round(sum(
-            it["Quantidade"] * it["Preco_Unit"] for it in grupos[tipo]
-        ), 2)
+    custo_direto_valor = round(sum(item["Total"] for item in dados_orcamento), 2)
 
     celula_custo_direto = ws.cell(row=linha_custo_direto, column=4, value=custo_direto_valor)
     celula_custo_direto.font = font_custo
@@ -162,7 +156,12 @@ def gerar_excel(dados_orcamento, output_path, bdi_percentual=0):
             c.alignment = align_bdi
         ws.cell(row=linha_bdi, column=1,
                 value=f"BDI ({bdi_percentual:g}%) — administração, lucro, impostos e imprevistos")
-        bdi_valor = round(custo_direto_valor * bdi_percentual / 100, 2)
+        # Mesma fórmula de core/orcamento_service.py::calcular_custo_e_preco --
+        # bdi_valor é derivado por subtração (não recalculado a partir do
+        # percentual) pra nunca divergir do Preço de Venda exibido logo
+        # abaixo, nem do valor salvo no histórico.
+        preco_venda_valor = round(custo_direto_valor * (1 + bdi_percentual / 100), 2)
+        bdi_valor = round(preco_venda_valor - custo_direto_valor, 2)
         celula_bdi_valor = ws.cell(row=linha_bdi, column=4, value=bdi_valor)
         celula_bdi_valor.font = Font(name=fonte_padrao, size=10, color="000000")
         celula_bdi_valor.number_format = 'R$ #,##0.00'
@@ -181,7 +180,6 @@ def gerar_excel(dados_orcamento, output_path, bdi_percentual=0):
         ws.merge_cells(f"A{linha_preco_venda}:C{linha_preco_venda}")
         ws.cell(row=linha_preco_venda, column=1, value="PREÇO DE VENDA")
 
-        preco_venda_valor = round(custo_direto_valor + bdi_valor, 2)
         celula_venda_valor = ws.cell(row=linha_preco_venda, column=4, value=preco_venda_valor)
         celula_venda_valor.font = font_venda
         celula_venda_valor.fill = fill_venda

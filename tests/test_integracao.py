@@ -5,6 +5,7 @@ orçamento completo, sem depender da UI (Streamlit) nem da API Gemini.
 """
 import os
 
+import openpyxl
 import pytest
 
 from core import orcamento_service, tabela_precos
@@ -61,6 +62,26 @@ class TestGerarExcel:
         caminho_csv = tmp_path / "orcamento.csv"
         resultado = gerar_excel(orcamento_completo, str(caminho_csv), bdi_percentual=0)
         assert resultado.endswith(".xlsx")
+
+    def test_preco_de_venda_bate_com_orcamento_service(self, orcamento_completo, tmp_path):
+        """Regressão: Excel, PDF e o valor salvo no histórico usavam 3
+        fórmulas de arredondamento diferentes pra Custo Direto + BDI ->
+        Preço de Venda, e podiam divergir em 1 centavo entre si. Garante
+        que o valor exibido no Excel bate exatamente com
+        core.orcamento_service.calcular_custo_e_preco, que é o que vai
+        pro histórico."""
+        caminho = tmp_path / "orcamento.xlsx"
+        _, preco_venda_esperado = orcamento_service.calcular_custo_e_preco(
+            orcamento_completo, bdi_percentual=25
+        )
+        resultado = gerar_excel(orcamento_completo, str(caminho), bdi_percentual=25)
+
+        wb = openpyxl.load_workbook(resultado, data_only=True)
+        ws = wb.active
+        valores = {row[0]: row[3] for row in ws.iter_rows(values_only=True) if row[0]}
+        assert valores["PREÇO DE VENDA"] == preco_venda_esperado
+        assert valores["CUSTO DIRETO"] + valores["BDI (25%) — administração, lucro, impostos e imprevistos"] == \
+            valores["PREÇO DE VENDA"]
 
 
 class TestGerarPdfProposta:

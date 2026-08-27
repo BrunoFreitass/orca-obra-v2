@@ -175,10 +175,15 @@ def gerar_pdf_proposta(dados_orcamento, output_path, nome_projeto,
     story.append(Spacer(1, 16))
 
     # --- Bloco final: Custo Direto -> BDI -> Preco de Venda ---
+    custo_direto = round(custo_direto, 2)
     linhas_final = [["Custo Direto", f"R$ {custo_direto:,.2f}"]]
     if bdi_percentual:
-        valor_bdi = custo_direto * bdi_percentual / 100
-        preco_venda = custo_direto + valor_bdi
+        # Mesma fórmula de core/orcamento_service.py::calcular_custo_e_preco --
+        # valor_bdi é derivado por subtração (não recalculado a partir do
+        # percentual) pra nunca divergir do Preço de Venda exibido logo
+        # abaixo, nem do valor salvo no histórico.
+        preco_venda = round(custo_direto * (1 + bdi_percentual / 100), 2)
+        valor_bdi = round(preco_venda - custo_direto, 2)
         linhas_final.append([f"BDI ({bdi_percentual:g}%)", f"R$ {valor_bdi:,.2f}"])
         linhas_final.append(["PREÇO DE VENDA", f"R$ {preco_venda:,.2f}"])
 
