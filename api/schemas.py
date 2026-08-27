@@ -153,3 +153,55 @@ class RevisaoAvaliarResponse(BaseModel):
     avisos_parede: list[str]
     sugestao_parede: float | None
     avisos_gerais: list[str]
+
+
+# --- Fase 4: Orçamento (materiais, mão de obra, geração) ------------------
+
+class ItemOrcamento(BaseModel):
+    """Espelha o dict que core/calculator.py e core/models.py::ItemOrcamento.to_dict()
+    já produzem -- chaves capitalizadas de propósito, pra core/reporter.py e
+    core/proposta_pdf.py aceitarem esses itens sem nenhuma conversão."""
+
+    Tipo: str
+    Material: str
+    Quantidade: float
+    Preco_Unit: float
+    Total: float
+    Fase: str
+
+
+class OrcamentoCalcularRequest(BaseModel):
+    area_piso_seco: float = 0
+    area_piso_molhado: float = 0
+    area_piso_externo: float = 0
+    metros_parede: float = 0
+    portas_internas: int = 0
+    portas_externas: int = 0
+    janelas: int = 0
+    padrao: str
+    estrutura: str
+
+
+class OrcamentoGerarRequest(BaseModel):
+    materiais: list[ItemOrcamento]
+    mao_de_obra: list[ItemOrcamento]
+    bdi_percentual: float
+    nome_projeto: str
+    padrao: str
+    estrutura: str
+    local_obra: str
+    area_piso_seco: float = 0
+    area_piso_molhado: float = 0
+    area_piso_externo: float = 0
+    metros_parede: float = 0
+    portas_internas: int = 0
+    portas_externas: int = 0
+    janelas: int = 0
+
+
+class OrcamentoGerarResponse(BaseModel):
+    custo_direto: float
+    preco_venda: float
+    caminho_excel: str
+    caminho_pdf: str
+    historico_id: int

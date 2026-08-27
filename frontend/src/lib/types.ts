@@ -131,3 +131,37 @@ export interface RevisaoAvaliarResponse {
   sugestao_parede: number | null
   avisos_gerais: string[]
 }
+
+// --- Fase 4: Orçamento ----------------------------------------------------
+
+export interface ItemOrcamento {
+  Tipo: string
+  Material: string
+  Quantidade: number
+  Preco_Unit: number
+  Total: number
+  Fase: string
+}
+
+export interface OrcamentoCalcularRequest extends DadosRevisao {
+  padrao: Padrao
+  estrutura: TipoCobertura
+}
+
+export interface OrcamentoGerarRequest extends DadosRevisao {
+  materiais: ItemOrcamento[]
+  mao_de_obra: ItemOrcamento[]
+  bdi_percentual: number
+  nome_projeto: string
+  padrao: Padrao
+  estrutura: TipoCobertura
+  local_obra: string
+}
+
+export interface OrcamentoGerarResponse {
+  custo_direto: number
+  preco_venda: number
+  caminho_excel: string
+  caminho_pdf: string
+  historico_id: number
+}

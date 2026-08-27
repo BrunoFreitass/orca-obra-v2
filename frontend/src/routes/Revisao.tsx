@@ -4,11 +4,10 @@ import { Label } from '@/components/ui/label'
 import { BadgeConfianca } from '@/components/BadgeConfianca'
 import { TextoMarkdownLeve } from '@/components/TextoMarkdownLeve'
 import { useAvaliarRevisao } from '@/hooks/use-revisao'
+import { LOCAL_OBRA } from '@/lib/constants'
 import { useExtracaoStore } from '@/lib/extracao-store'
 import { useProjetoStore } from '@/lib/projeto-store'
 import type { DadosRevisao } from '@/lib/types'
-
-const LOCAL_OBRA = 'Boa Vista/RR'
 
 const NIVEL_ESTILO: Record<string, string> = {
   alta: 'border-success/40 bg-success/10 text-success',
