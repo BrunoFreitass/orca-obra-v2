@@ -2,11 +2,12 @@
 
 import os
 import tempfile
+from pathlib import Path
 
 import streamlit as st
 
 from config import LOCAL_OBRA
-from core import paths, tabela_precos
+from core import paths, sinapi_import, tabela_precos
 from core.monitor_api import status_cota
 from core.perfil_empresa import carregar_perfil, salvar_perfil
 from core.ui_config import toggle_tema
@@ -236,6 +237,83 @@ def renderizar_sidebar():
                     tabela_precos.restaurar_padroes()
                     st.success("Restaurado!")
                     st.rerun()
+
+        st.divider()
+
+        # -----------------------------------------------------------------
+        # 4b. IMPORTAR SINAPI OFICIAL
+        # -----------------------------------------------------------------
+        with st.expander("📊 Importar SINAPI oficial", expanded=False):
+            st.caption(
+                "Baixe o ZIP do mês para RR no site da Caixa (Preços de Insumos "
+                "e Composições → RR → versão Não Desonerado) e envie aqui o(s) "
+                "arquivo(s) .xlsx extraído(s)."
+            )
+            arquivos_sinapi = st.file_uploader(
+                "Relatório(s) do SINAPI (Insumos e/ou Composições)",
+                type=["xlsx"], accept_multiple_files=True, label_visibility="collapsed",
+                key="upload_sinapi",
+            )
+            mes_manual = st.text_input(
+                "Mês de referência (AAAA-MM) — só se não for detectado automaticamente",
+                placeholder="Ex.: 2026-08", key="input_mes_sinapi",
+            )
+
+            if arquivos_sinapi:
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    caminhos_temp = []
+                    for arquivo in arquivos_sinapi:
+                        caminho = Path(tmpdir) / arquivo.name
+                        caminho.write_bytes(arquivo.getbuffer())
+                        caminhos_temp.append(caminho)
+
+                    precos, avisos, mes_ref = sinapi_import.importar(
+                        caminhos_temp, mes_referencia=mes_manual or None,
+                    )
+
+                avisos_sem_codigo = [a for a in avisos if "ainda sem código mapeado" in a]
+                avisos_mes = [a for a in avisos if "mês de referência" in a]
+                avisos_relevantes = [
+                    a for a in avisos if a not in avisos_sem_codigo and a not in avisos_mes
+                ]
+
+                for aviso in avisos_relevantes:
+                    st.warning(aviso, icon="⚠️")
+                if avisos_sem_codigo:
+                    st.caption(
+                        f"ℹ️ {len(avisos_sem_codigo)} item(ns) do motor de cálculo ainda sem "
+                        f"código SINAPI mapeado em `sinapi_codigos.py` — fora do escopo desta "
+                        f"importação, continuam no valor padrão/override atual."
+                    )
+
+                if precos and mes_ref:
+                    precos_padrao = {
+                        chave: preco for chave, _, _, preco in tabela_precos._itens_editaveis()
+                    }
+                    st.info(f"{len(precos)} preço(s) prontos para atualizar (ref. {mes_ref}):")
+                    for chave, dado in precos.items():
+                        atual = tabela_precos.obter_preco(chave, precos_padrao[chave]).valor
+                        st.caption(f"**{chave}**: R$ {atual:.2f} → R$ {dado['valor']:.2f}")
+                    if st.button(
+                        "✅ Aplicar preços do SINAPI", use_container_width=True,
+                        key="btn_aplicar_sinapi",
+                    ):
+                        valores = {chave: dado["valor"] for chave, dado in precos.items()}
+                        tabela_precos.salvar_overrides(
+                            valores,
+                            fonte=f"SINAPI oficial (CAIXA/IBGE) - ref. {mes_ref}",
+                            data_ref=mes_ref,
+                        )
+                        st.success("Preços do SINAPI aplicados!")
+                        st.rerun()
+                elif precos and not mes_ref:
+                    st.warning(
+                        "Não consegui identificar o mês de referência pelo nome do "
+                        "arquivo — preencha o campo acima para gravar os preços.",
+                        icon="⚠️",
+                    )
+                elif not avisos:
+                    st.info("Nenhum item pronto para atualizar.")
 
         st.divider()
 
