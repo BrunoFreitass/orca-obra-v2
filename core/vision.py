@@ -12,6 +12,7 @@ from core import cache
 from core.image_processing import melhorar_imagem
 from core.logger import get_logger
 from core.monitor_api import inicializar_tabela_monitor, registrar_chamada
+from core.validacao import validar_area_total_planta
 
 inicializar_tabela_monitor()
 logger = get_logger(__name__)
@@ -91,6 +92,13 @@ PROMPT_EXTRACAO = """
     6. Conte, uma por uma, todas as janelas da planta (linhas paralelas
        na espessura de parede externa). Janelas sao sempre tratadas
        como elemento externo, nao precisam de classificacao adicional.
+    7. Verifique se a planta declara uma AREA TOTAL explicita em algum
+       lugar (titulo do projeto, carimbo, memorial descritivo, ou uma
+       linha de "total" no quadro de areas). Se houver, anote esse
+       valor em area_total_planta -- serve so pra conferencia cruzada
+       com a soma dos comodos, nao confunda com ela. Se a planta nao
+       declarar nenhum total explicito, retorne area_total_planta
+       como 0.
 
     Depois de percorrer todos os comodos, SOME os resultados nas
     seguintes 7 variaveis agregadas (essas sao as unicas que vao pro
@@ -142,6 +150,7 @@ PROMPT_EXTRACAO = """
         "portas_internas": <int>,
         "portas_externas": <int>,
         "janelas": <int>,
+        "area_total_planta": <float, 0 se a planta nao declarar total explicito>,
         "confianca": {
             "area_piso_seco": {"nivel": "alta|media|baixa", "motivo": "<string curta>"},
             "area_piso_molhado": {"nivel": "alta|media|baixa", "motivo": "<string curta>"},
@@ -382,6 +391,8 @@ def extrair_dados_da_planta(caminho_arquivo):
                 "motivo": f"IA leu {mp:.0f}m — abaixo do esperado ({area_total*0.55:.0f}m). Revise na tela seguinte."
             }
     # ------------------------------------------------------------------
+
+    dados = validar_area_total_planta(dados)
 
     for campo in CAMPOS_AGREGADOS:
         if campo not in dados or dados[campo] is None:

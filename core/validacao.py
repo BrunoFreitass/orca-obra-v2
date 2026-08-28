@@ -46,3 +46,44 @@ def validar_dados(dados):
             avisos.append(f"{nome} está bem acima do esperado ({valor}) — vale conferir.")
 
     return avisos
+
+
+TOLERANCIA_AREA_TOTAL_PLANTA = 0.10  # 10% de divergência aceitável (paredes, arredondamento)
+
+
+def validar_area_total_planta(dados: dict) -> dict:
+    """Confere a área total impressa na planta (quando a IA achou uma,
+    em area_total_planta) contra a soma das 3 categorias de área
+    (area_piso_seco + area_piso_molhado + area_piso_externo). Diverge
+    mais que a tolerância -> rebaixa a confiança das 3 áreas pra
+    "baixa", mas NAO altera os valores -- quem decide e o engenheiro
+    na tela de revisao.
+
+    Se a planta nao tinha area total impressa (area_total_planta == 0,
+    caso mais comum) ou nao ha soma de ambientes pra comparar, nao
+    mexe em nada.
+    """
+    area_total_planta = dados.get("area_total_planta") or 0
+    area_soma_ambientes = (
+        (dados.get("area_piso_seco") or 0)
+        + (dados.get("area_piso_molhado") or 0)
+        + (dados.get("area_piso_externo") or 0)
+    )
+
+    if area_total_planta <= 0 or area_soma_ambientes <= 0:
+        return dados
+
+    divergencia = abs(area_total_planta - area_soma_ambientes) / area_total_planta
+
+    if divergencia > TOLERANCIA_AREA_TOTAL_PLANTA:
+        if "confianca" not in dados:
+            dados["confianca"] = {}
+        motivo = (
+            f"Área total da planta ({area_total_planta:.1f}m²) diverge "
+            f"{divergencia*100:.0f}% da soma dos ambientes ({area_soma_ambientes:.1f}m²). "
+            "Revise na tela seguinte."
+        )
+        for campo in ("area_piso_seco", "area_piso_molhado", "area_piso_externo"):
+            dados["confianca"][campo] = {"nivel": "baixa", "motivo": motivo}
+
+    return dados

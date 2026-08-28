@@ -1,5 +1,5 @@
 """Testes de core/validacao.py -- faixas plausiveis dos dados extraidos."""
-from core.validacao import validar_dados
+from core.validacao import validar_area_total_planta, validar_dados
 
 
 def _dados_ok():
@@ -52,3 +52,53 @@ class TestValidarDados:
         dados = {"area_piso": -5, "metros_parede": None, "portas": 0, "janelas": 6}
         avisos = validar_dados(dados)
         assert len(avisos) == 2  # area_piso negativa + metros_parede ausente
+
+
+class TestValidarAreaTotalPlanta:
+    def _dados_base(self, **overrides):
+        dados = {
+            "area_piso_seco": 100.0,
+            "area_piso_molhado": 15.0,
+            "area_piso_externo": 48.4,  # soma = 163.4
+            "area_total_planta": 0,
+            "confianca": {
+                "area_piso_seco": {"nivel": "alta", "motivo": "lida diretamente"},
+                "area_piso_molhado": {"nivel": "alta", "motivo": "lida diretamente"},
+                "area_piso_externo": {"nivel": "alta", "motivo": "lida diretamente"},
+            },
+        }
+        dados.update(overrides)
+        return dados
+
+    def test_sem_area_total_impressa_nao_mexe(self):
+        # Caso mais comum: a planta nao tem area total impressa em
+        # lugar nenhum (area_total_planta == 0) -- nao ha o que cruzar.
+        dados = self._dados_base(area_total_planta=0)
+        resultado = validar_area_total_planta(dados)
+        assert resultado["confianca"]["area_piso_seco"]["nivel"] == "alta"
+
+    def test_area_total_dentro_da_tolerancia_mantem_confianca(self):
+        # soma = 163.4, total impresso 173.5 -> divergencia ~5.8%, dentro
+        # dos 10% de tolerancia (paredes, arredondamento).
+        dados = self._dados_base(area_total_planta=173.5)
+        resultado = validar_area_total_planta(dados)
+        assert resultado["confianca"]["area_piso_seco"]["nivel"] == "alta"
+
+    def test_area_total_muito_divergente_rebaixa_as_3_areas(self):
+        # Caso real: planta "Casa Brunort" -- soma dos ambientes deu
+        # 163.4, mas a planta declarava area total de 156.1 no titulo
+        # (divergencia ~4.7%... o teste abaixo usa uma diferenca maior
+        # de proposito pra forcar o rebaixamento).
+        dados = self._dados_base(area_total_planta=140.0)  # divergencia ~16.7%
+        resultado = validar_area_total_planta(dados)
+        for campo in ("area_piso_seco", "area_piso_molhado", "area_piso_externo"):
+            assert resultado["confianca"][campo]["nivel"] == "baixa"
+            assert "diverge" in resultado["confianca"][campo]["motivo"]
+
+    def test_sem_soma_de_ambientes_nao_mexe(self):
+        dados = self._dados_base(
+            area_piso_seco=0, area_piso_molhado=0, area_piso_externo=0,
+            area_total_planta=173.5,
+        )
+        resultado = validar_area_total_planta(dados)
+        assert resultado["confianca"]["area_piso_seco"]["nivel"] == "alta"
