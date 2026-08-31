@@ -34,7 +34,7 @@ toda vez que o app sobe."""
     with _conectar() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS api_chamadas (
-                id GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
                 data_hora TEXT NOT NULL,
                 modelo TEXT,
                 status TEXT NOT NULL,

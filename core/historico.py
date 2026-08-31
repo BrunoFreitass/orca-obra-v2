@@ -29,7 +29,7 @@ def inicializar_db():
     with _conectar() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS orcamentos (
-                id GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
                 data_criacao TEXT NOT NULL,
                 nome_projeto TEXT NOT NULL,
                 estado_uf TEXT NOT NULL,
