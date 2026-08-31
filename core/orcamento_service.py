@@ -63,16 +63,15 @@ def gerar_orcamento_completo(
     histórico -- chamada pela API (api/routers/orcamento.py) ao gerar
     um orçamento completo.
 
-    Retorna {custo_direto, preco_venda, caminho_excel, caminho_pdf,
-    historico_id} -- não faz nenhuma renderização, quem chamar decide
-    como mostrar o resultado."""
+    Retorna {custo_direto, preco_venda, historico_id} -- não faz nenhuma
+    renderização, quem chamar decide como mostrar o resultado."""
     custo_direto, preco_venda = calcular_custo_e_preco(orcamento_final, bdi_percentual)
 
     base_nome = nome_arquivo_seguro(nome_projeto)
     excel_path = os.path.join(paths.PASTA_ORCAMENTOS, f"{base_nome}.xlsx")
     pdf_path = os.path.join(paths.PASTA_ORCAMENTOS, f"{base_nome}.pdf")
 
-    caminho_excel = gerar_excel(orcamento_final, excel_path, bdi_percentual)
+    gerar_excel(orcamento_final, excel_path, bdi_percentual)
 
     perfil = carregar_perfil()
 
@@ -88,7 +87,7 @@ def gerar_orcamento_completo(
     if perfil.get("registro"):
         registro_str = f"Registro (CREA/CAU/CNPJ): {perfil['registro']}"
 
-    caminho_pdf = gerar_pdf_proposta(
+    gerar_pdf_proposta(
         orcamento_final, pdf_path,
         nome_projeto=nome_projeto,
         estado_uf=local_obra, padrao=padrao,
@@ -122,7 +121,5 @@ def gerar_orcamento_completo(
     return {
         "custo_direto": custo_direto,
         "preco_venda": preco_venda,
-        "caminho_excel": caminho_excel,
-        "caminho_pdf": caminho_pdf,
         "historico_id": historico_id,
     }

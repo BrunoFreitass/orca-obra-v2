@@ -20,8 +20,6 @@ export interface OrcamentoHistorico {
   bdi_percentual: number
   preco_venda: number
   versao_coeficientes: string
-  caminho_excel: string
-  caminho_pdf: string | null
 }
 
 export interface PerfilEmpresa {
@@ -161,7 +159,5 @@ export interface OrcamentoGerarRequest extends DadosRevisao {
 export interface OrcamentoGerarResponse {
   custo_direto: number
   preco_venda: number
-  caminho_excel: string
-  caminho_pdf: string
   historico_id: number
 }

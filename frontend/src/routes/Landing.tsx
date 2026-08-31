@@ -142,16 +142,14 @@ export function Landing() {
                               <Download className="size-3.5" />
                             </a>
                           </Button>
-                          {registro.caminho_pdf && (
-                            <Button variant="ghost" size="icon" className="size-7" asChild>
-                              <a
-                                href={urlDownload(`/historico/${registro.id}/pdf`)}
-                                title="Baixar PDF"
-                              >
-                                <FileText className="size-3.5" />
-                              </a>
-                            </Button>
-                          )}
+                          <Button variant="ghost" size="icon" className="size-7" asChild>
+                            <a
+                              href={urlDownload(`/historico/${registro.id}/pdf`)}
+                              title="Baixar PDF"
+                            >
+                              <FileText className="size-3.5" />
+                            </a>
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"

@@ -200,6 +200,4 @@ class OrcamentoGerarRequest(BaseModel):
 class OrcamentoGerarResponse(BaseModel):
     custo_direto: float
     preco_venda: float
-    caminho_excel: str
-    caminho_pdf: str
     historico_id: int
