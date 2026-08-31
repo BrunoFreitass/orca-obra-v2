@@ -1,5 +1,6 @@
 requests
 python-dotenv
+psycopg[binary]
 PyMuPDF
 openpyxl
 reportlab

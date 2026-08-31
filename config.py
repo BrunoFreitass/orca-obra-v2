@@ -86,3 +86,7 @@ DADOS_MOCK = {
 
 # Local padrão da obra (usado em PDF e histórico)
 LOCAL_OBRA = os.environ.get("LOCAL_OBRA", "Boa Vista/RR")
+
+# Connection string do Postgres (Neon) usada por core/historico.py.
+# Vem com sslmode=require incluso na string padrao do Neon.
+DATABASE_URL = os.environ.get("DATABASE_URL", "")

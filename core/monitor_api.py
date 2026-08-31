@@ -1,16 +1,17 @@
 """
 Monitor de uso da API Gemini — rastreia chamadas, sucessos, falhas
-e alerta antes da cota acabar. Persiste em SQLite (sobrevive reruns
-do Streamlit).
+e alerta antes da cota acabar. Persiste no mesmo Postgres (Neon) de
+core/historico.py -- filesystem do Render free e efemero, entao
+SQLite local se perderia a cada redeploy/restart.
 """
 
 import os
-import sqlite3
 from datetime import UTC, datetime, timedelta
 
-from core import paths
+import psycopg
+from psycopg.rows import dict_row
 
-DB_PATH = paths.DB_PATH  # mesma base do historico de orcamentos
+import config
 
 # Limite diario configuravel via .env (padrao: 1500, limite generoso do Gemini free)
 LIMITE_DIARIO = int(os.environ.get("GEMINI_DAILY_LIMIT", "1500"))
@@ -20,33 +21,33 @@ ALERTA_VERMELHO = 0.90
 
 
 def _conectar():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    if not config.DATABASE_URL:
+        raise RuntimeError(
+            "DATABASE_URL não configurada -- defina no .env (ver .env.example)."
+        )
+    return psycopg.connect(config.DATABASE_URL, row_factory=dict_row)
 
 
 def inicializar_tabela_monitor():
     """Cria a tabela de monitoramento se nao existir. Seguro de chamar
 toda vez que o app sobe."""
-    conn = _conectar()
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS api_chamadas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            data_hora TEXT NOT NULL,
-            modelo TEXT,
-            status TEXT NOT NULL,
-            chave_indice INTEGER,
-            erro_status TEXT,
-            duracao_ms INTEGER,
-            bytes_enviados INTEGER
-        )
-    """)
-    conn.execute("""
-        CREATE INDEX IF NOT EXISTS idx_api_chamadas_data 
-        ON api_chamadas(data_hora)
-    """)
-    conn.commit()
-    conn.close()
+    with _conectar() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS api_chamadas (
+                id GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                data_hora TEXT NOT NULL,
+                modelo TEXT,
+                status TEXT NOT NULL,
+                chave_indice INTEGER,
+                erro_status TEXT,
+                duracao_ms INTEGER,
+                bytes_enviados INTEGER
+            )
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_api_chamadas_data
+            ON api_chamadas(data_hora)
+        """)
 
 
 def registrar_chamada(
@@ -58,38 +59,35 @@ def registrar_chamada(
     bytes_enviados: int = 0,
 ):
     """Registra uma chamada a API (sucesso ou falha)."""
-    conn = _conectar()
-    conn.execute("""
-        INSERT INTO api_chamadas 
-        (data_hora, modelo, status, chave_indice, erro_status, duracao_ms, bytes_enviados)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (
-        datetime.now(UTC).isoformat(),
-        modelo,
-        status,
-        chave_indice,
-        erro_status,
-        duracao_ms,
-        bytes_enviados,
-    ))
-    conn.commit()
-    conn.close()
+    with _conectar() as conn:
+        conn.execute("""
+            INSERT INTO api_chamadas
+            (data_hora, modelo, status, chave_indice, erro_status, duracao_ms, bytes_enviados)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (
+            datetime.now(UTC).isoformat(),
+            modelo,
+            status,
+            chave_indice,
+            erro_status,
+            duracao_ms,
+            bytes_enviados,
+        ))
 
 
 def resumo_periodo(dias: int = 1) -> dict:
     """Retorna estatisticas de uso nos ultimos N dias."""
-    conn = _conectar()
     desde = (datetime.now(UTC) - timedelta(days=dias)).isoformat()
-    row = conn.execute("""
-        SELECT 
-            COUNT(*) as total,
-            SUM(CASE WHEN status = 'OK' THEN 1 ELSE 0 END) as sucessos,
-            SUM(CASE WHEN status = 'ERRO' THEN 1 ELSE 0 END) as falhas,
-            SUM(CASE WHEN status = 'CACHE' THEN 1 ELSE 0 END) as caches
-        FROM api_chamadas
-        WHERE data_hora >= ?
-    """, (desde,)).fetchone()
-    conn.close()
+    with _conectar() as conn:
+        row = conn.execute("""
+            SELECT
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'OK' THEN 1 ELSE 0 END) as sucessos,
+                SUM(CASE WHEN status = 'ERRO' THEN 1 ELSE 0 END) as falhas,
+                SUM(CASE WHEN status = 'CACHE' THEN 1 ELSE 0 END) as caches
+            FROM api_chamadas
+            WHERE data_hora >= %s
+        """, (desde,)).fetchone()
     return {
         "total": row["total"] or 0,
         "sucessos": row["sucessos"] or 0,

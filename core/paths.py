@@ -29,7 +29,6 @@ RAIZ = _diretorio_base()
 
 PASTA_ORCAMENTOS = os.path.join(RAIZ, "orcamentos_salvos")
 PASTA_PERFIL = os.path.join(RAIZ, "perfil_empresa")
-DB_PATH = os.path.join(RAIZ, "historico.db")
 CACHE_DIR = os.path.join(RAIZ, ".cache_ia")
 PERFIL_PATH = os.path.join(RAIZ, "perfil_empresa.json")
 OVERRIDES_PATH = os.path.join(RAIZ, "precos_customizados.json")
