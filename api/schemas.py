@@ -29,8 +29,6 @@ class OrcamentoHistorico(BaseModel):
     bdi_percentual: float
     preco_venda: float
     versao_coeficientes: str
-    caminho_excel: str
-    caminho_pdf: str | None = None
 
 
 # --- Fase 1: Perfil da empresa ------------------------------------------

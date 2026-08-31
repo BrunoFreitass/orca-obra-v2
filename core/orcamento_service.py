@@ -116,8 +116,7 @@ def gerar_orcamento_completo(
         custo_direto=round(custo_direto, 2),
         bdi_percentual=bdi_percentual,
         preco_venda=preco_venda,
-        caminho_excel=caminho_excel,
-        caminho_pdf=caminho_pdf,
+        orcamento_json=orcamento_final,
     )
 
     return {
