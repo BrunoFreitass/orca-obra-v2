@@ -105,17 +105,28 @@ MATERIAIS_SIMPLES: dict[str, CodigoSinapi] = {
     # coeficientes.py (PRECO_ACO_RR), agora confirmado por fonte independente
 
     # ---- Ativados a partir de ITENS_EXTRAS (ver secao 4 abaixo) ----
+    # Conferidos em 2026-09 contra o arquivo oficial da Caixa (pacote
+    # SINAPI_Referência, ref. 2026-07, coluna RR).
     "reboco":            CodigoSinapi(None, "composicao", "m2"),
-    # Reboco/chapisco ainda sem codigo SINAPI conferido -- usa
-    # PRECO_REBOCO_M2 (pesquisa de mercado) em coeficientes.py ate
-    # alguem preencher o codigo real (relatorio CSD, "massa unica" ou
-    # "chapisco+emboço+reboco", m2 de parede pronta).
-    "impermeabilizacao": CodigoSinapi(None, "composicao", "m2"),
-    # Idem, ainda sem codigo -- usa PRECO_IMPERMEABILIZACAO_M2.
-    "forro_gesso":       CodigoSinapi(None, "composicao", "m2"),
-    # Idem, ainda sem codigo -- usa PRECO_FORRO_GESSO_M2.
-    "rejunte":           CodigoSinapi(None, "insumo", "kg"),
-    # Idem, ainda sem codigo -- usa CONSUMO_REJUNTE_KG_POR_M2 + PRECO_REJUNTE_KG.
+    # SINAPI nao tem um codigo unico "reboco completo": e sempre 2
+    # composicoes separadas (chapisco + emboco/massa unica), e
+    # CodigoSinapi so guarda 1 codigo. Por isso continua None aqui --
+    # o importador automatico nao consegue somar 2 codigos -- mas
+    # PRECO_REBOCO_M2 em coeficientes.py ja foi atualizado A MAO com o
+    # valor real somado: chapisco 87878 (R$6,81/m2) + emboço/massa
+    # unica 87794 (R$53,28/m2), ambos "sem presença de vãos"/preparo
+    # manual, RR, ref. 2026-07. Se algum dia o motor de calculo passar
+    # a aceitar mais de 1 codigo por item, isso pode ser automatizado.
+    "impermeabilizacao": CodigoSinapi("98555", "composicao", "m2"),
+    # "Impermeabilização de superfície com argamassa polimérica/
+    # membrana acrílica, 3 demãos" -- opção padrão mais comum pra área
+    # molhada (banheiro/área de serviço). Existem alternativas mais
+    # robustas (manta asfáltica, membrana de poliuretano) pra quem
+    # quiser um padrão mais caro -- ver ITENS_EXTRAS/histórico de busca.
+    "forro_gesso":       CodigoSinapi("96109", "composicao", "m2"),
+    # "Forro em placas de gesso, para ambientes residenciais" -- match direto.
+    "rejunte":           CodigoSinapi("34357", "insumo", "kg"),
+    # "Rejunte cimentício, qualquer cor" -- match direto.
 }
 
 # ---------------------------------------------------------------------
@@ -236,10 +247,17 @@ COBERTURA: dict[str, dict[str, CodigoSinapi]] = {
         "Alto Padrão": CodigoSinapi("94216", "composicao", "m2"),
         # Telhamento c/ telha metálica termoacústica e=30mm, até 2 águas -- R$222,78/m2 (RR, 2026-07)
     },
-    # Nenhuma composição de impermeabilização/acabamento de laje como
-    # cobertura, com preço coletado pra RR, apareceu no relatório --
-    # mantido pesquisa de mercado.
-    "cobertura_Laje": _grupo(_TRES_PADROES_M2),
+    # Conferido em 2026-09: existe sim impermeabilização de superfície
+    # coletada pra RR (aba ISD/CSD), 3 níveis de robustez plausíveis
+    # pra usar como padrão Econômico/Médio/Alto:
+    "cobertura_Laje": {
+        "Econômico":   CodigoSinapi("98557", "composicao", "m2"),
+        # "Impermeabilização de superfície com emulsão asfáltica, 2 demãos" -- R$45,83/m2 (RR, 2026-07)
+        "Médio":       CodigoSinapi("98546", "composicao", "m2"),
+        # "Impermeabilização de superfície com manta asfáltica, 1 camada, e=4mm" -- R$136,94/m2 (RR, 2026-07)
+        "Alto Padrão": CodigoSinapi("98553", "composicao", "m2"),
+        # "Impermeabilização de superfície com membrana à base de poliuretano, 2 demãos" -- R$190,94/m2 (RR, 2026-07)
+    },
 }
 
 # ---------------------------------------------------------------------

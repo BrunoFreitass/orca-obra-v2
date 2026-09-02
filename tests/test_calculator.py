@@ -182,7 +182,15 @@ class TestRegressaoCasoReal:
     de 4 itens que faltavam pra cobrir uma obra completa: Reboco,
     Impermeabilizacao (area molhada), Rejunte e Forro de Gesso (ver
     ITENS_EXTRAS em core/sinapi_codigos.py e a secao correspondente em
-    core/coeficientes.py)."""
+    core/coeficientes.py).
+
+    NOTA 5: total_material_medio_telhado subiu de R$72.266,06 pra
+    R$76.634,05 em 2026-09 (mesmo dia) -- conferencia do preco de
+    Reboco contra o arquivo oficial SINAPI (RR, ref. 2026-07): o
+    "chute" inicial de pesquisa de mercado (R$38,00/m2) foi substituido
+    pelo valor real (R$60,09/m2 = soma de 2 composicoes SINAPI,
+    chapisco + emboço/massa unica -- ver PRECO_REBOCO_M2 em
+    coeficientes.py)."""
 
     def _dados(self):
         return DadosExtracao(
@@ -193,9 +201,9 @@ class TestRegressaoCasoReal:
     def test_total_material_medio_telhado(self):
         materiais = calcular_materiais(self._dados(), padrao="Médio", tipo_cobertura="Telhado")
         total = round(sum(i["Total"] for i in materiais), 2)
-        # Valor atualizado apos adicionar reboco/impermeabilizacao/rejunte/
-        # forro de gesso -- ver NOTA 4 na docstring da classe.
-        assert total == pytest.approx(72266.06, abs=0.5)
+        # Valor atualizado apos conferir o preco do reboco contra o SINAPI
+        # oficial -- ver NOTA 5 na docstring da classe.
+        assert total == pytest.approx(76634.05, abs=0.5)
 
     def test_total_mao_de_obra_telhado(self):
         mao_de_obra = calcular_mao_de_obra(self._dados(), tipo_cobertura="Telhado")
