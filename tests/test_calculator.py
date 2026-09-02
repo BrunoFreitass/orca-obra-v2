@@ -175,7 +175,14 @@ class TestRegressaoCasoReal:
     quantidade em nº de tijolos mas PRECO_BLOCO_CERAMICO (e a
     composicao SINAPI que pode sobrescreve-lo) sempre foi preco por m²
     de parede pronta, nao por tijolo. Ver comentario de
-    PRECO_BLOCO_CERAMICO em coeficientes.py."""
+    PRECO_BLOCO_CERAMICO em coeficientes.py.
+
+    NOTA 4: total_material_medio_telhado subiu de R$59.085,69 pra
+    R$72.266,06 em 2026-09 -- nao e' regressao, e' a adicao intencional
+    de 4 itens que faltavam pra cobrir uma obra completa: Reboco,
+    Impermeabilizacao (area molhada), Rejunte e Forro de Gesso (ver
+    ITENS_EXTRAS em core/sinapi_codigos.py e a secao correspondente em
+    core/coeficientes.py)."""
 
     def _dados(self):
         return DadosExtracao(
@@ -186,9 +193,9 @@ class TestRegressaoCasoReal:
     def test_total_material_medio_telhado(self):
         materiais = calcular_materiais(self._dados(), padrao="Médio", tipo_cobertura="Telhado")
         total = round(sum(i["Total"] for i in materiais), 2)
-        # Valor atualizado apos correcao da unidade do Bloco Ceramico (m² de
-        # parede, nao nº de tijolos) -- ver NOTA 3 na docstring da classe.
-        assert total == pytest.approx(59085.69, abs=0.5)
+        # Valor atualizado apos adicionar reboco/impermeabilizacao/rejunte/
+        # forro de gesso -- ver NOTA 4 na docstring da classe.
+        assert total == pytest.approx(72266.06, abs=0.5)
 
     def test_total_mao_de_obra_telhado(self):
         mao_de_obra = calcular_mao_de_obra(self._dados(), tipo_cobertura="Telhado")

@@ -148,6 +148,21 @@ PRECO_AREIA_M3 = Preco(120.00, "Pesquisa de mercado - areia média/grossa", "202
 PRECO_BRITA_M3 = Preco(140.00, "Pesquisa de mercado - brita nº 1", "2026-06")
 
 # =====================================================================
+# ITENS EXTRAS (reboco, impermeabilizacao, forro de gesso, rejunte) --
+# ativados a partir do bloco ITENS_EXTRAS em core/sinapi_codigos.py
+# para ampliar a cobertura de itens necessarios pra construir uma obra
+# completa. reboco/impermeabilizacao/forro sao "composicao pronta por
+# m2" (material+mao de obra, mesmo padrao de PRECO_BLOCO_CERAMICO);
+# rejunte e "insumo por kg" (mesmo padrao de PRECO_ARGAMASSA_KG), por
+# isso tem coeficiente de consumo proprio.
+# =====================================================================
+PRECO_REBOCO_M2 = Preco(38.00, "Pesquisa de mercado - reboco completo (chapisco+emboço+reboco), material+mão de obra, m² de parede pronta", "2026-09")
+PRECO_IMPERMEABILIZACAO_M2 = Preco(55.00, "Pesquisa de mercado - impermeabilização de área molhada (manta asfáltica ou argamassa polimérica), material+mão de obra, m² aplicado", "2026-09")
+PRECO_FORRO_GESSO_M2 = Preco(48.00, "Pesquisa de mercado - forro de gesso liso, material+mão de obra, m²", "2026-09")
+CONSUMO_REJUNTE_KG_POR_M2 = Preco(0.4, "Padrão de mercado - rejunte para piso/revestimento cerâmico", "2026-09")
+PRECO_REJUNTE_KG = Preco(12.00, "Pesquisa de mercado - rejunte cimentício/epóxi padrão médio", "2026-09")
+
+# =====================================================================
 # FATOR REGIONAL E ACO -- fixos para Roraima (RR), unico estado
 # atendido pelo OrçaObra neste momento.
 # =====================================================================
@@ -243,5 +258,7 @@ mais velho usado no motor de calculo esta."""
             PRECO_BLOCO_CERAMICO, PRECO_ARGAMASSA_KG, PRECO_TINTA_L,
             PRECO_CIMENTO_SACO, PRECO_AREIA_M3, PRECO_BRITA_M3,
             FATOR_REGIONAL_RR, PRECO_ACO_RR,
+            PRECO_REBOCO_M2, PRECO_IMPERMEABILIZACAO_M2, PRECO_FORRO_GESSO_M2,
+            CONSUMO_REJUNTE_KG_POR_M2, PRECO_REJUNTE_KG,
         )
     ] + datas_mao_de_obra)

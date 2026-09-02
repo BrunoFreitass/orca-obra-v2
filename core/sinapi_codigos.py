@@ -103,6 +103,19 @@ MATERIAIS_SIMPLES: dict[str, CodigoSinapi] = {
     "aco":            CodigoSinapi("32",    "insumo", "kg"),
     # "Aço CA-50, 6,3mm, vergalhão" -- já era a fonte citada em
     # coeficientes.py (PRECO_ACO_RR), agora confirmado por fonte independente
+
+    # ---- Ativados a partir de ITENS_EXTRAS (ver secao 4 abaixo) ----
+    "reboco":            CodigoSinapi(None, "composicao", "m2"),
+    # Reboco/chapisco ainda sem codigo SINAPI conferido -- usa
+    # PRECO_REBOCO_M2 (pesquisa de mercado) em coeficientes.py ate
+    # alguem preencher o codigo real (relatorio CSD, "massa unica" ou
+    # "chapisco+emboço+reboco", m2 de parede pronta).
+    "impermeabilizacao": CodigoSinapi(None, "composicao", "m2"),
+    # Idem, ainda sem codigo -- usa PRECO_IMPERMEABILIZACAO_M2.
+    "forro_gesso":       CodigoSinapi(None, "composicao", "m2"),
+    # Idem, ainda sem codigo -- usa PRECO_FORRO_GESSO_M2.
+    "rejunte":           CodigoSinapi(None, "insumo", "kg"),
+    # Idem, ainda sem codigo -- usa CONSUMO_REJUNTE_KG_POR_M2 + PRECO_REJUNTE_KG.
 }
 
 # ---------------------------------------------------------------------
@@ -272,18 +285,21 @@ MAO_DE_OBRA: dict[str, CodigoSinapi] = {
 # 4. ITENS EXTRAS / AVULSOS -- espaço livre pra materiais e serviços
 # que ainda NÃO existem no motor de cálculo (core/coeficientes.py),
 # mas que fazem parte de uma obra real e podem ser úteis como linha
-# avulsa no orçamento (ex: reboco, impermeabilização, forro de gesso,
-# rejunte, portão, calçada, muro). Adicionar aqui não quebra nada --
-# esses itens só passam a existir quando alguém também expõe a chave
-# na tela (ver sugestão de integração no fim do arquivo).
+# avulsa no orçamento (ex: portão, muro, calçada). Adicionar aqui não
+# quebra nada -- esses itens só passam a existir quando alguém também
+# expõe a chave na tela (ver sugestão de integração no fim do arquivo).
+#
+# reboco, impermeabilizacao, forro_gesso e rejunte SAÍRAM daqui em
+# 2026-09: já entram no motor de cálculo (MATERIAIS_SIMPLES acima +
+# core/calculator.py:calcular_materiais()), porque dá pra derivar a
+# quantidade deles direto de DadosExtracao (area_parede/area_piso_*)
+# sem precisar de nenhum campo novo de extração. muro e calcada
+# continuam de fora: dependem do perímetro do lote, que a planta
+# baixa normalmente não mostra e a extração da IA hoje não capta.
 #
 # Formato: "chave_livre": (CodigoSinapi, "Rótulo pra exibir na tela")
 # ---------------------------------------------------------------------
 ITENS_EXTRAS: dict[str, tuple[CodigoSinapi, str]] = {
-    # "reboco": (CodigoSinapi(None, "composicao", "m2"), "Reboco / chapisco"),
-    # "impermeabilizacao": (CodigoSinapi(None, "composicao", "m2"), "Impermeabilização de laje/banheiro"),
-    # "forro_gesso": (CodigoSinapi(None, "composicao", "m2"), "Forro de gesso"),
-    # "rejunte": (CodigoSinapi(None, "insumo", "kg"), "Rejunte"),
     # "muro": (CodigoSinapi(None, "composicao", "m2"), "Muro de fechamento"),
     # "calcada": (CodigoSinapi(None, "composicao", "m2"), "Calçada externa"),
 }

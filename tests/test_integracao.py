@@ -80,8 +80,12 @@ class TestGerarExcel:
         ws = wb.active
         valores = {row[0]: row[3] for row in ws.iter_rows(values_only=True) if row[0]}
         assert valores["PREÇO DE VENDA"] == preco_venda_esperado
+        # pytest.approx: soma de 2 valores ja arredondados a centavo pode
+        # cair em imprecisao de ponto flutuante binario (ex: 150382.33 +
+        # 37595.58 == 187977.90999999997, nao 187977.91) -- nao e por isso
+        # que o preco de venda esta errado.
         assert valores["CUSTO DIRETO"] + valores["BDI (25%) — administração, lucro, impostos e imprevistos"] == \
-            valores["PREÇO DE VENDA"]
+            pytest.approx(valores["PREÇO DE VENDA"], abs=0.01)
 
 
 class TestGerarPdfProposta:

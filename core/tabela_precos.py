@@ -39,6 +39,10 @@ def _itens_editaveis():
     add("areia", "Material", "Areia (m³)", coef.PRECO_AREIA_M3)
     add("brita", "Material", "Brita nº 1 (m³)", coef.PRECO_BRITA_M3)
     add("aco", "Material", "Aço CA-50 (kg)", coef.PRECO_ACO_RR)
+    add("reboco", "Material", "Reboco (chapisco + emboço) (m²)", coef.PRECO_REBOCO_M2)
+    add("impermeabilizacao", "Material", "Impermeabilização - Área Molhada (m²)", coef.PRECO_IMPERMEABILIZACAO_M2)
+    add("forro_gesso", "Material", "Forro de Gesso (m²)", coef.PRECO_FORRO_GESSO_M2)
+    add("rejunte", "Material", "Rejunte (kg)", coef.PRECO_REJUNTE_KG)
 
     grupos_por_padrao = [
         ("piso_seco", "Piso Área Seca", coef.PRECOS_PISO_SECO),
