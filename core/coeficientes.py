@@ -85,10 +85,14 @@ PRECOS_PORTA_EXTERNA = {
     "Médio": Preco(480.00, "Pesquisa de mercado - porta externa reforçada média", "2026-06"),
     "Alto Padrão": Preco(850.00, "Pesquisa de mercado - porta externa blindada/design", "2026-06"),
 }
+# Preco por m² (nao mais por unidade -- SINAPI so precifica janela por
+# m² do vao; ver AREA_MEDIA_JANELA_M2 em core/models.py pra como a
+# contagem de janelas vira area). Valores reais do SINAPI oficial
+# (CAIXA/IBGE) RR, ref. 2026-07 -- ja incluem fornecimento + instalação.
 PRECOS_JANELA = {
-    "Econômico": Preco(150.00, "Pesquisa de mercado - janela de alumínio econômica", "2026-06"),
-    "Médio": Preco(280.00, "Pesquisa de mercado - janela de alumínio padrão médio", "2026-06"),
-    "Alto Padrão": Preco(590.00, "Pesquisa de mercado - janela de alumínio premium/vidro duplo", "2026-06"),
+    "Econômico": Preco(368.87, "SINAPI oficial código 94570 - janela de alumínio de correr, 2 folhas, vidro incluso, fornecimento e instalação", "2026-07"),
+    "Médio": Preco(410.39, "SINAPI oficial código 94573 - janela de alumínio de correr, 4 folhas com bandeira, vidro incluso, fornecimento e instalação", "2026-07"),
+    "Alto Padrão": Preco(527.09, "SINAPI oficial código 94572 - janela de alumínio de correr, 3 folhas (2 venezianas + 1 vidro), fornecimento e instalação", "2026-07"),
 }
 
 # -----------------------------------------------------------------
@@ -195,28 +199,21 @@ PRECO_ACO_RR = Preco(
 # SINAPI completa com mão de obra embutida -- ver
 # core/sinapi_codigos.py e core/calculator.py:calcular_mao_de_obra().
 # Manter os dois contaria a mão de obra 2x.
+#
+# "Assentamento de Piso (Área Externa)" e "Instalação de Janela" saíram
+# daqui em 2026-09 pelo mesmo motivo: piso_externo (ref. commit
+# a69d1d5) e janela (mapeada por m² nesta mudança) passaram a usar
+# composições SINAPI completas também.
 # =====================================================================
 _FONTE_MAO_DE_OBRA = "Aproximação a partir da parcela de mão de obra das composições SINAPI (ainda não coletado item a item)"
 _DATA_MAO_DE_OBRA = "2026-06"
 
 MAO_DE_OBRA_POR_SERVICO = {
-    "Assentamento de Piso (Área Externa)": {
-        "preco": Preco(
-            26.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA
-        ),
-        "unidade": "m2_piso_externo",
-    },
     "Pintura": {
         "preco": Preco(
             12.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA
         ),
         "unidade": "m2_parede",
-    },
-    "Instalação de Janela": {
-        "preco": Preco(
-            70.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA
-        ),
-        "unidade": "unidade",
     },
     "Execução de Cobertura": {
         "preco": Preco(

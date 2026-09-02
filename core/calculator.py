@@ -110,7 +110,7 @@ def calcular_materiais(dados, padrao, tipo_cobertura="Telhado"):
                       obter_preco(f"porta_externa__{padrao}", PRECOS_PORTA_EXTERNA[padrao]).valor * fator_regional,
                       fase="Acabamento"),
         ItemOrcamento("Material", f"Janela ({padrao})",
-                      d.janelas,
+                      d.area_janelas,
                       obter_preco(f"janela__{padrao}", PRECOS_JANELA[padrao]).valor * fator_regional,
                       fase="Acabamento"),
         ItemOrcamento("Material", f"Cobertura em {tipo_cobertura} ({padrao})",
@@ -168,10 +168,11 @@ def calcular_mao_de_obra(dados, tipo_cobertura="Telhado"):
     completa (material + mao de obra embutidos -- ver GRUPOS_POR_PADRAO
     e MATERIAIS_SIMPLES em core/sinapi_codigos.py) NAO geram linha
     aqui, pra nao contar a mao de obra 2x: 1x embutida no preco do
-    material, 1x aqui como estimativa separada. "Execução de Cobertura"
-    e' condicional -- so' fica redundante quando tipo_cobertura="Telhado"
-    (cobertura_Laje ainda nao tem composicao SINAPI mapeada, entao
-    continua precisando da mao de obra em separado)."""
+    material, 1x aqui como estimativa separada -- inclui piso_externo e
+    janela desde 2026-09. "Execução de Cobertura" e' condicional -- so'
+    fica redundante quando tipo_cobertura="Telhado" (cobertura_Laje
+    ainda nao tem composicao SINAPI mapeada, entao continua precisando
+    da mao de obra em separado)."""
     d = _dados_extracao(dados)
     fator_regional = FATOR_REGIONAL_RR.valor
     area_cobertura = d.area_cobertura(tipo_cobertura)
@@ -180,9 +181,7 @@ def calcular_mao_de_obra(dados, tipo_cobertura="Telhado"):
 
     # Mapeamento de servico -> (quantidade, fase)
     servicos_base = {
-        "Assentamento de Piso (Área Externa)": (d.area_piso_externo, "Acabamento"),
         "Pintura": (d.area_parede, "Acabamento"),
-        "Instalação de Janela": (d.janelas, "Acabamento"),
         "Estrutura (fundação/armação)": (d.area_piso_total, "Obra Bruta"),
     }
     if tipo_cobertura != "Telhado":

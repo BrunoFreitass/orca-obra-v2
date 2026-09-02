@@ -228,12 +228,20 @@ GRUPOS_POR_PADRAO: dict[str, dict[str, CodigoSinapi]] = {
         "Alto Padrão": CodigoSinapi("94805", "composicao", "un"),
         # Porta de alumínio de abrir p/ vidro, 87x210cm, com vidro -- R$919,79 (RR, 2026-07)
     },
-    # SINAPI precifica janela por m² (varia com o tamanho real do vão),
-    # mas o motor de cálculo hoje trata janela como unidade (contagem)
-    # -- unidade incompatível, forçar um código aqui alimentaria o
-    # cálculo com preço errado. Precisa decidir: ou o motor passa a
-    # pedir m² por janela, ou o item continua pesquisa de mercado.
-    "janela": _grupo(_TRES_PADROES_UN),
+    # Resolvido em 2026-09: o motor de cálculo passou a converter a
+    # contagem de janelas em área (AREA_MEDIA_JANELA_M2 em
+    # core/models.py), então agora dá pra usar preço por m² direto do
+    # SINAPI. Janela de alumínio de correr, "fornecimento e instalação"
+    # -- já embute mão de obra (ver remoção de "Instalação de Janela"
+    # em MAO_DE_OBRA abaixo).
+    "janela": {
+        "Econômico":   CodigoSinapi("94570", "composicao", "m2"),
+        # Correr 2 folhas, vidro incluso, 100x120cm -- R$368,87/m2 (RR, 2026-07)
+        "Médio":       CodigoSinapi("94573", "composicao", "m2"),
+        # Correr 4 folhas com bandeira, vidro incluso, 150x120cm -- R$410,39/m2 (RR, 2026-07)
+        "Alto Padrão": CodigoSinapi("94572", "composicao", "m2"),
+        # Correr 3 folhas (2 venezianas + 1 vidro), 100x120cm -- R$527,09/m2 (RR, 2026-07)
+    },
     # Confirmado em 2026-09 direto no arquivo oficial (antes era só
     # suposição, sem acesso ao arquivo real): SINAPI só tem "ponto
     # elétrico" como componente avulso de instalação (suporte/placa por
@@ -288,7 +296,10 @@ COBERTURA: dict[str, dict[str, CodigoSinapi]] = {
 # motivo: "Alvenaria (assentamento)" (coberto por bloco_ceramico,
 # 103361), "Assentamento de Piso (Área Seca/Molhada)" (piso_seco/
 # piso_molhado), "Instalação de Porta Interna/Externa" (porta_interna/
-# porta_externa).
+# porta_externa). Em 2026-09, pelo mesmo motivo: "Assentamento de Piso
+# (Área Externa)" (piso_externo passou a usar composição, ver commit
+# a69d1d5) e "Instalação de Janela" (janela agora é composição
+# "fornecimento e instalação" por m², ver GRUPOS_POR_PADRAO acima).
 #
 # Os itens abaixo continuam com codigo=None porque não há composição
 # SINAPI com preço coletado pra RR que os cubra (ainda são
@@ -297,9 +308,7 @@ COBERTURA: dict[str, dict[str, CodigoSinapi]] = {
 # real).
 # ---------------------------------------------------------------------
 MAO_DE_OBRA: dict[str, CodigoSinapi] = {
-    "Assentamento de Piso (Área Externa)":    CodigoSinapi(None, "composicao", "m2_piso_externo"),
     "Pintura":                                CodigoSinapi(None, "composicao", "m2_parede"),
-    "Instalação de Janela":                   CodigoSinapi(None, "composicao", "unidade"),
     "Execução de Cobertura":                  CodigoSinapi(None, "composicao", "m2_cobertura"),
     # Só ainda é usado pra cobertura_Laje (sem composição SINAPI) --
     # pra Telhado, cobertura_Telhado (94195/94207/94216) já cobre

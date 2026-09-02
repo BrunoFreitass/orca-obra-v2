@@ -14,6 +14,14 @@ from dataclasses import dataclass, field
 # de calcular_materiais() E calcular_mao_de_obra() em calculator.py.
 ALTURA_PAREDE_PADRAO = 2.8
 
+# Area media por janela (m2, ~1,20m x 1,20m), usada para converter a
+# CONTAGEM de janelas (o que a IA consegue extrair com confianca de uma
+# planta baixa) em AREA (o que o SINAPI precifica). Uma planta baixa e
+# uma vista de cima -- ela mostra a largura do vao na parede, mas nao a
+# altura real de cada janela, entao area exata por unidade nao e
+# extraivel com confianca so a partir dela.
+AREA_MEDIA_JANELA_M2 = 1.44
+
 
 @dataclass
 class DadosExtracao:
@@ -43,6 +51,12 @@ class DadosExtracao:
     def area_parede(self) -> float:
         """Area vertical de parede (m2), assumindo o pe direito padrao."""
         return self.metros_parede * ALTURA_PAREDE_PADRAO
+
+    @property
+    def area_janelas(self) -> float:
+        """Area total de janelas (m2), usando um tamanho medio por
+        unidade (ver AREA_MEDIA_JANELA_M2 acima)."""
+        return round(self.janelas * AREA_MEDIA_JANELA_M2, 2)
 
     def area_cobertura(self, tipo_cobertura: str) -> float:
         """Area de cobertura (m2). Telhado tem fator 1.15 sobre a area de

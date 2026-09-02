@@ -16,7 +16,7 @@ from core.coeficientes import (
     MARGEM_PERDA,
     PRECO_BLOCO_CERAMICO,
 )
-from core.models import DadosExtracao
+from core.models import AREA_MEDIA_JANELA_M2, DadosExtracao
 
 
 def _item(itens, nome):
@@ -52,14 +52,24 @@ class TestCalcularMateriaisContaFechada:
         # fator regional fixo de Roraima, unico estado atendido hoje
         assert item["Preco_Unit"] == pytest.approx(PRECO_BLOCO_CERAMICO.valor * FATOR_REGIONAL_RR.valor, abs=0.001)
 
-    def test_portas_e_janelas_sao_unidade_inteira_sem_margem_de_perda(self):
-        # Nao faz sentido aplicar margem de perda de 10% em porta/janela
-        # (nao se "perde" meia porta) -- a quantidade deve ser exata.
-        d = DadosExtracao(portas_internas=3, portas_externas=1, janelas=5)
+    def test_portas_sao_unidade_inteira_sem_margem_de_perda(self):
+        # Nao faz sentido aplicar margem de perda de 10% em porta (nao
+        # se "perde" meia porta) -- a quantidade deve ser exata.
+        d = DadosExtracao(portas_internas=3, portas_externas=1)
         itens = calcular_materiais(d, padrao="Econômico")
         assert _item(itens, "Porta Interna (Econômico)")["Quantidade"] == 3
         assert _item(itens, "Porta Externa (Econômico)")["Quantidade"] == 1
-        assert _item(itens, "Janela (Econômico)")["Quantidade"] == 5
+
+    def test_janela_converte_contagem_em_area_media(self):
+        # SINAPI precifica janela por m2 do vao, nao por unidade -- a
+        # contagem que a IA extrai da planta (unica coisa que da pra ler
+        # com confianca, ja que uma planta baixa nao mostra a altura do
+        # vao) e convertida em area usando um tamanho medio fixo
+        # (AREA_MEDIA_JANELA_M2 em core/models.py), sem margem de perda.
+        d = DadosExtracao(janelas=5)
+        itens = calcular_materiais(d, padrao="Econômico")
+        qtd_esperada = round(5 * AREA_MEDIA_JANELA_M2, 2)
+        assert _item(itens, "Janela (Econômico)")["Quantidade"] == pytest.approx(qtd_esperada, abs=0.001)
 
     def test_area_piso_total_soma_as_tres_areas(self):
         d = DadosExtracao(area_piso_seco=10, area_piso_molhado=5, area_piso_externo=3)
@@ -190,7 +200,18 @@ class TestRegressaoCasoReal:
     "chute" inicial de pesquisa de mercado (R$38,00/m2) foi substituido
     pelo valor real (R$60,09/m2 = soma de 2 composicoes SINAPI,
     chapisco + emboço/massa unica -- ver PRECO_REBOCO_M2 em
-    coeficientes.py)."""
+    coeficientes.py).
+
+    NOTA 6: total_material_medio_telhado subiu de R$76.634,05 pra
+    R$78.630,42 e total_mao_de_obra_telhado caiu de R$8.041,72 pra
+    R$6.930,76 em 2026-09 -- Janela passou a ser precificada por m2
+    (SINAPI so' tem preco de janela por m2 do vao, nao por unidade;
+    ver AREA_MEDIA_JANELA_M2 em core/models.py), com preco real do
+    SINAPI (antes era pesquisa de mercado por unidade). Como a
+    composicao de janela ja inclui "fornecimento e instalacao", o item
+    de mao de obra "Instalacao de Janela" saiu do calculo pra nao
+    contar 2x (mesmo motivo removeu "Assentamento de Piso (Area
+    Externa)", ja coberto desde o commit a69d1d5)."""
 
     def _dados(self):
         return DadosExtracao(
@@ -201,11 +222,14 @@ class TestRegressaoCasoReal:
     def test_total_material_medio_telhado(self):
         materiais = calcular_materiais(self._dados(), padrao="Médio", tipo_cobertura="Telhado")
         total = round(sum(i["Total"] for i in materiais), 2)
-        # Valor atualizado apos conferir o preco do reboco contra o SINAPI
-        # oficial -- ver NOTA 5 na docstring da classe.
-        assert total == pytest.approx(76634.05, abs=0.5)
+        # Valor atualizado apos mapear janela por m2 -- ver NOTA 6 na
+        # docstring da classe.
+        assert total == pytest.approx(78630.42, abs=0.5)
 
     def test_total_mao_de_obra_telhado(self):
         mao_de_obra = calcular_mao_de_obra(self._dados(), tipo_cobertura="Telhado")
         total = round(sum(i["Total"] for i in mao_de_obra), 2)
-        assert total == pytest.approx(8041.72, abs=0.5)
+        # Valor atualizado apos remover "Instalacao de Janela" (agora
+        # embutida na composicao do material) -- ver NOTA 6 na docstring
+        # da classe.
+        assert total == pytest.approx(6930.76, abs=0.5)
