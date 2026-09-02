@@ -370,11 +370,25 @@ MAO_DE_OBRA: dict[str, CodigoSinapi] = {
 # continuam de fora: dependem do perímetro do lote, que a planta
 # baixa normalmente não mostra e a extração da IA hoje não capta.
 #
+# Conferido em 2026-09 contra o arquivo oficial:
+# - calcada TEM composição SINAPI limpa: "Execução de passeio (calçada)
+#   ou piso de concreto, e=6cm, armado" -- código 94992 (feito em obra,
+#   R$101,13/m2, RR/2026-07) ou 94993 (usinado, R$116,06/m2).
+# - muro NÃO tem: só existem peças fragmentadas (armação em kg, muro de
+#   gabião/contenção em m3, drenos) -- nada equivalente a um muro de
+#   vedação residencial simples pronto por m2.
+# Mesmo assim os dois continuam fora do motor de cálculo: nenhum tem
+# fonte de quantidade em DadosExtracao (nem perímetro de lote, nem área
+# de calçada) -- e diferente de janela (onde um tamanho médio fixo é
+# razoável por ter pouca variação), lote e calçada variam demais pra
+# justificar um coeficiente fixo. Isso exigiria um campo novo de
+# extração (ou input manual na tela), não só um código SINAPI.
+#
 # Formato: "chave_livre": (CodigoSinapi, "Rótulo pra exibir na tela")
 # ---------------------------------------------------------------------
 ITENS_EXTRAS: dict[str, tuple[CodigoSinapi, str]] = {
     # "muro": (CodigoSinapi(None, "composicao", "m2"), "Muro de fechamento"),
-    # "calcada": (CodigoSinapi(None, "composicao", "m2"), "Calçada externa"),
+    # "calcada": (CodigoSinapi("94992", "composicao", "m2"), "Calçada externa"),
 }
 
 
