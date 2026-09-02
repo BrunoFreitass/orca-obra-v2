@@ -34,7 +34,6 @@ def _itens_editaveis():
 
     add("bloco_ceramico", "Material", "Bloco Cerâmico 14x19x29", coef.PRECO_BLOCO_CERAMICO)
     add("argamassa", "Material", "Argamassa AC-II (kg)", coef.PRECO_ARGAMASSA_KG)
-    add("tinta", "Material", "Tinta Acrílica Premium (L)", coef.PRECO_TINTA_L)
     add("cimento", "Material", "Cimento (saco 50kg)", coef.PRECO_CIMENTO_SACO)
     add("areia", "Material", "Areia (m³)", coef.PRECO_AREIA_M3)
     add("brita", "Material", "Brita nº 1 (m³)", coef.PRECO_BRITA_M3)
@@ -51,6 +50,7 @@ def _itens_editaveis():
         ("porta_interna", "Porta Interna", coef.PRECOS_PORTA_INTERNA),
         ("porta_externa", "Porta Externa", coef.PRECOS_PORTA_EXTERNA),
         ("janela", "Janela", coef.PRECOS_JANELA),
+        ("pintura", "Pintura", coef.PRECOS_PINTURA),
         ("ponto_eletrico_infra", "Ponto Elétrico - Infraestrutura", coef.PRECOS_PONTO_ELETRICO_INFRA),
         ("ponto_eletrico_acabamento", "Ponto Elétrico - Acabamento", coef.PRECOS_PONTO_ELETRICO_ACABAMENTO),
         ("ponto_hidraulico_infra", "Ponto Hidráulico - Infraestrutura", coef.PRECOS_PONTO_HIDRAULICO_INFRA),

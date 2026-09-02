@@ -5,7 +5,6 @@ from core.coeficientes import (
     CONSUMO_BRITA_M3_POR_M2,
     CONSUMO_CIMENTO_SACO_POR_M2,
     CONSUMO_REJUNTE_KG_POR_M2,
-    CONSUMO_TINTA_L_POR_M2,
     FATOR_REGIONAL_RR,
     M2_POR_PONTO_ELETRICO,
     M2_POR_PONTO_HIDRAULICO,
@@ -21,9 +20,9 @@ from core.coeficientes import (
     PRECO_IMPERMEABILIZACAO_M2,
     PRECO_REBOCO_M2,
     PRECO_REJUNTE_KG,
-    PRECO_TINTA_L,
     PRECOS_COBERTURA,
     PRECOS_JANELA,
+    PRECOS_PINTURA,
     PRECOS_PISO_EXTERNO,
     PRECOS_PISO_MOLHADO,
     PRECOS_PISO_SECO,
@@ -97,9 +96,9 @@ def calcular_materiais(dados, padrao, tipo_cobertura="Telhado"):
                       round(d.area_piso_total * margem, 2),
                       obter_preco("forro_gesso", PRECO_FORRO_GESSO_M2).valor * fator_regional,
                       fase="Acabamento"),
-        ItemOrcamento("Material", "Tinta Acrílica Premium",
-                      round(d.area_parede * CONSUMO_TINTA_L_POR_M2.valor),
-                      obter_preco("tinta", PRECO_TINTA_L).valor * fator_regional,
+        ItemOrcamento("Material", f"Pintura ({padrao})",
+                      round(d.area_parede * margem, 2),
+                      obter_preco(f"pintura__{padrao}", PRECOS_PINTURA[padrao]).valor * fator_regional,
                       fase="Acabamento"),
         ItemOrcamento("Material", f"Porta Interna ({padrao})",
                       d.portas_internas,
@@ -168,11 +167,11 @@ def calcular_mao_de_obra(dados, tipo_cobertura="Telhado"):
     completa (material + mao de obra embutidos -- ver GRUPOS_POR_PADRAO
     e MATERIAIS_SIMPLES em core/sinapi_codigos.py) NAO geram linha
     aqui, pra nao contar a mao de obra 2x: 1x embutida no preco do
-    material, 1x aqui como estimativa separada -- inclui piso_externo e
-    janela desde 2026-09. "Execução de Cobertura" e' condicional -- so'
-    fica redundante quando tipo_cobertura="Telhado" (cobertura_Laje
-    ainda nao tem composicao SINAPI mapeada, entao continua precisando
-    da mao de obra em separado)."""
+    material, 1x aqui como estimativa separada -- inclui piso_externo,
+    janela e pintura desde 2026-09. "Execução de Cobertura" e'
+    condicional -- so' fica redundante quando tipo_cobertura="Telhado"
+    (cobertura_Laje ainda nao tem composicao SINAPI mapeada, entao
+    continua precisando da mao de obra em separado)."""
     d = _dados_extracao(dados)
     fator_regional = FATOR_REGIONAL_RR.valor
     area_cobertura = d.area_cobertura(tipo_cobertura)
@@ -181,7 +180,6 @@ def calcular_mao_de_obra(dados, tipo_cobertura="Telhado"):
 
     # Mapeamento de servico -> (quantidade, fase)
     servicos_base = {
-        "Pintura": (d.area_parede, "Acabamento"),
         "Estrutura (fundação/armação)": (d.area_piso_total, "Obra Bruta"),
     }
     if tipo_cobertura != "Telhado":

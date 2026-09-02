@@ -52,7 +52,6 @@ CONSUMO_AREIA_M3_POR_M2 = Preco(0.5, "SINAPI - composição contrapiso", "2026-0
 CONSUMO_BRITA_M3_POR_M2 = Preco(0.3, "SINAPI - composição concreto estrutural", "2026-06")
 CONSUMO_ACO_KG_POR_M2 = Preco(6, "SINAPI - composição estrutura/fundação", "2026-06")
 CONSUMO_ARGAMASSA_KG_POR_M2 = Preco(5, "Padrão de mercado - argamassa AC-II para assentamento de piso", "2026-06")
-CONSUMO_TINTA_L_POR_M2 = Preco(0.4, "Padrão de mercado - tinta acrílica premium, 2 demãos", "2026-06")
 M2_POR_PONTO_ELETRICO = Preco(5, "Estimativa de mercado (heurística, não é item SINAPI)", "2026-06")
 M2_POR_PONTO_HIDRAULICO = Preco(8, "Estimativa de mercado (heurística, não é item SINAPI)", "2026-06")
 MARGEM_PERDA = Preco(1.1, "Padrão de mercado para perda/quebra de material (10%)", "2026-06")
@@ -93,6 +92,17 @@ PRECOS_JANELA = {
     "Econômico": Preco(368.87, "SINAPI oficial código 94570 - janela de alumínio de correr, 2 folhas, vidro incluso, fornecimento e instalação", "2026-07"),
     "Médio": Preco(410.39, "SINAPI oficial código 94573 - janela de alumínio de correr, 4 folhas com bandeira, vidro incluso, fornecimento e instalação", "2026-07"),
     "Alto Padrão": Preco(527.09, "SINAPI oficial código 94572 - janela de alumínio de correr, 3 folhas (2 venezianas + 1 vidro), fornecimento e instalação", "2026-07"),
+}
+# Preco por m² de parede -- substitui o par antigo "Tinta Acrílica
+# Premium" (material, por litro) + "Pintura" (mão de obra avulsa):
+# essas 3 composições SINAPI já embutem tinta + aplicação manual (2
+# demãos) juntos, então viraram 1 item só, igual já tinha acontecido
+# com bloco_ceramico. Valores reais do SINAPI oficial (CAIXA/IBGE) RR,
+# ref. 2026-07.
+PRECOS_PINTURA = {
+    "Econômico": Preco(12.02, "SINAPI oficial código 104641 - pintura látex acrílica econômica, aplicação manual em paredes, 2 demãos", "2026-07"),
+    "Médio": Preco(13.89, "SINAPI oficial código 104642 - pintura látex acrílica standard, aplicação manual em paredes, 2 demãos", "2026-07"),
+    "Alto Padrão": Preco(17.08, "SINAPI oficial código 88489 - pintura látex acrílica premium, aplicação manual em paredes, 2 demãos", "2026-07"),
 }
 
 # -----------------------------------------------------------------
@@ -146,7 +156,6 @@ PRECOS_COBERTURA = {
 # unidade consistente com o que calcular.py de fato multiplica.
 PRECO_BLOCO_CERAMICO = Preco(71.61, "Pesquisa de mercado - bloco cerâmico 14x19x29, m² de parede pronta", "2026-06")
 PRECO_ARGAMASSA_KG = Preco(1.80, "Pesquisa de mercado - argamassa AC-II", "2026-06")
-PRECO_TINTA_L = Preco(22.00, "Pesquisa de mercado - tinta acrílica premium", "2026-06")
 PRECO_CIMENTO_SACO = Preco(44.00, "SINAPI/IBGE - média nacional, 1º bimestre/2026", "2026-06")
 PRECO_AREIA_M3 = Preco(120.00, "Pesquisa de mercado - areia média/grossa", "2026-06")
 PRECO_BRITA_M3 = Preco(140.00, "Pesquisa de mercado - brita nº 1", "2026-06")
@@ -200,21 +209,17 @@ PRECO_ACO_RR = Preco(
 # core/sinapi_codigos.py e core/calculator.py:calcular_mao_de_obra().
 # Manter os dois contaria a mão de obra 2x.
 #
-# "Assentamento de Piso (Área Externa)" e "Instalação de Janela" saíram
-# daqui em 2026-09 pelo mesmo motivo: piso_externo (ref. commit
-# a69d1d5) e janela (mapeada por m² nesta mudança) passaram a usar
-# composições SINAPI completas também.
+# "Assentamento de Piso (Área Externa)", "Instalação de Janela" e
+# "Pintura" saíram daqui em 2026-09 pelo mesmo motivo: piso_externo
+# (ref. commit a69d1d5), janela (mapeada por m² nesta mudança) e
+# pintura (fundida com o antigo item de material "Tinta Acrílica
+# Premium" -- ver PRECOS_PINTURA acima) passaram a usar composições
+# SINAPI completas também.
 # =====================================================================
 _FONTE_MAO_DE_OBRA = "Aproximação a partir da parcela de mão de obra das composições SINAPI (ainda não coletado item a item)"
 _DATA_MAO_DE_OBRA = "2026-06"
 
 MAO_DE_OBRA_POR_SERVICO = {
-    "Pintura": {
-        "preco": Preco(
-            12.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA
-        ),
-        "unidade": "m2_parede",
-    },
     "Execução de Cobertura": {
         "preco": Preco(
             45.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA
@@ -251,14 +256,14 @@ mais velho usado no motor de calculo esta."""
         _mais_antiga(
             CONSUMO_CIMENTO_SACO_POR_M2,
             CONSUMO_AREIA_M3_POR_M2, CONSUMO_BRITA_M3_POR_M2, CONSUMO_ACO_KG_POR_M2,
-            CONSUMO_ARGAMASSA_KG_POR_M2, CONSUMO_TINTA_L_POR_M2,
+            CONSUMO_ARGAMASSA_KG_POR_M2,
             M2_POR_PONTO_ELETRICO, M2_POR_PONTO_HIDRAULICO, MARGEM_PERDA,
             PRECOS_PISO_SECO, PRECOS_PISO_MOLHADO, PRECOS_PISO_EXTERNO,
-            PRECOS_PORTA_INTERNA, PRECOS_PORTA_EXTERNA, PRECOS_JANELA,
+            PRECOS_PORTA_INTERNA, PRECOS_PORTA_EXTERNA, PRECOS_JANELA, PRECOS_PINTURA,
             PRECOS_PONTO_ELETRICO_INFRA, PRECOS_PONTO_ELETRICO_ACABAMENTO,
             PRECOS_PONTO_HIDRAULICO_INFRA, PRECOS_PONTO_HIDRAULICO_ACABAMENTO,
             PRECOS_COBERTURA["Telhado"], PRECOS_COBERTURA["Laje"],
-            PRECO_BLOCO_CERAMICO, PRECO_ARGAMASSA_KG, PRECO_TINTA_L,
+            PRECO_BLOCO_CERAMICO, PRECO_ARGAMASSA_KG,
             PRECO_CIMENTO_SACO, PRECO_AREIA_M3, PRECO_BRITA_M3,
             FATOR_REGIONAL_RR, PRECO_ACO_RR,
             PRECO_REBOCO_M2, PRECO_IMPERMEABILIZACAO_M2, PRECO_FORRO_GESSO_M2,

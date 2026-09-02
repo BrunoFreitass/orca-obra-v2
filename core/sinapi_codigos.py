@@ -89,8 +89,9 @@ MATERIAIS_SIMPLES: dict[str, CodigoSinapi] = {
     # separado, porque a mão de obra de assentamento já vem embutida.
     "argamassa":      CodigoSinapi("34353", "insumo", "kg"),
     # "Argamassa Colante AC II" -- confiança alta
-    "tinta":          CodigoSinapi("7356",  "insumo", "l"),
-    # "Tinta Látex Acrílica Premium, cor branco fosco" -- confiança alta
+    # "tinta" saiu daqui em 2026-09: fundida com a mão de obra de
+    # Pintura numa composição SINAPI completa por padrão -- ver "pintura"
+    # em GRUPOS_POR_PADRAO abaixo.
     "cimento":        CodigoSinapi("1379", "insumo", "kg", fator_conversao=50),
     # SINAPI 1379 -- "Cimento Portland Composto CP II-32", medido por
     # KG (fator_conversao=50 converte pra preço por saco de 50kg
@@ -242,6 +243,18 @@ GRUPOS_POR_PADRAO: dict[str, dict[str, CodigoSinapi]] = {
         "Alto Padrão": CodigoSinapi("94572", "composicao", "m2"),
         # Correr 3 folhas (2 venezianas + 1 vidro), 100x120cm -- R$527,09/m2 (RR, 2026-07)
     },
+    # Substitui o antigo par "tinta" (insumo) + "Pintura" (mão de obra
+    # avulsa): estas 3 composições já embutem tinta + aplicação manual
+    # (2 demãos), então viraram 1 item tiered só -- mesmo padrão do
+    # bloco_ceramico. Achado direto no arquivo oficial em 2026-09.
+    "pintura": {
+        "Econômico":   CodigoSinapi("104641", "composicao", "m2"),
+        # Pintura látex acrílica econômica, aplicação manual, 2 demãos -- R$12,02/m2 (RR, 2026-07)
+        "Médio":       CodigoSinapi("104642", "composicao", "m2"),
+        # Pintura látex acrílica standard, aplicação manual, 2 demãos -- R$13,89/m2 (RR, 2026-07)
+        "Alto Padrão": CodigoSinapi("88489",  "composicao", "m2"),
+        # Pintura látex acrílica premium, aplicação manual, 2 demãos -- R$17,08/m2 (RR, 2026-07)
+    },
     # Confirmado em 2026-09 direto no arquivo oficial (antes era só
     # suposição, sem acesso ao arquivo real): SINAPI só tem "ponto
     # elétrico" como componente avulso de instalação (suporte/placa por
@@ -298,17 +311,23 @@ COBERTURA: dict[str, dict[str, CodigoSinapi]] = {
 # piso_molhado), "Instalação de Porta Interna/Externa" (porta_interna/
 # porta_externa). Em 2026-09, pelo mesmo motivo: "Assentamento de Piso
 # (Área Externa)" (piso_externo passou a usar composição, ver commit
-# a69d1d5) e "Instalação de Janela" (janela agora é composição
-# "fornecimento e instalação" por m², ver GRUPOS_POR_PADRAO acima).
+# a69d1d5), "Instalação de Janela" (janela agora é composição
+# "fornecimento e instalação" por m², ver GRUPOS_POR_PADRAO acima) e
+# "Pintura" (fundida com o antigo item de material "tinta" -- exatamente
+# o exemplo "PINTURA LÁTEX ACRÍLICA PREMIUM..." citado acima).
 #
 # Os itens abaixo continuam com codigo=None porque não há composição
 # SINAPI com preço coletado pra RR que os cubra (ainda são
-# estimativa/pesquisa de mercado, e por ora ficam assim -- decisão
-# tomada em 2026-08: nenhum outro dado de terceiros até achar SINAPI
-# real).
+# estimativa/pesquisa de mercado, e por ora ficam assim). Confirmado em
+# 2026-09 contra o arquivo oficial (antes era suposição): "Estrutura",
+# "Instalação Elétrica" e "Instalação Hidráulica" são estimativas de
+# mão de obra pra CASA INTEIRA (não um serviço pontual), e o SINAPI só
+# tem os insumos avulsos de mão de obra (ex: "ELETRICISTA (HORISTA)",
+# R$/hora) -- não uma composição pronta equivalente. Montar uma
+# composição do zero a partir desses insumos (horas × produtividade)
+# está fora do que este importador faz hoje.
 # ---------------------------------------------------------------------
 MAO_DE_OBRA: dict[str, CodigoSinapi] = {
-    "Pintura":                                CodigoSinapi(None, "composicao", "m2_parede"),
     "Execução de Cobertura":                  CodigoSinapi(None, "composicao", "m2_cobertura"),
     # Só ainda é usado pra cobertura_Laje (sem composição SINAPI) --
     # pra Telhado, cobertura_Telhado (94195/94207/94216) já cobre

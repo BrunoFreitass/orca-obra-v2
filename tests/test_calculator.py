@@ -92,7 +92,7 @@ class TestFaseObraBrutaAcabamento:
     def test_piso_e_pintura_sao_sempre_acabamento(self):
         itens = calcular_materiais(self._dados(), padrao="Médio")
         assert _item(itens, "Piso Interno - Área Seca (Médio)")["Fase"] == "Acabamento"
-        assert _item(itens, "Tinta Acrílica Premium")["Fase"] == "Acabamento"
+        assert _item(itens, "Pintura (Médio)")["Fase"] == "Acabamento"
 
     def test_ponto_eletrico_vira_dois_itens_infra_e_acabamento(self):
         itens = calcular_materiais(self._dados(), padrao="Médio")
@@ -211,7 +211,16 @@ class TestRegressaoCasoReal:
     composicao de janela ja inclui "fornecimento e instalacao", o item
     de mao de obra "Instalacao de Janela" saiu do calculo pra nao
     contar 2x (mesmo motivo removeu "Assentamento de Piso (Area
-    Externa)", ja coberto desde o commit a69d1d5)."""
+    Externa)", ja coberto desde o commit a69d1d5).
+
+    NOTA 7: total_material_medio_telhado subiu de R$78.630,42 pra
+    R$79.799,79 e total_mao_de_obra_telhado caiu de R$6.930,76 pra
+    R$4.773,64 em 2026-09 -- "Tinta Acrilica Premium" (material, por
+    litro) + "Pintura" (mao de obra avulsa) foram fundidos num unico
+    item "Pintura ({padrao})", usando 3 composicoes SINAPI reais que ja
+    embutem tinta + aplicacao manual (2 demaos) -- ver PRECOS_PINTURA em
+    coeficientes.py. Mesmo motivo das fusoes anteriores: manter os dois
+    em paralelo contaria a mao de obra 2x."""
 
     def _dados(self):
         return DadosExtracao(
@@ -222,14 +231,13 @@ class TestRegressaoCasoReal:
     def test_total_material_medio_telhado(self):
         materiais = calcular_materiais(self._dados(), padrao="Médio", tipo_cobertura="Telhado")
         total = round(sum(i["Total"] for i in materiais), 2)
-        # Valor atualizado apos mapear janela por m2 -- ver NOTA 6 na
-        # docstring da classe.
-        assert total == pytest.approx(78630.42, abs=0.5)
+        # Valor atualizado apos fundir tinta+pintura num item SINAPI so
+        # -- ver NOTA 7 na docstring da classe.
+        assert total == pytest.approx(79799.79, abs=0.5)
 
     def test_total_mao_de_obra_telhado(self):
         mao_de_obra = calcular_mao_de_obra(self._dados(), tipo_cobertura="Telhado")
         total = round(sum(i["Total"] for i in mao_de_obra), 2)
-        # Valor atualizado apos remover "Instalacao de Janela" (agora
-        # embutida na composicao do material) -- ver NOTA 6 na docstring
-        # da classe.
-        assert total == pytest.approx(6930.76, abs=0.5)
+        # Valor atualizado apos remover "Pintura" (agora embutida na
+        # composicao do material) -- ver NOTA 7 na docstring da classe.
+        assert total == pytest.approx(4773.64, abs=0.5)
