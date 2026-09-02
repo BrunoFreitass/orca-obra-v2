@@ -143,6 +143,21 @@ PRECOS_COBERTURA = {
     },
 }
 
+# Estrutura da laje quando usada como cobertura (Laje ≠ Telhado): laje
+# pré-moldada completa (vigota + enchimento + capa de concreto + mão de
+# obra), separada da impermeabilização acima (que é só o acabamento
+# final). Substitui "Execução de Cobertura" -- que era mão de obra
+# avulsa em coeficientes.py, sem material -- em 2026-09. Valores reais
+# do SINAPI oficial (CAIXA/IBGE) RR, ref. 2026-07, mesma família "vigota
+# treliçada para piso" (a laje é a mesma peça, usada aqui como teto),
+# diferenciados pela espessura total (mais espesso = mais robusto/vão
+# maior, critério de padrão razoável na ausência de outro).
+PRECOS_ESTRUTURA_LAJE_COBERTURA = {
+    "Econômico": Preco(229.96, "SINAPI oficial código 101951 - laje pré-moldada, vigota treliçada, enchimento EPS, LT=12cm", "2026-07"),
+    "Médio": Preco(254.03, "SINAPI oficial código 101948 - laje pré-moldada, vigota treliçada, enchimento cerâmico, LT=16cm", "2026-07"),
+    "Alto Padrão": Preco(273.03, "SINAPI oficial código 101949 - laje pré-moldada, vigota treliçada, enchimento cerâmico, LT=20cm", "2026-07"),
+}
+
 # =====================================================================
 # PRECOS FIXOS (nao variam por padrao de acabamento)
 # =====================================================================
@@ -214,18 +229,17 @@ PRECO_ACO_RR = Preco(
 # (ref. commit a69d1d5), janela (mapeada por m² nesta mudança) e
 # pintura (fundida com o antigo item de material "Tinta Acrílica
 # Premium" -- ver PRECOS_PINTURA acima) passaram a usar composições
-# SINAPI completas também.
+# SINAPI completas também. "Execução de Cobertura" saiu também em
+# 2026-09 -- virou o item de MATERIAL "Estrutura da Laje de Cobertura"
+# (ver PRECOS_ESTRUTURA_LAJE_COBERTURA acima), porque a composição real
+# que cobre isso (laje pré-moldada) inclui material (vigota/enchimento/
+# concreto), não só mão de obra -- catalogar como "Mão de Obra" seria
+# enganoso.
 # =====================================================================
 _FONTE_MAO_DE_OBRA = "Aproximação a partir da parcela de mão de obra das composições SINAPI (ainda não coletado item a item)"
 _DATA_MAO_DE_OBRA = "2026-06"
 
 MAO_DE_OBRA_POR_SERVICO = {
-    "Execução de Cobertura": {
-        "preco": Preco(
-            45.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA
-        ),
-        "unidade": "m2_cobertura",
-    },
     "Estrutura (fundação/armação)": {
         "preco": Preco(
             35.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA
@@ -262,7 +276,7 @@ mais velho usado no motor de calculo esta."""
             PRECOS_PORTA_INTERNA, PRECOS_PORTA_EXTERNA, PRECOS_JANELA, PRECOS_PINTURA,
             PRECOS_PONTO_ELETRICO_INFRA, PRECOS_PONTO_ELETRICO_ACABAMENTO,
             PRECOS_PONTO_HIDRAULICO_INFRA, PRECOS_PONTO_HIDRAULICO_ACABAMENTO,
-            PRECOS_COBERTURA["Telhado"], PRECOS_COBERTURA["Laje"],
+            PRECOS_COBERTURA["Telhado"], PRECOS_COBERTURA["Laje"], PRECOS_ESTRUTURA_LAJE_COBERTURA,
             PRECO_BLOCO_CERAMICO, PRECO_ARGAMASSA_KG,
             PRECO_CIMENTO_SACO, PRECO_AREIA_M3, PRECO_BRITA_M3,
             FATOR_REGIONAL_RR, PRECO_ACO_RR,

@@ -65,6 +65,10 @@ def _itens_editaveis():
             add(f"cobertura_{tipo_cobertura}__{padrao}", "Material",
                 f"Cobertura {tipo_cobertura} ({padrao})", preco)
 
+    for padrao, preco in coef.PRECOS_ESTRUTURA_LAJE_COBERTURA.items():
+        add(f"estrutura_laje_cobertura__{padrao}", "Material",
+            f"Estrutura da Laje de Cobertura ({padrao})", preco)
+
     for servico, info in coef.MAO_DE_OBRA_POR_SERVICO.items():
         add(f"mao_de_obra__{servico}", "Mão de Obra", servico, info["preco"])
 

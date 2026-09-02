@@ -154,14 +154,22 @@ class TestMaoDeObraSemDuplicarComposicaoSinapiCompleta:
         }
         assert not (nomes & redundantes)
 
-    def test_execucao_de_cobertura_some_so_para_telhado(self):
-        # cobertura_Telhado ja e' composicao SINAPI completa (94195/
-        # 94207/94216); cobertura_Laje ainda nao tem equivalente, entao
-        # continua precisando da mao de obra em separado.
+    def test_execucao_de_cobertura_nunca_aparece_em_mao_de_obra(self):
+        # "Execução de Cobertura" saiu de MAO_DE_OBRA_POR_SERVICO em
+        # 2026-09: pra Telhado, cobertura_Telhado ja e' composicao SINAPI
+        # completa (94195/94207/94216); pra Laje, virou item de MATERIAL
+        # "Estrutura da Laje de Cobertura" (laje pre-moldada, que inclui
+        # material, nao so mao de obra) -- ver teste abaixo.
         itens_telhado = calcular_mao_de_obra(self._dados(), tipo_cobertura="Telhado")
         itens_laje = calcular_mao_de_obra(self._dados(), tipo_cobertura="Laje")
         assert "Execução de Cobertura" not in {it["Material"] for it in itens_telhado}
-        assert "Execução de Cobertura" in {it["Material"] for it in itens_laje}
+        assert "Execução de Cobertura" not in {it["Material"] for it in itens_laje}
+
+    def test_estrutura_da_laje_de_cobertura_so_aparece_para_laje(self):
+        materiais_telhado = calcular_materiais(self._dados(), padrao="Médio", tipo_cobertura="Telhado")
+        materiais_laje = calcular_materiais(self._dados(), padrao="Médio", tipo_cobertura="Laje")
+        assert "Estrutura da Laje de Cobertura (Médio)" not in {it["Material"] for it in materiais_telhado}
+        assert "Estrutura da Laje de Cobertura (Médio)" in {it["Material"] for it in materiais_laje}
 
 
 class TestRegressaoCasoReal:

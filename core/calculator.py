@@ -21,6 +21,7 @@ from core.coeficientes import (
     PRECO_REBOCO_M2,
     PRECO_REJUNTE_KG,
     PRECOS_COBERTURA,
+    PRECOS_ESTRUTURA_LAJE_COBERTURA,
     PRECOS_JANELA,
     PRECOS_PINTURA,
     PRECOS_PISO_EXTERNO,
@@ -157,6 +158,20 @@ def calcular_materiais(dados, padrao, tipo_cobertura="Telhado"):
                       fase="Acabamento"),
     ]
 
+    if tipo_cobertura != "Telhado":
+        # Laje como cobertura precisa da estrutura da própria laje (esta
+        # linha), além do acabamento de impermeabilização já coberto por
+        # "Cobertura em Laje" acima -- Telhado não precisa disso porque
+        # a composição de telhamento já é auto-suficiente (telha +
+        # madeiramento).
+        itens.append(ItemOrcamento(
+            "Material", f"Estrutura da Laje de Cobertura ({padrao})",
+            area_cobertura,
+            obter_preco(f"estrutura_laje_cobertura__{padrao}",
+                        PRECOS_ESTRUTURA_LAJE_COBERTURA[padrao]).valor * fator_regional,
+            fase="Obra Bruta"
+        ))
+
     return itens_para_dicts(itens)
 
 
@@ -168,13 +183,14 @@ def calcular_mao_de_obra(dados, tipo_cobertura="Telhado"):
     e MATERIAIS_SIMPLES em core/sinapi_codigos.py) NAO geram linha
     aqui, pra nao contar a mao de obra 2x: 1x embutida no preco do
     material, 1x aqui como estimativa separada -- inclui piso_externo,
-    janela e pintura desde 2026-09. "Execução de Cobertura" e'
-    condicional -- so' fica redundante quando tipo_cobertura="Telhado"
-    (cobertura_Laje ainda nao tem composicao SINAPI mapeada, entao
-    continua precisando da mao de obra em separado)."""
+    janela e pintura desde 2026-09. "Execução de Cobertura" tambem saiu
+    daqui (2026-09): pra Laje virou item de MATERIAL "Estrutura da Laje
+    de Cobertura" em calcular_materiais() (a composicao real inclui
+    material -- vigota/enchimento/concreto -- nao so mao de obra).
+    tipo_cobertura fica como parametro por compatibilidade com quem
+    chama esta funcao, mas nao afeta mais o resultado aqui."""
     d = _dados_extracao(dados)
     fator_regional = FATOR_REGIONAL_RR.valor
-    area_cobertura = d.area_cobertura(tipo_cobertura)
     qtd_eletricos = round(d.area_piso_total / M2_POR_PONTO_ELETRICO.valor)
     qtd_hidraulicos = round(d.area_piso_total / M2_POR_PONTO_HIDRAULICO.valor)
 
@@ -182,8 +198,6 @@ def calcular_mao_de_obra(dados, tipo_cobertura="Telhado"):
     servicos_base = {
         "Estrutura (fundação/armação)": (d.area_piso_total, "Obra Bruta"),
     }
-    if tipo_cobertura != "Telhado":
-        servicos_base["Execução de Cobertura"] = (area_cobertura, "Obra Bruta")
 
     itens = []
     for servico, (qtd, fase) in servicos_base.items():

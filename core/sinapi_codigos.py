@@ -292,6 +292,22 @@ COBERTURA: dict[str, dict[str, CodigoSinapi]] = {
     },
 }
 
+# Estrutura da laje quando usada como cobertura (Laje ≠ Telhado) --
+# separado de COBERTURA acima porque cobertura_Laje é só o acabamento
+# de impermeabilização; isto aqui é a laje pré-moldada em si (vigota +
+# enchimento + capa de concreto + mão de obra). Substitui "Execução de
+# Cobertura" em MAO_DE_OBRA (seção 3 abaixo) -- essa composição inclui
+# material, catalogá-la como mão de obra avulsa seria enganoso. Chave
+# final: "estrutura_laje_cobertura__{padrao}".
+ESTRUTURA_LAJE_COBERTURA: dict[str, CodigoSinapi] = {
+    "Econômico":   CodigoSinapi("101951", "composicao", "m2"),
+    # Laje pré-moldada, vigota treliçada, enchimento EPS, LT=12cm -- R$229,96/m2 (RR, 2026-07)
+    "Médio":       CodigoSinapi("101948", "composicao", "m2"),
+    # Laje pré-moldada, vigota treliçada, enchimento cerâmico, LT=16cm -- R$254,03/m2 (RR, 2026-07)
+    "Alto Padrão": CodigoSinapi("101949", "composicao", "m2"),
+    # Laje pré-moldada, vigota treliçada, enchimento cerâmico, LT=20cm -- R$273,03/m2 (RR, 2026-07)
+}
+
 # ---------------------------------------------------------------------
 # 3. MÃO DE OBRA POR SERVIÇO -- hoje quase tudo aqui é estimativa ("não
 # coletado item a item"), não SINAPI de verdade. Chave final:
@@ -314,7 +330,12 @@ COBERTURA: dict[str, dict[str, CodigoSinapi]] = {
 # a69d1d5), "Instalação de Janela" (janela agora é composição
 # "fornecimento e instalação" por m², ver GRUPOS_POR_PADRAO acima) e
 # "Pintura" (fundida com o antigo item de material "tinta" -- exatamente
-# o exemplo "PINTURA LÁTEX ACRÍLICA PREMIUM..." citado acima).
+# o exemplo "PINTURA LÁTEX ACRÍLICA PREMIUM..." citado acima). "Execução
+# de Cobertura" saiu também, mas por um motivo diferente dos outros: não
+# ficou redundante, virou item de MATERIAL -- ver
+# ESTRUTURA_LAJE_COBERTURA acima -- porque a composição de laje
+# pré-moldada que a substitui inclui material (vigota/enchimento/
+# concreto), não só mão de obra.
 #
 # Os itens abaixo continuam com codigo=None porque não há composição
 # SINAPI com preço coletado pra RR que os cubra (ainda são
@@ -328,11 +349,6 @@ COBERTURA: dict[str, dict[str, CodigoSinapi]] = {
 # está fora do que este importador faz hoje.
 # ---------------------------------------------------------------------
 MAO_DE_OBRA: dict[str, CodigoSinapi] = {
-    "Execução de Cobertura":                  CodigoSinapi(None, "composicao", "m2_cobertura"),
-    # Só ainda é usado pra cobertura_Laje (sem composição SINAPI) --
-    # pra Telhado, cobertura_Telhado (94195/94207/94216) já cobre
-    # material + mão de obra, então este item nem entra no cálculo
-    # quando tipo_cobertura="Telhado" (ver calcular_mao_de_obra()).
     "Estrutura (fundação/armação)":           CodigoSinapi(None, "composicao", "m2_area"),
     "Instalação Elétrica":                    CodigoSinapi(None, "composicao", "unidade"),
     "Instalação Hidráulica":                  CodigoSinapi(None, "composicao", "unidade"),
@@ -376,6 +392,9 @@ def todos_mapeamentos() -> dict[str, CodigoSinapi]:
     for prefixo, grupo in COBERTURA.items():
         for padrao, codigo in grupo.items():
             resultado[f"{prefixo}__{padrao}"] = codigo
+
+    for padrao, codigo in ESTRUTURA_LAJE_COBERTURA.items():
+        resultado[f"estrutura_laje_cobertura__{padrao}"] = codigo
 
     for servico, codigo in MAO_DE_OBRA.items():
         resultado[f"mao_de_obra__{servico}"] = codigo
