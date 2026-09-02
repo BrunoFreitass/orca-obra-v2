@@ -190,11 +190,19 @@ GRUPOS_POR_PADRAO: dict[str, dict[str, CodigoSinapi]] = {
         "Alto Padrão": CodigoSinapi("87261", "composicao", "m2"),
         # Revest. cerâmico porcelanato 60x60cm, ambiente <5m² -- R$185,17/m2 (RR, 2026-07)
     },
-    # Não achei, no relatório de RR, uma composição de piso de área
-    # externa (antiderrapante/intertravado) com preço coletado -- as
-    # únicas com "piso externo" na descrição eram sobre mobiliário
-    # urbano ou pavimentação de rua, não bateram com o item real.
-    "piso_externo": _grupo(_TRES_PADROES_M2),
+    # Conferido em 2026-09 direto no arquivo oficial (antes só tinha
+    # sido tentado por busca em site terceiro): não existe "piso
+    # externo" com esse nome exato, mas existem pavimentos externos
+    # reais (não é calçada/passeio público -- isso foi descartado por
+    # semântica errada) com robustez crescente:
+    "piso_externo": {
+        "Econômico":   CodigoSinapi("106789", "composicao", "m2"),
+        # Piso cimentado, traço 1:3, acabamento rugoso, e=1,5cm, preparo mecânico -- R$40,15/m2 (RR, 2026-07)
+        "Médio":       CodigoSinapi("36155", "composicao", "m2"),
+        # Piso intertravado de concreto 20x10cm, e=6cm, 35MPa, cor natural -- R$118,38/m2 (RR, 2026-07)
+        "Alto Padrão": CodigoSinapi("40529", "composicao", "m2"),
+        # Piso intertravado de concreto 20x10cm, e=10cm, 50MPa, cor natural -- R$250,26/m2 (RR, 2026-07)
+    },
     # Kits de porta de madeira (fornecimento + batente + instalação),
     # ~70cm de largura -- tamanho padrão de porta interna. O SINAPI já
     # rotula "Popular"/"Médio", batendo direto com os 2 primeiros
@@ -226,11 +234,14 @@ GRUPOS_POR_PADRAO: dict[str, dict[str, CodigoSinapi]] = {
     # cálculo com preço errado. Precisa decidir: ou o motor passa a
     # pedir m² por janela, ou o item continua pesquisa de mercado.
     "janela": _grupo(_TRES_PADROES_UN),
-    # SINAPI só tem "ponto elétrico"/"ponto hidráulico" como componente
-    # avulso de instalação (ex: caixa/suporte por altura de montagem --
-    # alto/médio/baixo), não como pacote "infraestrutura completa" ou
-    # "acabamento completo" por padrão de acabamento que dê pra separar
-    # em Econômico/Médio/Alto Padrão.
+    # Confirmado em 2026-09 direto no arquivo oficial (antes era só
+    # suposição, sem acesso ao arquivo real): SINAPI só tem "ponto
+    # elétrico" como componente avulso de instalação (suporte/placa por
+    # altura de montagem -- alto/médio/baixo), não como pacote
+    # "infraestrutura completa" ou "acabamento completo" por padrão de
+    # acabamento. "Ponto hidráulico" nem aparece como termo isolado no
+    # arquivo. Continua pesquisa de mercado -- não é falta de busca,
+    # é falta de composição SINAPI equivalente.
     "ponto_eletrico_infra":        _grupo(_TRES_PADROES_UN),
     "ponto_eletrico_acabamento":   _grupo(_TRES_PADROES_UN),
     "ponto_hidraulico_infra":      _grupo(_TRES_PADROES_UN),
