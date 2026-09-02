@@ -42,14 +42,69 @@ pipeline.
 
 ## Antes de usar
 
-1. Aplicar o patch em `core/tabela_precos.py` (ver `PATCH_tabela_precos.md`)
-2. Preencher os códigos SINAPI reais em `sinapi_codigos.py` (uma vez
-   só — os códigos não mudam mês a mês, só o preço)
-3. Baixar um ZIP de teste da Caixa e rodar o importador pra conferir
-   se os preços e descrições batem com o esperado antes de confiar
-   nele em produção
+1. Baixe o pacote mensal ("SINAPI_Referência") do site da Caixa pro
+   estado atendido (hoje só RR) — dentro dele está o arquivo
+   `.xlsx` que o comando abaixo espera.
+2. Rode `python -m core.sinapi_import <arquivo.xlsx>` (use `--sim`
+   pra gravar sem confirmação interativa, útil em automação).
+3. Confira o resumo impresso — quantos itens foram atualizados, quais
+   ficaram sem código mapeado, e qualquer aviso de unidade
+   incompatível — antes de considerar o orçamento confiável pro mês.
 
-## Limitações honestas desta primeira versão
+Se algum item novo precisar de código (ex: um material que ainda não
+existe em `sinapi_codigos.py`), preencha lá seguindo as instruções no
+topo do próprio arquivo — é trabalho de pesquisa (achar o código
+certo na planilha), não de programação.
+
+## Estado atual (2026-09)
+
+Testado de ponta a ponta contra o pacote real da Caixa (RR, ref.
+2026-07): a detecção de layout funcionou sem ajuste, e **39 dos 55
+itens do motor de cálculo já têm código SINAPI real** (rode
+`python -m core.sinapi_codigos` pra ver o número atualizado e o que
+falta). Isso cobre praticamente todas as categorias — materiais
+simples (cimento, areia, brita, aço), pisos, portas, janela (por m²,
+não por unidade — ver nota abaixo), cobertura (telhado e laje, com
+estrutura da laje separada da impermeabilização), pintura, reboco,
+impermeabilização, forro de gesso, rejunte e piso externo.
+
+Rodar o importador contra o arquivo real corrigiu distorções grandes
+que existiam nos preços "de pesquisa de mercado" que alimentavam o
+motor de cálculo antes — o pior caso foi Porta Interna (Econômico),
+que estava **395% abaixo** do valor real do SINAPI pra Roraima.
+
+**O que ficou de fora, e por quê (não é falta de busca, é confirmado
+contra o arquivo real):**
+- **Mão de obra pra casa inteira** (Estrutura/fundação, Instalação
+  Elétrica, Instalação Hidráulica): são estimativas de lump-sum pra
+  obra toda, e o SINAPI só tem os insumos avulsos de mão de obra
+  (ex: "ELETRICISTA HORISTA", R$/hora) — não uma composição pronta
+  equivalente.
+- **Pontos elétricos/hidráulicos por padrão de acabamento**: SINAPI só
+  tem o suporte/placa avulso por altura de montagem, não um pacote
+  "infraestrutura completa" ou "acabamento completo".
+- **Muro e calçada**: calçada até tem composição limpa (94992/94993),
+  mas nenhum dos dois tem fonte de quantidade em `DadosExtracao` — a
+  planta baixa não mostra perímetro de lote nem área de calçada, e
+  diferente de janela não dá pra assumir um tamanho médio razoável
+  (lotes variam demais). Precisaria de um campo novo de extração ou
+  input manual na tela, não só um código SINAPI (ver comentário na
+  seção `ITENS_EXTRAS` de `sinapi_codigos.py`).
+
+**Duas particularidades que valem saber antes de mexer:**
+- **Janela** virou preço por m² (era por unidade) — SINAPI só
+  precifica por área do vão, mas uma planta baixa não mostra a altura
+  real de cada janela (só a largura), então a contagem que a IA
+  extrai é convertida em área usando um tamanho médio fixo
+  (`AREA_MEDIA_JANELA_M2` em `core/models.py`).
+- **Reboco** não tem composição SINAPI única — é sempre chapisco +
+  emboço em separado. Como `CodigoSinapi` só guarda 1 código, esse
+  item ficou com `codigo=None` de propósito, mas o preço padrão em
+  `coeficientes.py` foi atualizado à mão com a soma dos 2 códigos
+  reais (não vai se beneficiar de atualização automática mês a mês
+  até o importador ganhar suporte a múltiplos códigos por item).
+
+## Limitações honestas
 
 - **Não baixa nada sozinho** (ver "por que" acima) — é um importador,
   não um scraper.
@@ -58,11 +113,9 @@ pipeline.
   qualquer preço vigente.
 - **Detecção de layout é por texto de cabeçalho, não posição fixa de
   coluna** — mais robusto a mudanças de leiaute da Caixa entre meses,
-  mas ainda não testado contra um arquivo real (não tenho acesso pra
-  baixar um agora). O primeiro teste real de vocês com o ZIP do mês
-  vai revelar se algum ajuste fino é necessário.
-- **Só cobre os itens que vocês mapearem em `sinapi_codigos.py`** —
-  hoje isso são os ~7 materiais simples (cimento, areia, brita, aço,
-  bloco cerâmico, argamassa, tinta); os itens por padrão de acabamento
-  (piso, porta, janela, cobertura) e mão de obra ficam de fora até
-  alguém mapear os códigos correspondentes.
+  mas só foi validado contra o pacote de 2026-07 até agora.
+- **(Resolvido em 2026-09) Rodar a suíte de testes apagava/sobrescrevia
+  `precos_customizados.json` de verdade sem avisar** — vários testes
+  chamavam `restaurar_padroes()`/`salvar_overrides()` direto no
+  arquivo real. `tests/conftest.py` agora isola cada teste num arquivo
+  temporário; rodar `pytest` depois de importar preços é seguro hoje.
