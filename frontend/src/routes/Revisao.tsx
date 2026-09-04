@@ -2,7 +2,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { BadgeConfianca } from '@/components/BadgeConfianca'
+import { PainelColapsavel } from '@/components/PainelColapsavel'
 import { TextoMarkdownLeve } from '@/components/TextoMarkdownLeve'
+import { VisualizacaoPlanta3D } from '@/components/VisualizacaoPlanta3D'
 import { useAvaliarRevisao } from '@/hooks/use-revisao'
 import { LOCAL_OBRA } from '@/lib/constants'
 import { useExtracaoStore } from '@/lib/extracao-store'
@@ -158,6 +160,14 @@ export function Revisao() {
           </div>
         </div>
       </div>
+
+      <PainelColapsavel titulo="Pré-visualização 3D (beta)" abertoPorPadrao>
+        <p className="text-xs text-muted-foreground">
+          Confira visualmente se a IA leu certo as paredes, portas, janelas e ambientes. Se algo
+          estiver errado ou faltando na extração, isso deve aparecer errado/faltando aqui também.
+        </p>
+        <VisualizacaoPlanta3D layout={dadosOriginais.layout} />
+      </PainelColapsavel>
 
       {avaliacao?.avisos_parede.map((aviso, i) => (
         <div key={i} className="whitespace-pre-line border-l-2 border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">

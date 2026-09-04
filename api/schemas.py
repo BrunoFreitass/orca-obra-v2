@@ -110,6 +110,39 @@ class ConfiancaCampo(BaseModel):
     motivo: str = ""
 
 
+# Espelha core/vision.py::LAYOUT_VAZIO / frontend/src/lib/types.ts -- geometria
+# opcional (layout 3D), aditiva ao orçamento (ver CAMPOS_AGREGADOS em vision.py).
+
+class ComodoLayout(BaseModel):
+    nome: str
+    tipo_piso: str
+    x: float
+    y: float
+    largura: float
+    comprimento: float
+
+
+class ParedeLayout(BaseModel):
+    x1: float
+    y1: float
+    x2: float
+    y2: float
+
+
+class AberturaLayout(BaseModel):
+    tipo: str
+    parede_index: int
+    posicao: float
+
+
+class LayoutGeometria(BaseModel):
+    disponivel: bool = False
+    motivo_indisponivel: str = ""
+    comodos: list[ComodoLayout] = []
+    paredes: list[ParedeLayout] = []
+    aberturas: list[AberturaLayout] = []
+
+
 class DadosExtraidos(BaseModel):
     area_piso_seco: float = 0
     area_piso_molhado: float = 0
@@ -119,6 +152,7 @@ class DadosExtraidos(BaseModel):
     portas_externas: int = 0
     janelas: int = 0
     confianca: dict[str, ConfiancaCampo] = {}
+    layout: LayoutGeometria = LayoutGeometria()
 
 
 class ErroExtracao(BaseModel):
