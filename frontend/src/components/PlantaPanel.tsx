@@ -10,6 +10,7 @@ export function PlantaPanel() {
   const navigate = useNavigate()
   const analisar = useAnalisarPlanta()
   const setDadosOriginais = useExtracaoStore((s) => s.setDadosOriginais)
+  const setArquivoNaStore = useExtracaoStore((s) => s.setArquivo)
   const [arquivo, setArquivo] = useState<File | null>(null)
 
   return (
@@ -37,6 +38,7 @@ export function PlantaPanel() {
             analisar.mutate(arquivo, {
               onSuccess: (dados) => {
                 setDadosOriginais(dados)
+                setArquivoNaStore(arquivo)
                 navigate('/revisao')
               },
             })

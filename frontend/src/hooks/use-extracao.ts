@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query'
 
 import { ApiError, apiPostFormData } from '@/lib/api-client'
-import type { DadosExtraidos, ErroExtracaoDetalhe } from '@/lib/types'
+import type { DadosExtraidos, ErroExtracaoDetalhe, LayoutGeometria } from '@/lib/types'
 
 export function useAnalisarPlanta() {
   return useMutation({
@@ -9,6 +9,21 @@ export function useAnalisarPlanta() {
       const formData = new FormData()
       formData.append('planta', arquivo)
       return apiPostFormData<DadosExtraidos>('/extracao', formData)
+    },
+  })
+}
+
+/** Fallback opcional acionado pelo usuário na tela de Revisão quando a
+ * extração oficial não conseguiu montar a geometria 3D -- gera uma
+ * aproximação ilustrativa (ver core.vision.gerar_layout_ilustrativo),
+ * sem a válvula de segurança da extração oficial. Nunca afeta os campos
+ * do orçamento. */
+export function useGerarLayoutIlustrativo() {
+  return useMutation({
+    mutationFn: (arquivo: File) => {
+      const formData = new FormData()
+      formData.append('planta', arquivo)
+      return apiPostFormData<LayoutGeometria>('/extracao/layout-ilustrativo', formData)
     },
   })
 }

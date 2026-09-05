@@ -247,6 +247,67 @@ PROMPT_EXTRACAO = """
     }
     """
 
+# Prompt avulso usado só por gerar_layout_ilustrativo() -- pede a mesma
+# geometria do passo 8 de PROMPT_EXTRACAO, mas SEM a válvula de
+# segurança "disponivel: false" pra formato de prédio irregular: aqui a
+# IA deve sempre tentar produzir uma aproximação, mesmo com baixa
+# confiança, porque o resultado é claramente rotulado como ilustrativo
+# no frontend e nunca alimenta o orçamento.
+PROMPT_LAYOUT_ILUSTRATIVO = """
+    Analise esta imagem de planta baixa de engenharia/arquitetura e monte
+    uma geometria aproximada e ILUSTRATIVA dos comodos, paredes e
+    aberturas -- essa geometria e so pra o usuario visualizar uma maquete
+    3D aproximada da planta, NAO alimenta nenhum calculo de orcamento.
+    Por isso, VOCE DEVE SEMPRE tentar montar um layout, mesmo com baixa
+    confianca -- e sempre melhor uma maquete aproximada do que nenhuma.
+
+    Raciocine comodo por comodo (nao inclua esse raciocinio na resposta
+    final, so o JSON):
+    (a) Liste cada comodo visivel na planta e classifique o tipo de piso:
+        "seco" (sala, quarto, cozinha, corredor), "molhado" (banheiro,
+        area de servico, lavabo), ou "externo" (varanda, garagem, quintal
+        coberto).
+    (b) Para cada comodo, estime um retangulo que o represente (posicao
+        x,y do canto inferior-esquerdo + largura + comprimento), num
+        sistema de coordenadas relativo em metros que voce mesmo define.
+        Os retangulos devem se encaixar entre si sem sobrepor, respeitando
+        a posicao relativa real dos comodos na planta. O contorno GERAL do
+        predio/terreno pode ser irregular (em L, em U, etc) sem problema
+        nenhum -- areas externas abertas sem comodo (quintal, piscina,
+        jardim) simplesmente ficam sem retangulo, ocupando o espaco vazio
+        entre os comodos.
+    (c) Liste os segmentos de parede como dois pontos extremos
+        (x1,y1)-(x2,y2) -- paredes compartilhadas entre dois comodos
+        aparecem uma unica vez.
+    (d) Para cada porta/janela, informe a qual parede ela pertence
+        (indice na lista de paredes) e a posicao proporcional ao longo
+        dela (0.0 a 1.0, na ordem (x1,y1)->(x2,y2) que voce listou essa
+        parede em (c)).
+
+    So retorne "disponivel": false se a imagem estiver ilegivel demais
+    pra sequer identificar os comodos (ex: resolucao extrema baixa,
+    cortada, ou nao e uma planta baixa de verdade) -- fora isso, SEMPRE
+    monte a melhor aproximacao possivel, mesmo que nao seja perfeita.
+
+    Retorne estritamente um JSON valido com a estrutura abaixo, sem
+    textos adicionais, explicacoes ou marcacoes de markdown -- so o JSON:
+    {
+        "layout": {
+            "disponivel": <bool>,
+            "motivo_indisponivel": "<string curta, so quando disponivel=false>",
+            "comodos": [
+                {"nome": "<string>", "tipo_piso": "seco|molhado|externo", "x": <float>, "y": <float>, "largura": <float>, "comprimento": <float>}
+            ],
+            "paredes": [
+                {"x1": <float>, "y1": <float>, "x2": <float>, "y2": <float>}
+            ],
+            "aberturas": [
+                {"tipo": "porta_interna|porta_externa|janela", "parede_index": <int>, "posicao": <float 0.0-1.0>}
+            ]
+        }
+    }
+    """
+
 
 def _montar_prompt():
     return PROMPT_EXTRACAO
@@ -440,19 +501,12 @@ def _chamar_gemini_com_uma_chave(chave, prompt, img_base64):
     return None, {"status": "UNAVAILABLE", "bruto": resultado}
 
 
-def extrair_dados_da_planta(caminho_arquivo):
-    # 1. Modo mock: nao gasta nenhuma chamada de API.
-    if MOCK_AI:
-        return DADOS_MOCK
-
-    # 2. Cache local: a mesma planta (mesmo arquivo) ja testada antes
-    #    nao dispara uma nova chamada de API.
-    if USE_CACHE:
-        resultado_em_cache = cache.buscar_cache(caminho_arquivo)
-        if resultado_em_cache is not None:
-            registrar_chamada(status="CACHE", modelo=GEMINI_MODEL)
-            return resultado_em_cache
-
+def _chamar_gemini_e_obter_json(prompt, caminho_arquivo):
+    """Prepara a imagem, tenta cada chave configurada em GEMINI_API_KEYS
+    (com retentativas por chave, ver _chamar_gemini_com_uma_chave), e
+    devolve o JSON já parseado da resposta. Compartilhado entre a
+    extração oficial (extrair_dados_da_planta) e a geometria ilustrativa
+    avulsa (gerar_layout_ilustrativo) -- ambas so diferem no prompt."""
     if not GEMINI_API_KEYS:
         raise ErroExtracaoAmigavel(
             "Nenhuma chave da API do Gemini está configurada. Defina "
@@ -463,7 +517,6 @@ def extrair_dados_da_planta(caminho_arquivo):
 
     img_bytes = _preparar_imagem(caminho_arquivo)
     img_base64 = base64.b64encode(img_bytes).decode("utf-8")
-    prompt = _montar_prompt()
 
     inicio = time.time()
     erros_por_chave = []
@@ -518,7 +571,7 @@ def extrair_dados_da_planta(caminho_arquivo):
     texto_limpo = texto_resposta.replace("```json", "").replace("```", "").strip()
 
     try:
-        dados = json.loads(texto_limpo)
+        return json.loads(texto_limpo)
     except json.JSONDecodeError as e:
         raise ErroExtracaoAmigavel(
             "A IA retornou uma resposta em formato inesperado ao analisar essa "
@@ -526,6 +579,40 @@ def extrair_dados_da_planta(caminho_arquivo):
             "melhor qualidade ou outro arquivo.",
             detalhe_tecnico=f"JSONDecodeError: {e}. Texto bruto: {texto_resposta[:500]}",
         )
+
+
+def gerar_layout_ilustrativo(caminho_arquivo):
+    """Gera uma geometria 3D aproximada e ILUSTRATIVA pra pré-visualização,
+    usando um prompt sem a válvula de segurança do passo 8 de
+    PROMPT_EXTRACAO -- a IA é instruída a SEMPRE tentar montar um layout,
+    mesmo com baixa confiança. Isso é acionado sob demanda (botão no
+    frontend) só quando a extração oficial já recusou a geometria.
+
+    NUNCA alimenta CAMPOS_AGREGADOS nem qualquer cálculo de orçamento --
+    só a pré-visualização opcional. O resultado deve ser exibido no
+    frontend com um aviso claro de que é aproximado/não verificado."""
+    if MOCK_AI:
+        return DADOS_MOCK["layout"]
+
+    dados = _chamar_gemini_e_obter_json(PROMPT_LAYOUT_ILUSTRATIVO, caminho_arquivo)
+    dados_normalizados = _normalizar_layout({"layout": dados.get("layout")})
+    return dados_normalizados["layout"]
+
+
+def extrair_dados_da_planta(caminho_arquivo):
+    # 1. Modo mock: nao gasta nenhuma chamada de API.
+    if MOCK_AI:
+        return DADOS_MOCK
+
+    # 2. Cache local: a mesma planta (mesmo arquivo) ja testada antes
+    #    nao dispara uma nova chamada de API.
+    if USE_CACHE:
+        resultado_em_cache = cache.buscar_cache(caminho_arquivo)
+        if resultado_em_cache is not None:
+            registrar_chamada(status="CACHE", modelo=GEMINI_MODEL)
+            return resultado_em_cache
+
+    dados = _chamar_gemini_e_obter_json(_montar_prompt(), caminho_arquivo)
 
     # Defesa: garante que todos os 7 campos agregados existam e nunca
     # sejam None (a Gemini as vezes retorna null em vez de omitir).

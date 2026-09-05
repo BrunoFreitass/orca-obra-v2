@@ -5,6 +5,7 @@ import { BadgeConfianca } from '@/components/BadgeConfianca'
 import { PainelColapsavel } from '@/components/PainelColapsavel'
 import { TextoMarkdownLeve } from '@/components/TextoMarkdownLeve'
 import { VisualizacaoPlanta3D } from '@/components/VisualizacaoPlanta3D'
+import { extrairDetalheErro, useGerarLayoutIlustrativo } from '@/hooks/use-extracao'
 import { useAvaliarRevisao } from '@/hooks/use-revisao'
 import { LOCAL_OBRA } from '@/lib/constants'
 import { useExtracaoStore } from '@/lib/extracao-store'
@@ -54,6 +55,10 @@ export function Revisao() {
   const setCampo = useExtracaoStore((s) => s.setCampo)
   const confirmar = useExtracaoStore((s) => s.confirmar)
   const reabrir = useExtracaoStore((s) => s.reabrir)
+  const arquivo = useExtracaoStore((s) => s.arquivo)
+  const layoutEhIlustrativo = useExtracaoStore((s) => s.layoutEhIlustrativo)
+  const setLayoutIlustrativo = useExtracaoStore((s) => s.setLayoutIlustrativo)
+  const gerarIlustrativo = useGerarLayoutIlustrativo()
   const { padrao, estrutura } = useProjetoStore()
 
   const dadosCompletos = dadosOriginais ? { ...valores, confianca: dadosOriginais.confianca } : null
@@ -166,7 +171,21 @@ export function Revisao() {
           Confira visualmente se a IA leu certo as paredes, portas, janelas e ambientes. Se algo
           estiver errado ou faltando na extração, isso deve aparecer errado/faltando aqui também.
         </p>
-        <VisualizacaoPlanta3D layout={dadosOriginais.layout} />
+        <VisualizacaoPlanta3D
+          layout={dadosOriginais.layout}
+          ilustrativo={layoutEhIlustrativo}
+          gerandoIlustrativo={gerarIlustrativo.isPending}
+          onGerarIlustrativo={
+            arquivo
+              ? () => gerarIlustrativo.mutate(arquivo, { onSuccess: setLayoutIlustrativo })
+              : undefined
+          }
+        />
+        {gerarIlustrativo.isError && (
+          <p className="text-[11px] text-destructive">
+            {extrairDetalheErro(gerarIlustrativo.error).mensagem_amigavel}
+          </p>
+        )}
       </PainelColapsavel>
 
       {avaliacao?.avisos_parede.map((aviso, i) => (

@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber'
 import { Component, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 
+import { Button } from '@/components/ui/button'
 import {
   ALTURA_JANELA_M,
   ALTURA_PAREDE_M,
@@ -154,24 +155,51 @@ class LimiteDeErro3D extends Component<LimiteDeErroProps, LimiteDeErroState> {
   }
 }
 
-function Indisponivel({ mensagem }: { mensagem: string }) {
+function Indisponivel({ mensagem, acao }: { mensagem: string; acao?: ReactNode }) {
   return (
-    <p className="text-xs text-muted-foreground">
-      {mensagem} {MENSAGEM_BASE}
-    </p>
+    <div className="flex flex-col items-start gap-2">
+      <p className="text-xs text-muted-foreground">
+        {mensagem} {MENSAGEM_BASE}
+      </p>
+      {acao}
+    </div>
   )
 }
 
 interface Props {
   layout: LayoutGeometria | undefined
+  /** true quando `layout` veio do fallback ilustrativo, não da extração
+   * oficial -- mostra o aviso de aproximado/não verificado. */
+  ilustrativo?: boolean
+  /** Presente só quando o arquivo original ainda está disponível pra
+   * reenviar -- omitir esconde o botão de fallback. */
+  onGerarIlustrativo?: () => void
+  gerandoIlustrativo?: boolean
 }
 
-export function VisualizacaoPlanta3D({ layout }: Props) {
+export function VisualizacaoPlanta3D({ layout, ilustrativo, onGerarIlustrativo, gerandoIlustrativo }: Props) {
   const [webglDisponivel] = useState(isWebGLDisponivel)
 
   if (!layout?.disponivel) {
     const motivo = layout?.motivo_indisponivel ? ` — ${layout.motivo_indisponivel}` : '.'
-    return <Indisponivel mensagem={`Pré-visualização 3D não disponível para esta planta${motivo}`} />
+    return (
+      <Indisponivel
+        mensagem={`Pré-visualização 3D não disponível para esta planta${motivo}`}
+        acao={
+          onGerarIlustrativo && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 w-fit text-xs"
+              disabled={gerandoIlustrativo}
+              onClick={onGerarIlustrativo}
+            >
+              {gerandoIlustrativo ? 'Gerando maquete aproximada… (pode levar ~2 min)' : '🧊 Gerar visualização 3D aproximada'}
+            </Button>
+          )
+        }
+      />
+    )
   }
 
   if (!webglDisponivel) {
@@ -179,12 +207,20 @@ export function VisualizacaoPlanta3D({ layout }: Props) {
   }
 
   return (
-    <div className="h-80 w-full border border-border bg-card">
-      <LimiteDeErro3D fallback={<Indisponivel mensagem="Não foi possível renderizar a pré-visualização 3D neste ambiente." />}>
-        <Canvas gl={{ antialias: true }}>
-          <Cena layout={layout} />
-        </Canvas>
-      </LimiteDeErro3D>
+    <div className="flex flex-col gap-2">
+      {ilustrativo && (
+        <p className="border-l-2 border-warning/40 bg-warning/10 px-3 py-1.5 text-xs text-warning">
+          ⚠️ Maquete aproximada e ilustrativa, gerada sob demanda — não confira medidas aqui, os
+          cômodos podem não corresponder exatamente à planta real.
+        </p>
+      )}
+      <div className="h-80 w-full border border-border bg-card">
+        <LimiteDeErro3D fallback={<Indisponivel mensagem="Não foi possível renderizar a pré-visualização 3D neste ambiente." />}>
+          <Canvas gl={{ antialias: true }}>
+            <Cena layout={layout} />
+          </Canvas>
+        </LimiteDeErro3D>
+      </div>
     </div>
   )
 }
