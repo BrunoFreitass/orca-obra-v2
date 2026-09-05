@@ -56,6 +56,15 @@ LAYOUT_VAZIO = {
     "aberturas": [],
 }
 
+# O limiar de "mais de 10 comodos" no passo 8 do PROMPT_EXTRACAO (e no
+# passo equivalente de PROMPT_LAYOUT_ILUSTRATIVO) e uma estimativa
+# inicial, nao um valor validado extensivamente -- baseada em 1 caso
+# real (planta "Casa Bruno", 15 comodos) que falhou de 3 formas
+# diferentes em 3 chamadas reais (recusa com um motivo, recusa com
+# outro motivo, "disponivel: true" com paredes/aberturas vazias). O
+# objetivo aqui e trocar recusa inconsistente por recusa previsivel,
+# nao achar o numero "certo" -- pode precisar de ajuste (pra cima ou
+# pra baixo) conforme mais plantas reais passarem por isso.
 TIPOS_PISO_VALIDOS = {"seco", "molhado", "externo"}
 TIPOS_ABERTURA_VALIDOS = {"porta_interna", "porta_externa", "janela"}
 
@@ -123,6 +132,17 @@ PROMPT_EXTRACAO = """
        declarar nenhum total explicito, retorne area_total_planta
        como 0.
     8. GEOMETRIA (opcional -- só preencha se estiver confiante):
+       LIMITE DE COMPLEXIDADE (verifique ANTES de tentar qualquer coisa
+       abaixo): se voce ja identificou MAIS DE 10 comodos/ambientes
+       distintos nesta planta (contando os do passo 3, acima), NAO tente
+       gerar paredes e aberturas -- retorne imediatamente "disponivel":
+       false com "motivo_indisponivel": "Pré-visualização 3D ainda não
+       suportada para plantas com mais de 10 ambientes." Isso vale mesmo
+       que voce ache que consegue -- e melhor recusar de forma limpa e
+       previsivel do que arriscar geometria incompleta (paredes/aberturas
+       vazias) ou malformada (comodos sobrepostos). Plantas com 10
+       comodos ou menos seguem o processo normal abaixo.
+
        Tente montar um layout aproximado da planta, reaproveitando o
        raciocinio comodo-por-comodo que voce ja fez acima:
        (a) Para cada comodo, estime um retangulo que o represente
@@ -270,7 +290,11 @@ PROMPT_EXTRACAO = """
 # segurança "disponivel: false" pra formato de prédio irregular: aqui a
 # IA deve sempre tentar produzir uma aproximação, mesmo com baixa
 # confiança, porque o resultado é claramente rotulado como ilustrativo
-# no frontend e nunca alimenta o orçamento.
+# no frontend e nunca alimenta o orçamento. Deliberadamente SEM o
+# limiar de "mais de 10 comodos" de PROMPT_EXTRACAO -- este fallback
+# existe justamente pra cobrir os casos que a extração oficial recusa,
+# então capá-lo com o mesmo limite deixaria plantas grandes/complexas
+# sem nenhum caminho de visualização 3D.
 PROMPT_LAYOUT_ILUSTRATIVO = """
     Analise esta imagem de planta baixa de engenharia/arquitetura e monte
     uma geometria aproximada e ILUSTRATIVA dos comodos, paredes e
