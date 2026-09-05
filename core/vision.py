@@ -135,15 +135,33 @@ PROMPT_EXTRACAO = """
            intermediarios interpolam linearmente entre as duas. Use
            sempre a ordem (x1,y1)->(x2,y2) tal como voce mesmo listou
            essa parede no passo (b) -- nao inverta o sentido.
-       REGRA DE SEGURANCA: essa geometria e um bonus, NAO e o
-       objetivo principal da analise. Se a planta tiver formato
-       irregular, comodos muito distorcidos, ou voce nao tiver
-       confianca de montar um layout coerente pros comodos e paredes,
-       NAO invente coordenadas -- retorne "disponivel": false, deixe
-       as 3 listas vazias, e explique o motivo em
-       "motivo_indisponivel" (ex: "comodos com formato em L, retangulo
-       simples nao representa bem"). E preferivel nao desenhar do que
-       desenhar errado.
+       ATENCAO -- ERRO COMUM A EVITAR: o contorno GERAL do terreno ou
+       do predio ser em L, em U, ou irregular NAO E MOTIVO PRA
+       RECUSAR a geometria. Isso e normal e esperado na maioria das
+       casas reais, e nao impede montar o layout. Exemplo concreto:
+       uma casa com contorno em L, onde a "reentrancia" do L e area
+       externa (quintal, piscina, jardim) e todos os comodos internos
+       sao retangulares -- esse caso e FACIL e voce DEVE montar a
+       geometria normalmente: cada comodo vira um retangulo, e a
+       reentrancia do L simplesmente fica sem nenhum retangulo ali
+       (nao sobra nem falta nada, o "buraco" do L e so o espaco vazio
+       entre os retangulos dos comodos). Voce NUNCA precisa desenhar
+       o contorno externo do predio como forma unica -- so os
+       comodos, um a um.
+       So retorne "disponivel": false na situacao rara em que um
+       COMODO INDIVIDUAL (nao o predio inteiro) tem parede angulada,
+       curva, ou formato que um unico retangulo realmente nao
+       representa (ex: um comodo com um canto cortado em diagonal).
+       "A casa/planta tem formato em L" sozinho NUNCA e motivo valido
+       para "motivo_indisponivel" -- se voce pensar em escrever algo
+       assim, pare e verifique se e so o contorno externo (que nao
+       importa) e nao um comodo especifico de verdade.
+       Se, mesmo assim, nenhum comodo individual puder ser
+       representado, deixe as 3 listas vazias e explique o motivo
+       citando o comodo especifico (ex: "closet tem parede diagonal
+       cortando o canto, retangulo simples nao representa bem"). E
+       preferivel nao desenhar do que desenhar errado, mas o objetivo
+       e SEMPRE tentar primeiro.
 
     Depois de percorrer todos os comodos, SOME os resultados nas
     seguintes 7 variaveis agregadas (essas sao as 7 variaveis
