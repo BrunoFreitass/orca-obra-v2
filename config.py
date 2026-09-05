@@ -108,13 +108,13 @@ DADOS_MOCK = {
             {"x1": 2.5, "y1": 4.0, "x2": 2.5, "y2": 6.5},   # 6: divisa Banheiro/Varanda
         ],
         "aberturas": [
-            {"tipo": "porta_externa", "parede_index": 0, "posicao": 0.30},  # entrada, junto a Sala
-            {"tipo": "porta_interna", "parede_index": 4, "posicao": 0.50},  # Sala <-> Quarto
-            {"tipo": "porta_interna", "parede_index": 5, "posicao": 0.14},  # Sala <-> Banheiro
-            {"tipo": "porta_externa", "parede_index": 5, "posicao": 0.67},  # Quarto <-> Varanda
-            {"tipo": "janela", "parede_index": 1, "posicao": 0.31},         # janela do Quarto
-            {"tipo": "janela", "parede_index": 2, "posicao": 0.86},         # janela do Banheiro
-            {"tipo": "janela", "parede_index": 3, "posicao": 0.69},         # janela da Sala
+            {"tipo": "porta_externa", "parede_index": 0, "posicao": 0.30, "largura_m": 1.20},  # entrada, junto a Sala
+            {"tipo": "porta_interna", "parede_index": 4, "posicao": 0.50, "largura_m": 0.80},  # Sala <-> Quarto
+            {"tipo": "porta_interna", "parede_index": 5, "posicao": 0.14, "largura_m": 0.70},  # Sala <-> Banheiro
+            {"tipo": "porta_externa", "parede_index": 5, "posicao": 0.67, "largura_m": 1.60},  # Quarto <-> Varanda
+            {"tipo": "janela", "parede_index": 1, "posicao": 0.31, "largura_m": 1.50},         # janela do Quarto
+            {"tipo": "janela", "parede_index": 2, "posicao": 0.86, "largura_m": 0.60},         # janela do Banheiro
+            {"tipo": "janela", "parede_index": 3, "posicao": 0.69, "largura_m": 2.00},         # janela da Sala
         ],
     },
 }
@@ -128,6 +128,16 @@ ESPESSURA_PAREDE_PADRAO_M = 0.15
 ALTURA_PORTA_PADRAO_M = 2.10
 ALTURA_JANELA_PADRAO_M = 1.20
 PEITORIL_JANELA_PADRAO_M = 0.90
+
+# Fallback de largura_m de abertura (core/vision.py::_abertura_valida) --
+# diferente das constantes acima, a IA TENTA estimar a largura real de
+# cada porta/janela (a vista de cima mostra isso, ao contrario de
+# altura/espessura). Esses valores so entram quando a IA nao informa
+# largura_m ou informa um valor fora da faixa plausivel -- servem pra
+# nao derrubar a abertura (ou o layout inteiro) por causa de um unico
+# campo ausente/invalido.
+LARGURA_PORTA_PADRAO_M = 0.80
+LARGURA_JANELA_PADRAO_M = 1.20
 
 # Local padrão da obra (usado em PDF e histórico)
 LOCAL_OBRA = os.environ.get("LOCAL_OBRA", "Boa Vista/RR")

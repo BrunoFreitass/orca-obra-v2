@@ -135,6 +135,11 @@ export interface AberturaLayout {
   parede_index: number
   /** 0.0 = extremidade (x1,y1) da parede referenciada, 1.0 = (x2,y2). */
   posicao: number
+  /** Largura real do vão em metros -- lida do Quadro de Esquadrias
+   * quando existe, senão estimada pela IA, senão um padrão por tipo
+   * (ver core/vision.py::_normalizar_largura_abertura). Sempre presente
+   * depois da normalização no backend. */
+  largura_m: number
 }
 
 export interface LayoutGeometria {

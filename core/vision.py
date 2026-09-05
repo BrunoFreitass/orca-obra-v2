@@ -7,7 +7,15 @@ import time
 import cv2
 import requests
 
-from config import DADOS_MOCK, GEMINI_API_KEYS, GEMINI_MODEL, MOCK_AI, USE_CACHE
+from config import (
+    DADOS_MOCK,
+    GEMINI_API_KEYS,
+    GEMINI_MODEL,
+    LARGURA_JANELA_PADRAO_M,
+    LARGURA_PORTA_PADRAO_M,
+    MOCK_AI,
+    USE_CACHE,
+)
 from core import cache
 from core.image_processing import melhorar_imagem
 from core.logger import get_logger
@@ -134,7 +142,17 @@ PROMPT_EXTRACAO = """
            parede", 1.0 significa "na extremidade (x2,y2)", e valores
            intermediarios interpolam linearmente entre as duas. Use
            sempre a ordem (x1,y1)->(x2,y2) tal como voce mesmo listou
-           essa parede no passo (b) -- nao inverta o sentido.
+           essa parede no passo (b) -- nao inverta o sentido. Informe
+           tambem "largura_m" (largura real do vao, em metros): se a
+           planta tiver um Quadro de Esquadrias ou cota explicita pra
+           aquela porta/janela (ex: "P4 = 1,60m"), USE esse numero
+           diretamente -- e a MESMA logica de "leitura direta" do
+           passo 3a. Se nao houver cota explicita, estime por
+           proporcao visual em relacao as cotas que voce ja tem na
+           planta -- e a MESMA logica de "estimativa por calculo" do
+           passo 3b. Isso nao muda o sistema de confianca agregado (7
+           variaveis do passo acima) -- e so mais um dado da geometria
+           opcional.
        ATENCAO -- ERRO COMUM A EVITAR: o contorno GERAL do terreno ou
        do predio ser em L, em U, ou irregular NAO E MOTIVO PRA
        RECUSAR a geometria. Isso e normal e esperado na maioria das
@@ -241,7 +259,7 @@ PROMPT_EXTRACAO = """
                 {"x1": <float>, "y1": <float>, "x2": <float>, "y2": <float>}
             ],
             "aberturas": [
-                {"tipo": "porta_interna|porta_externa|janela", "parede_index": <int>, "posicao": <float 0.0-1.0>}
+                {"tipo": "porta_interna|porta_externa|janela", "parede_index": <int>, "posicao": <float 0.0-1.0>, "largura_m": <float>}
             ]
         }
     }
@@ -282,7 +300,11 @@ PROMPT_LAYOUT_ILUSTRATIVO = """
     (d) Para cada porta/janela, informe a qual parede ela pertence
         (indice na lista de paredes) e a posicao proporcional ao longo
         dela (0.0 a 1.0, na ordem (x1,y1)->(x2,y2) que voce listou essa
-        parede em (c)).
+        parede em (c)). Informe tambem "largura_m" (largura real do
+        vao, em metros): use a cota do Quadro de Esquadrias quando
+        existir (leitura direta), ou estime por proporcao visual
+        quando nao existir (estimativa) -- mesma logica do passo 3
+        de PROMPT_EXTRACAO, sem afetar nenhum calculo de orcamento.
 
     So retorne "disponivel": false se a imagem estiver ilegivel demais
     pra sequer identificar os comodos (ex: resolucao extrema baixa,
@@ -302,7 +324,7 @@ PROMPT_LAYOUT_ILUSTRATIVO = """
                 {"x1": <float>, "y1": <float>, "x2": <float>, "y2": <float>}
             ],
             "aberturas": [
-                {"tipo": "porta_interna|porta_externa|janela", "parede_index": <int>, "posicao": <float 0.0-1.0>}
+                {"tipo": "porta_interna|porta_externa|janela", "parede_index": <int>, "posicao": <float 0.0-1.0>, "largura_m": <float>}
             ]
         }
     }
@@ -339,6 +361,30 @@ def _abertura_valida(abertura, total_paredes):
         return False
     posicao = abertura.get("posicao")
     return _numero_valido(posicao) and 0 <= posicao <= 1
+
+
+LARGURA_ABERTURA_MIN_M = 0.3
+LARGURA_ABERTURA_MAX_M = 6.0
+
+
+def _largura_abertura_valida(valor):
+    return _numero_valido(valor) and LARGURA_ABERTURA_MIN_M <= valor <= LARGURA_ABERTURA_MAX_M
+
+
+def _normalizar_largura_abertura(abertura):
+    """largura_m segue uma regra DIFERENTE das outras validacoes de
+    abertura acima (_abertura_valida): ausente ou fora da faixa
+    plausivel NAO derruba o layout inteiro nem descarta a abertura --
+    so cai num padrao por tipo. Motivo: tipo/parede_index/posicao sao
+    estruturais (sem eles a abertura nem faz sentido geometrico), mas
+    largura_m e so um dado visual a mais que a IA pode nao estimar bem
+    numa planta especifica -- nao vale jogar fora uma porta/janela que
+    esta correta em tudo o resto por causa so desse campo."""
+    largura = abertura.get("largura_m")
+    if _largura_abertura_valida(largura):
+        return {**abertura, "largura_m": largura}
+    padrao = LARGURA_JANELA_PADRAO_M if abertura["tipo"] == "janela" else LARGURA_PORTA_PADRAO_M
+    return {**abertura, "largura_m": padrao}
 
 
 def _layout_com_fallback(motivo=""):
@@ -383,6 +429,8 @@ def _normalizar_layout(dados):
     if not all(_abertura_valida(a, len(paredes)) for a in aberturas):
         dados["layout"] = _layout_com_fallback("Abertura inválida (parede inexistente ou posição fora de 0-1).")
         return dados
+
+    aberturas = [_normalizar_largura_abertura(a) for a in aberturas]
 
     dados["layout"] = {
         "disponivel": True,

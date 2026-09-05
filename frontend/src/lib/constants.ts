@@ -8,7 +8,13 @@ export const LOCAL_OBRA = 'Boa Vista/RR'
 // partir de uma planta baixa (vista de cima não mostra altura/espessura),
 // então são padrões de mercado usados só pra desenhar a maquete.
 export const ESPESSURA_PAREDE_M = 0.15
-export const ALTURA_PAREDE_M = 2.8
 export const ALTURA_PORTA_M = 2.1
 export const ALTURA_JANELA_M = 1.2
 export const PEITORIL_JANELA_M = 0.9
+
+/** Alturas de parede selecionáveis pelo toggle "Maquete/Real" na
+ * pré-visualização 3D -- portas e janelas mantêm altura/posição fixas
+ * (constantes acima) independente da alternativa escolhida; só a
+ * extrusão da parede muda. */
+export const ALTURA_PAREDE_MAQUETE_M = 1.2
+export const ALTURA_PAREDE_REAL_M = 2.8

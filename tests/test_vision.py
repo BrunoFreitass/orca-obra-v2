@@ -2,6 +2,7 @@
 'layout' (geometria). O orcamento nunca depende deste campo (ver
 CAMPOS_AGREGADOS em core/vision.py), entao qualquer formato inesperado
 precisa cair em fallback seguro (disponivel: False) sem lancar excecao."""
+from config import LARGURA_JANELA_PADRAO_M, LARGURA_PORTA_PADRAO_M
 from core.vision import _normalizar_layout
 
 
@@ -155,3 +156,64 @@ class TestLayoutValido:
         assert resultado["layout"]["disponivel"] is True
         assert len(resultado["layout"]["comodos"]) == 2
         assert len(resultado["layout"]["paredes"]) == 2
+
+
+class TestLarguraAbertura:
+    """largura_m tem uma regra diferente das outras validacoes de
+    abertura: ausente ou fora da faixa plausivel nao invalida a
+    abertura nem o layout inteiro, so cai num padrao por tipo (ver
+    _normalizar_largura_abertura em core/vision.py)."""
+
+    def test_largura_valida_e_preservada(self):
+        layout = _layout_valido()
+        layout["aberturas"][0]["largura_m"] = 1.5
+        dados = {"layout": layout}
+        resultado = _normalizar_layout(dados)
+        assert resultado["layout"]["disponivel"] is True
+        assert resultado["layout"]["aberturas"][0]["largura_m"] == 1.5
+
+    def test_largura_ausente_cai_no_padrao_por_tipo(self):
+        layout = _layout_valido()
+        layout["aberturas"][0]["tipo"] = "janela"
+        dados = {"layout": layout}
+        resultado = _normalizar_layout(dados)
+        assert resultado["layout"]["disponivel"] is True
+        assert resultado["layout"]["aberturas"][0]["largura_m"] == LARGURA_JANELA_PADRAO_M
+
+    def test_largura_ausente_em_porta_cai_no_padrao_de_porta(self):
+        layout = _layout_valido()
+        layout["aberturas"][0]["tipo"] = "porta_interna"
+        dados = {"layout": layout}
+        resultado = _normalizar_layout(dados)
+        assert resultado["layout"]["disponivel"] is True
+        assert resultado["layout"]["aberturas"][0]["largura_m"] == LARGURA_PORTA_PADRAO_M
+
+    def test_largura_abaixo_da_faixa_cai_no_padrao_sem_invalidar_layout(self):
+        layout = _layout_valido()
+        layout["aberturas"][0]["largura_m"] = 0.05
+        dados = {"layout": layout}
+        resultado = _normalizar_layout(dados)
+        assert resultado["layout"]["disponivel"] is True
+        assert resultado["layout"]["aberturas"][0]["largura_m"] == LARGURA_JANELA_PADRAO_M
+
+    def test_largura_acima_da_faixa_cai_no_padrao_sem_invalidar_layout(self):
+        layout = _layout_valido()
+        layout["aberturas"][0]["largura_m"] = 15.0
+        dados = {"layout": layout}
+        resultado = _normalizar_layout(dados)
+        assert resultado["layout"]["disponivel"] is True
+        assert resultado["layout"]["aberturas"][0]["largura_m"] == LARGURA_JANELA_PADRAO_M
+
+    def test_uma_abertura_com_largura_invalida_nao_afeta_as_outras(self):
+        layout = _layout_valido()
+        layout["paredes"].append(_parede(x1=5.0, x2=5.0, y2=4.0))
+        layout["aberturas"] = [
+            {"tipo": "janela", "parede_index": 0, "posicao": 0.5, "largura_m": 15.0},  # invalida
+            {"tipo": "porta_interna", "parede_index": 1, "posicao": 0.3, "largura_m": 0.9},  # valida
+        ]
+        dados = {"layout": layout}
+        resultado = _normalizar_layout(dados)
+        assert resultado["layout"]["disponivel"] is True
+        aberturas = resultado["layout"]["aberturas"]
+        assert aberturas[0]["largura_m"] == LARGURA_JANELA_PADRAO_M
+        assert aberturas[1]["largura_m"] == 0.9

@@ -133,6 +133,7 @@ class AberturaLayout(BaseModel):
     tipo: str
     parede_index: int
     posicao: float
+    largura_m: float = 0
 
 
 class LayoutGeometria(BaseModel):
