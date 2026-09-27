@@ -34,7 +34,8 @@ def _agrupar_por_tipo(dados_orcamento):
 def gerar_pdf_proposta(dados_orcamento, output_path, nome_projeto,
                         estado_uf, padrao, tipo_cobertura, area_piso,
                         bdi_percentual=0, nome_empresa="OrçaObra AI",
-                        contato="", registro="", caminho_logo=""):
+                        contato="", registro="", caminho_logo="",
+                        cliente=""):
     """Gera uma proposta comercial em PDF, com capa e tabela resumida
     (sem quantidade/preco unitario por item -- so os totais por
     servico/material), pensada pra ser enviada ao cliente final.
@@ -115,13 +116,18 @@ def gerar_pdf_proposta(dados_orcamento, output_path, nome_projeto,
     story.append(Spacer(1, 16))
 
     dados_capa = [
+        ["Projeto:", nome_projeto],
+        ["Cliente:", cliente],
+    ] if cliente else [
         ["Projeto / Cliente:", nome_projeto],
+    ]
+    dados_capa.extend([
         ["Data:", datetime.now(tz=UTC).strftime("%d/%m/%Y")],
         ["Estado da Obra:", estado_uf],
         ["Padrão de Acabamento:", padrao],
         ["Tipo de Cobertura:", tipo_cobertura],
         ["Área de Piso:", f"{area_piso:.0f} m²"],
-    ]
+    ])
     tabela_capa = Table(dados_capa, colWidths=[5 * cm, 10 * cm])
     tabela_capa.setStyle(TableStyle([
         ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),

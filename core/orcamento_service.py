@@ -7,15 +7,10 @@ funcao aqui importa UI; quem chama (hoje, a API) so cuida de mostrar
 o resultado na tela.
 """
 
-import os
 from datetime import UTC, datetime
 
-from core import paths
 from core.historico import salvar_orcamento
 from core.logger import get_logger
-from core.perfil_empresa import carregar_perfil
-from core.proposta_pdf import gerar_pdf_proposta
-from core.reporter import gerar_excel
 
 logger = get_logger(__name__)
 
@@ -57,50 +52,18 @@ def gerar_orcamento_completo(
     estrutura: str, area_piso_total: float, metros_parede: float,
     portas_internas: int, portas_externas: int, janelas: int,
     area_piso_seco: float, area_piso_molhado: float, area_piso_externo: float,
-    local_obra: str,
+    local_obra: str, cliente: str = "",
 ) -> dict:
-    """Calcula custo/preço, gera Excel + PDF em disco e persiste no
-    histórico -- chamada pela API (api/routers/orcamento.py) ao gerar
-    um orçamento completo.
+    """Calcula custo/preço e persiste no histórico (com orcamento_json completo).
+    Downloads de Excel e PDF são gerados sob demanda via API (api/routers/historico.py)
+    a partir do orcamento_json, dispensando arquivos estáticos duplicados em disco.
 
-    Retorna {custo_direto, preco_venda, historico_id} -- não faz nenhuma
-    renderização, quem chamar decide como mostrar o resultado."""
+    Retorna {custo_direto, preco_venda, historico_id}."""
     custo_direto, preco_venda = calcular_custo_e_preco(orcamento_final, bdi_percentual)
-
-    base_nome = nome_arquivo_seguro(nome_projeto)
-    excel_path = os.path.join(paths.PASTA_ORCAMENTOS, f"{base_nome}.xlsx")
-    pdf_path = os.path.join(paths.PASTA_ORCAMENTOS, f"{base_nome}.pdf")
-
-    gerar_excel(orcamento_final, excel_path, bdi_percentual)
-
-    perfil = carregar_perfil()
-
-    contato_linhas = []
-    if perfil.get("profissional_responsavel"):
-        contato_linhas.append(f"Profissional Responsável: {perfil['profissional_responsavel']}")
-    if perfil.get("telefone"):
-        contato_linhas.append(f"Contato: {perfil['telefone']}")
-    if perfil.get("email"):
-        contato_linhas.append(f"E-mail: {perfil['email']}")
-
-    registro_str = ""
-    if perfil.get("registro"):
-        registro_str = f"Registro (CREA/CAU/CNPJ): {perfil['registro']}"
-
-    gerar_pdf_proposta(
-        orcamento_final, pdf_path,
-        nome_projeto=nome_projeto,
-        estado_uf=local_obra, padrao=padrao,
-        tipo_cobertura=estrutura, area_piso=area_piso_total,
-        bdi_percentual=bdi_percentual,
-        nome_empresa=perfil["nome_empresa"] or "OrçaObra AI",
-        contato=contato_linhas,
-        registro=registro_str,
-        caminho_logo=perfil["caminho_logo"],
-    )
 
     historico_id = salvar_orcamento(
         nome_projeto=nome_projeto,
+        cliente=cliente,
         estado_uf=local_obra,
         padrao=padrao,
         tipo_cobertura=estrutura,

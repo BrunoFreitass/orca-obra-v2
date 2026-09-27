@@ -90,8 +90,18 @@ PRECOS_PORTA_EXTERNA = {
 # (CAIXA/IBGE) RR, ref. 2026-07 -- ja incluem fornecimento + instalação.
 PRECOS_JANELA = {
     "Econômico": Preco(368.87, "SINAPI oficial código 94570 - janela de alumínio de correr, 2 folhas, vidro incluso, fornecimento e instalação", "2026-07"),
-    "Médio": Preco(410.39, "SINAPI oficial código 94573 - janela de alumínio de correr, 4 folhas com bandeira, vidro incluso, fornecimento e instalação", "2026-07"),
-    "Alto Padrão": Preco(527.09, "SINAPI oficial código 94572 - janela de alumínio de correr, 3 folhas (2 venezianas + 1 vidro), fornecimento e instalação", "2026-07"),
+    "Médio": Preco(
+        410.39,
+        "SINAPI oficial código 94573 - janela de alumínio de correr, 4 "
+        "folhas com bandeira, vidro incluso, fornecimento e instalação",
+        "2026-07",
+    ),
+    "Alto Padrão": Preco(
+        527.09,
+        "SINAPI oficial código 94572 - janela de alumínio de correr, 3 "
+        "folhas (2 venezianas + 1 vidro), fornecimento e instalação",
+        "2026-07",
+    ),
 }
 # Preco por m² de parede -- substitui o par antigo "Tinta Acrílica
 # Premium" (material, por litro) + "Pintura" (mão de obra avulsa):
@@ -191,7 +201,12 @@ PRECO_REBOCO_M2 = Preco(
     "emboço/massa única 87794 (R$53,28/m²), sem presença de vãos, preparo manual",
     "2026-07",
 )
-PRECO_IMPERMEABILIZACAO_M2 = Preco(55.00, "Pesquisa de mercado - impermeabilização de área molhada (manta asfáltica ou argamassa polimérica), material+mão de obra, m² aplicado", "2026-09")
+PRECO_IMPERMEABILIZACAO_M2 = Preco(
+    55.00,
+    "Pesquisa de mercado - impermeabilização de área molhada (manta "
+    "asfáltica ou argamassa polimérica), material+mão de obra, m² aplicado",
+    "2026-09",
+)
 PRECO_FORRO_GESSO_M2 = Preco(48.00, "Pesquisa de mercado - forro de gesso liso, material+mão de obra, m²", "2026-09")
 CONSUMO_REJUNTE_KG_POR_M2 = Preco(0.4, "Padrão de mercado - rejunte para piso/revestimento cerâmico", "2026-09")
 PRECO_REJUNTE_KG = Preco(12.00, "Pesquisa de mercado - rejunte cimentício/epóxi padrão médio", "2026-09")

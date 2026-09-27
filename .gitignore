@@ -22,6 +22,7 @@ corrigir_*.py
 limpar_*.py
 remover_*.py
 adicionar_*.py
+claude
 
 # Logs (gerados por core/logger.py em tempo de execução)
 logs/

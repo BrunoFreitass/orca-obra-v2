@@ -14,6 +14,7 @@ class OrcamentoHistorico(BaseModel):
     id: int
     data_criacao: str
     nome_projeto: str
+    cliente: str = ""
     estado_uf: str
     padrao: str
     tipo_cobertura: str
@@ -220,6 +221,7 @@ class OrcamentoGerarRequest(BaseModel):
     mao_de_obra: list[ItemOrcamento]
     bdi_percentual: float
     nome_projeto: str
+    cliente: str = ""
     padrao: str
     estrutura: str
     local_obra: str

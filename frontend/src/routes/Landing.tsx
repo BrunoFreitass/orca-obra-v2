@@ -120,7 +120,14 @@ export function Landing() {
                           <ChevronRight className="size-3.5 text-muted-foreground" />
                         )}
                       </TableCell>
-                      <TableCell className="font-medium">{registro.nome_projeto}</TableCell>
+                      <TableCell className="font-medium">
+                        <div>{registro.nome_projeto}</div>
+                        {registro.cliente && (
+                          <div className="text-xs font-normal text-muted-foreground">
+                            Cliente: {registro.cliente}
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">
                         {registro.data_criacao}
                       </TableCell>

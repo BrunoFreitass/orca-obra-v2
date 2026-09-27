@@ -56,5 +56,5 @@ def gerar(corpo: OrcamentoGerarRequest) -> dict:
         corpo.estrutura, dados.area_piso_total, corpo.metros_parede,
         corpo.portas_internas, corpo.portas_externas, corpo.janelas,
         corpo.area_piso_seco, corpo.area_piso_molhado, corpo.area_piso_externo,
-        corpo.local_obra,
+        corpo.local_obra, cliente=corpo.cliente,
     )

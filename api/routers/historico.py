@@ -88,6 +88,7 @@ def baixar_pdf(orcamento_id: int) -> FileResponse:
         contato=contato_linhas,
         registro=registro_str,
         caminho_logo=perfil["caminho_logo"],
+        cliente=registro.get("cliente", "") or "",
     )
 
     return FileResponse(

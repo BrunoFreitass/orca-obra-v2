@@ -10,18 +10,7 @@ import os
 
 
 def _diretorio_base():
-    """Retorna o diretório base para dados persistentes.
-
-    No Streamlit Cloud, existe um diretório persistente em
-    /mount/data/ (ou similar, dependendo da versão). Em ambiente
-    local, usa a pasta raiz do projeto.
-    """
-    # Streamlit Cloud (versões mais recentes usam /mount/data)
-    for candidato in ("/mount/data", "/app/data"):
-        if os.path.exists(candidato) and os.access(candidato, os.W_OK):
-            return candidato
-
-    # Ambiente local: pasta raiz do projeto
+    """Retorna o diretório base (pasta raiz do projeto)."""
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 

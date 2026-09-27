@@ -5,6 +5,7 @@ export interface OrcamentoHistorico {
   id: number
   data_criacao: string
   nome_projeto: string
+  cliente?: string
   estado_uf: string
   padrao: string
   tipo_cobertura: string
@@ -199,6 +200,7 @@ export interface OrcamentoGerarRequest extends DadosRevisao {
   mao_de_obra: ItemOrcamento[]
   bdi_percentual: number
   nome_projeto: string
+  cliente?: string
   padrao: Padrao
   estrutura: TipoCobertura
   local_obra: string

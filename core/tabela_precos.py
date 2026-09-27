@@ -17,6 +17,7 @@ from openpyxl.styles import Font
 
 from core import coeficientes as coef
 from core import paths
+from core.historico import deletar_configuracao, obter_configuracao, salvar_configuracao
 
 CAMINHO_OVERRIDES = paths.OVERRIDES_PATH
 
@@ -156,6 +157,14 @@ def importar_tabela_excel(caminho_arquivo):
     return precos_atualizados, avisos
 
 
+_cache_overrides = None
+
+
+def invalidar_cache_overrides():
+    global _cache_overrides
+    _cache_overrides = None
+
+
 def salvar_overrides(precos_atualizados, fonte=None, data_ref=None):
     """Persiste os precos customizados em disco (precos_customizados.json).
 
@@ -173,8 +182,18 @@ def salvar_overrides(precos_atualizados, fonte=None, data_ref=None):
         if fonte:
             entrada["fonte"] = fonte
         dados[chave] = entrada
-    with open(CAMINHO_OVERRIDES, "w", encoding="utf-8") as f:
-        json.dump(dados, f, ensure_ascii=False, indent=2)
+
+    # Persiste no banco se disponível
+    salvar_configuracao("precos_overrides", dados)
+
+    # Persiste localmente como fallback
+    try:
+        with open(CAMINHO_OVERRIDES, "w", encoding="utf-8") as f:
+            json.dump(dados, f, ensure_ascii=False, indent=2)
+    except OSError:
+        pass
+
+    invalidar_cache_overrides()
     return dados
 
 
@@ -194,19 +213,32 @@ def obter_preco(chave, preco_padrao):
 
 
 def carregar_overrides():
-    """Le os precos customizados salvos em disco. Se o arquivo nao
-    existir ainda, retorna vazio (usa os precos padrao de
-    core/coeficientes.py em tudo)."""
+    """Lê os preços customizados. Prioriza o PostgreSQL (sobrevive a redeploy
+    no Render), com fallback transparente para o arquivo local precos_customizados.json
+    quando o banco não estiver configurado ou estiver inacessível."""
+    global _cache_overrides
+    if _cache_overrides is not None:
+        return _cache_overrides
+
+    dados_banco = obter_configuracao("precos_overrides")
+    if dados_banco and isinstance(dados_banco, dict):
+        _cache_overrides = dados_banco
+        return _cache_overrides
+
     if not os.path.exists(CAMINHO_OVERRIDES):
-        return {}
+        _cache_overrides = {}
+        return _cache_overrides
     with open(CAMINHO_OVERRIDES, encoding="utf-8") as f:
-        return json.load(f)
+        _cache_overrides = json.load(f)
+        return _cache_overrides
 
 
 def restaurar_padroes():
-    """Remove todos os overrides -- volta a usar os precos padrao de
-    core/coeficientes.py em tudo."""
+    """Remove todos os overrides no PostgreSQL e no arquivo local -- volta
+    a usar os preços padrão de core/coeficientes.py em tudo."""
+    deletar_configuracao("precos_overrides")
     if os.path.exists(CAMINHO_OVERRIDES):
         os.remove(CAMINHO_OVERRIDES)
+    invalidar_cache_overrides()
 
 

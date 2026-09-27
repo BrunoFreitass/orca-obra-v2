@@ -19,12 +19,12 @@ export function PerfilPanel() {
   const salvar = useSalvarPerfil()
   const enviarLogo = useEnviarLogo()
   const [form, setForm] = useState<PerfilEmpresaUpdate>(CAMPOS_VAZIOS)
+  const [inicializado, setInicializado] = useState(false)
 
-  // Só preenche o form com o que veio do servidor uma vez -- depois
-  // disso o usuário é quem controla os campos (não sobrescreve
-  // enquanto ele digita).
+  // Preenche o formulário com o que veio do servidor apenas na primeira carga bem-sucedida,
+  // evitando que refetch em segundo plano sobrescreva o que o usuário está digitando.
   useEffect(() => {
-    if (perfil) {
+    if (perfil && !inicializado) {
       setForm({
         nome_empresa: perfil.nome_empresa,
         profissional_responsavel: perfil.profissional_responsavel,
@@ -32,8 +32,9 @@ export function PerfilPanel() {
         email: perfil.email,
         registro: perfil.registro,
       })
+      setInicializado(true)
     }
-  }, [perfil])
+  }, [perfil, inicializado])
 
   function atualizarCampo(campo: keyof PerfilEmpresaUpdate, valor: string) {
     setForm((atual) => ({ ...atual, [campo]: valor }))

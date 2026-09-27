@@ -14,7 +14,7 @@ import { formatarMoeda } from '@/lib/utils'
 export function Orcamento() {
   const dadosOriginais = useExtracaoStore((s) => s.dadosOriginais)
   const valores = useExtracaoStore((s) => s.valores)
-  const { nomeProjeto, padrao, estrutura } = useProjetoStore()
+  const { nomeProjeto, cliente, padrao, estrutura } = useProjetoStore()
 
   const corpo = dadosOriginais ? { ...valores, padrao, estrutura } : null
   const { data: materiaisSugeridos } = useMateriais(corpo)
@@ -110,6 +110,7 @@ export function Orcamento() {
               mao_de_obra: maoDeObra,
               bdi_percentual: bdi,
               nome_projeto: nomeProjeto,
+              cliente: cliente,
               padrao,
               estrutura,
               local_obra: LOCAL_OBRA,

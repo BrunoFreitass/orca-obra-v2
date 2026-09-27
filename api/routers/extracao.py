@@ -10,13 +10,33 @@ from core.vision import ErroExtracaoAmigavel, extrair_dados_da_planta, gerar_lay
 router = APIRouter(prefix="/api/extracao", tags=["extracao"])
 
 
+MAX_UPLOAD_SIZE = 20 * 1024 * 1024  # 20 MB
+EXTENSOES_PERMITIDAS = {".pdf", ".jpg", ".jpeg", ".png"}
+
+
+async def _validar_e_salvar_upload(planta: UploadFile) -> str:
+    extensao = Path(planta.filename or "planta").suffix.lower() or ".png"
+    if extensao not in EXTENSOES_PERMITIDAS:
+        raise HTTPException(
+            status_code=400,
+            detail={"mensagem_amigavel": "Formato de arquivo não suportado. Envie um arquivo PDF, JPG ou PNG."},
+        )
+
+    conteudo = await planta.read()
+    if len(conteudo) > MAX_UPLOAD_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail={"mensagem_amigavel": "Arquivo muito grande. O tamanho máximo permitido é 20MB."},
+        )
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=extensao) as tmp:
+        tmp.write(conteudo)
+        return tmp.name
+
+
 @router.post("", response_model=DadosExtraidos)
 async def extrair(planta: UploadFile) -> dict:
-    extensao = Path(planta.filename or "planta").suffix or ".png"
-    with tempfile.NamedTemporaryFile(delete=False, suffix=extensao) as tmp:
-        tmp.write(await planta.read())
-        caminho_temp = tmp.name
-
+    caminho_temp = await _validar_e_salvar_upload(planta)
     try:
         return extrair_dados_da_planta(caminho_temp)
     except ErroExtracaoAmigavel as e:
@@ -39,11 +59,7 @@ async def layout_ilustrativo(planta: UploadFile) -> dict:
     frontend só quando a extração oficial (/api/extracao) já recusou a
     geometria (layout.disponivel=false). Nunca afeta o orçamento -- ver
     core.vision.gerar_layout_ilustrativo."""
-    extensao = Path(planta.filename or "planta").suffix or ".png"
-    with tempfile.NamedTemporaryFile(delete=False, suffix=extensao) as tmp:
-        tmp.write(await planta.read())
-        caminho_temp = tmp.name
-
+    caminho_temp = await _validar_e_salvar_upload(planta)
     try:
         return gerar_layout_ilustrativo(caminho_temp)
     except ErroExtracaoAmigavel as e:

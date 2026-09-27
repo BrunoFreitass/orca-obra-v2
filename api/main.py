@@ -20,10 +20,17 @@ from api.routers import (
 from api.schemas import HealthResponse
 from core import paths
 from core.historico import inicializar_db
+from core.logger import get_logger
 from core.monitor_api import inicializar_tabela_monitor
 
-inicializar_db()
-inicializar_tabela_monitor()
+logger = get_logger(__name__)
+
+try:
+    inicializar_db()
+    inicializar_tabela_monitor()
+except Exception as e:
+    logger.warning("Aviso: banco de dados não inicializado no startup (%s). Operações dependentes tentarão reconectar.", e)
+
 paths.garantir_diretorios()
 
 app = FastAPI(title="OrçaObra AI API")
