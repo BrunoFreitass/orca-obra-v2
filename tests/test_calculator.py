@@ -170,6 +170,28 @@ class TestMaoDeObraSemDuplicarComposicaoSinapiCompleta:
         assert "Estrutura da Laje de Cobertura (Médio)" in {it["Material"] for it in materiais_laje}
 
 
+class TestPadroesSinapiRrSemFatorEmDobro:
+    """Padroes que ja sao preco SINAPI oficial de RR guardam o valor-base
+    (RR / FATOR_REGIONAL_RR) em core/coeficientes.py, pro calculator -- que
+    multiplica tudo pelo fator -- chegar no preco SINAPI exato, nao ~7% acima."""
+
+    def _dados(self):
+        return DadosExtracao(metros_parede=50, area_piso_seco=80, area_piso_molhado=10, janelas=4)
+
+    @pytest.mark.parametrize("nome,preco_sinapi_rr", [
+        ("Janela (Médio)", 410.39),
+        ("Pintura (Médio)", 13.89),
+        ("Reboco (chapisco + emboço)", 60.09),
+    ])
+    def test_preco_unit_igual_ao_sinapi_rr(self, nome, preco_sinapi_rr):
+        itens = calcular_materiais(self._dados(), padrao="Médio", tipo_cobertura="Telhado")
+        assert _item(itens, nome)["Preco_Unit"] == pytest.approx(preco_sinapi_rr, abs=0.01)
+
+    def test_estrutura_laje_igual_ao_sinapi_rr(self):
+        itens = calcular_materiais(self._dados(), padrao="Médio", tipo_cobertura="Laje")
+        assert _item(itens, "Estrutura da Laje de Cobertura (Médio)")["Preco_Unit"] == pytest.approx(254.03, abs=0.01)
+
+
 class TestRegressaoCasoReal:
     """Sentinela: caso completo com dados reais de uma planta ja
     validada manualmente durante o desenvolvimento (Boa Vista/RR, unico
@@ -226,7 +248,14 @@ class TestRegressaoCasoReal:
     item "Pintura ({padrao})", usando 3 composicoes SINAPI reais que ja
     embutem tinta + aplicacao manual (2 demaos) -- ver PRECOS_PINTURA em
     coeficientes.py. Mesmo motivo das fusoes anteriores: manter os dois
-    em paralelo contaria a mao de obra 2x."""
+    em paralelo contaria a mao de obra 2x.
+
+    NOTA 8: total_material_medio_telhado caiu de R$79.799,79 pra
+    R$78.594,52 em 2026-10 -- os padroes de janela, pintura, reboco e
+    estrutura da laje ja sao preco SINAPI oficial de RR, mas o calculator
+    aplicava FATOR_REGIONAL_RR por cima (~7% acima do SINAPI). Agora
+    guardam o valor-base RR / fator (ver _sem_fator_regional em
+    coeficientes.py), mesmo criterio do importador do SINAPI."""
 
     def _dados(self):
         return DadosExtracao(
@@ -237,9 +266,9 @@ class TestRegressaoCasoReal:
     def test_total_material_medio_telhado(self):
         materiais = calcular_materiais(self._dados(), padrao="Médio", tipo_cobertura="Telhado")
         total = round(sum(i["Total"] for i in materiais), 2)
-        # Valor atualizado apos fundir tinta+pintura num item SINAPI so
-        # -- ver NOTA 7 na docstring da classe.
-        assert total == pytest.approx(79799.79, abs=0.5)
+        # Valor atualizado apos tirar o fator regional em dobro dos padroes
+        # SINAPI de RR -- ver NOTA 8 na docstring da classe.
+        assert total == pytest.approx(78594.52, abs=0.5)
 
     def test_total_mao_de_obra_telhado(self):
         mao_de_obra = calcular_mao_de_obra(self._dados())
