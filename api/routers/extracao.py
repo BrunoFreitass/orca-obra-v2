@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, UploadFile
 
 from api.schemas import DadosExtraidos, LayoutGeometria
+from api.uploads import ler_com_limite
 from core.vision import ErroExtracaoAmigavel, extrair_dados_da_planta, gerar_layout_ilustrativo
 
 router = APIRouter(prefix="/api/extracao", tags=["extracao"])
@@ -22,12 +23,7 @@ async def _validar_e_salvar_upload(planta: UploadFile) -> str:
             detail={"mensagem_amigavel": "Formato de arquivo não suportado. Envie um arquivo PDF, JPG ou PNG."},
         )
 
-    conteudo = await planta.read()
-    if len(conteudo) > MAX_UPLOAD_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail={"mensagem_amigavel": "Arquivo muito grande. O tamanho máximo permitido é 20MB."},
-        )
+    conteudo = await ler_com_limite(planta, MAX_UPLOAD_SIZE)
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=extensao) as tmp:
         tmp.write(conteudo)

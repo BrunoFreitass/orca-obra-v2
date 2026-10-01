@@ -1,5 +1,6 @@
 import os
 from datetime import UTC, datetime
+from xml.sax.saxutils import escape
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -97,7 +98,9 @@ def gerar_pdf_proposta(dados_orcamento, output_path, nome_projeto,
             # PDF inteiro -- ignora o logo e segue sem ele.
             pass
 
-    story.append(Paragraph(nome_empresa or "OrçaObra AI", estilo_titulo))
+    # Dados do usuario sao escapados: Paragraph interpreta marcacao, e um
+    # "<" ou "&" no nome da empresa quebraria a geracao do PDF.
+    story.append(Paragraph(escape(nome_empresa or "OrçaObra AI"), estilo_titulo))
     story.append(Paragraph("Proposta de Orçamento de Obra", estilo_subtitulo))
 
     # Contato: aceita string (compatibilidade) ou lista de linhas
@@ -105,11 +108,11 @@ def gerar_pdf_proposta(dados_orcamento, output_path, nome_projeto,
         if isinstance(contato, list):
             for parte in contato:
                 if parte:
-                    story.append(Paragraph(parte, estilo_contato))
+                    story.append(Paragraph(escape(parte), estilo_contato))
         else:
-            story.append(Paragraph(contato, estilo_contato))
+            story.append(Paragraph(escape(contato), estilo_contato))
     if registro:
-        story.append(Paragraph(registro, estilo_contato))
+        story.append(Paragraph(escape(registro), estilo_contato))
 
     story.append(Spacer(1, 10))
     story.append(HRFlowable(width="100%", color=colors.HexColor("#1F4E78"), thickness=1.2))

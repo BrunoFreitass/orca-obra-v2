@@ -138,6 +138,23 @@ class TestGerarPdfProposta:
         )
         assert os.path.exists(caminho)
 
+    def test_pdf_escapa_marcacao_nos_dados_do_usuario(self, orcamento_completo, tmp_path):
+        """'<' e '&' vindos do perfil nao podem quebrar o Paragraph do reportlab."""
+        caminho = tmp_path / "proposta_marcacao.pdf"
+        gerar_pdf_proposta(
+            orcamento_completo,
+            str(caminho),
+            nome_projeto="Casa Marcacao",
+            estado_uf="Boa Vista/RR",
+            padrao="Médio",
+            tipo_cobertura="Telhado",
+            area_piso=100.0,
+            nome_empresa="A <B> & C",
+            contato=["Tel <1>", "x & y"],
+            registro="CREA <RR>",
+        )
+        assert os.path.getsize(caminho) > 2048
+
     def test_pdf_com_dados_minimos(self, orcamento_completo, tmp_path):
         """PDF deve funcionar mesmo com apenas os campos obrigatorios."""
         caminho = tmp_path / "proposta_minima.pdf"

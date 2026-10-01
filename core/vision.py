@@ -19,10 +19,9 @@ from config import (
 from core import cache
 from core.image_processing import melhorar_imagem
 from core.logger import get_logger
-from core.monitor_api import inicializar_tabela_monitor, registrar_chamada
+from core.monitor_api import registrar_chamada
 from core.validacao import validar_area_total_planta
 
-inicializar_tabela_monitor()
 logger = get_logger(__name__)
 
 
@@ -526,7 +525,7 @@ def _chamar_gemini_com_uma_chave(chave, prompt, img_base64):
     """
     url = (
         "https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{GEMINI_MODEL}:generateContent?key={chave}"
+        f"{GEMINI_MODEL}:generateContent"
     )
     payload = {
         "contents": [
@@ -539,7 +538,9 @@ def _chamar_gemini_com_uma_chave(chave, prompt, img_base64):
         ],
         "generationConfig": {"responseMimeType": "application/json"},
     }
-    headers = {"Content-Type": "application/json"}
+    # Chave no header (nao na URL) pra nao vazar em logs nem em
+    # mensagens de excecao do requests, que incluem a URL.
+    headers = {"Content-Type": "application/json", "x-goog-api-key": chave}
 
     max_tentativas = 3
     espera_segundos = 5

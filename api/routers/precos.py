@@ -2,15 +2,20 @@
 import os
 import tempfile
 from pathlib import Path
+from zipfile import BadZipFile
 
 from fastapi import APIRouter, UploadFile
 from fastapi.responses import FileResponse
+from openpyxl.utils.exceptions import InvalidFileException
 
 from api.schemas import ItemPreco, PrecosAplicarRequest, PrecosImportarResponse
+from api.uploads import erro_amigavel, ler_com_limite
 from core import paths
 from core import tabela_precos as tp
 
 router = APIRouter(prefix="/api/precos", tags=["precos"])
+
+MAX_TAMANHO_PLANILHA = 5 * 1024 * 1024  # 5 MB (o modelo tem poucos KB)
 
 
 def _listar() -> list[dict]:
@@ -48,11 +53,16 @@ def baixar_modelo() -> FileResponse:
 
 @router.post("/importar", response_model=PrecosImportarResponse)
 async def importar(arquivo: UploadFile) -> dict:
+    conteudo = await ler_com_limite(arquivo, MAX_TAMANHO_PLANILHA)
     with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
-        tmp.write(await arquivo.read())
+        tmp.write(conteudo)
         caminho_temp = tmp.name
     try:
         atualizados, avisos = tp.importar_tabela_excel(caminho_temp)
+    except (BadZipFile, InvalidFileException, KeyError, ValueError, OSError) as e:
+        raise erro_amigavel(
+            400, "Não foi possível ler a planilha. Envie o arquivo .xlsx do 'Baixar modelo Excel'."
+        ) from e
     finally:
         Path(caminho_temp).unlink(missing_ok=True)
     return {"atualizados": atualizados, "avisos": avisos}

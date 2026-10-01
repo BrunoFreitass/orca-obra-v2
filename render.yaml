@@ -20,6 +20,10 @@ services:
         sync: false
       - key: DATABASE_URL
         sync: false
+      - key: APP_USER
+        sync: false
+      - key: APP_PASSWORD
+        sync: false
       - key: GEMINI_MODEL
         value: gemini-3.1-flash-lite
       - key: MOCK_AI

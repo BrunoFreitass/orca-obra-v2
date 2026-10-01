@@ -48,6 +48,7 @@ jobs:
         env:
           MOCK_AI: "true"
           USE_CACHE: "false"
+          AUTH_DISABLED: "true"
 
       - name: Upload coverage (optional)
         if: matrix.python-version == '3.12'
