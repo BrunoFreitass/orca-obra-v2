@@ -106,56 +106,8 @@ export interface DadosRevisao {
   janelas: number
 }
 
-// --- Geometria opcional (layout 3D) --------------------------------------
-// Espelha core/vision.py::LAYOUT_VAZIO / PROMPT_EXTRACAO passo 8. Aditivo:
-// nunca obrigatório em nenhum lugar do fluxo de revisão/orçamento -- se a
-// IA não retornar geometria confiável, `disponivel` vem false e as 3
-// listas vêm vazias (nunca ausentes).
-export type TipoPiso = 'seco' | 'molhado' | 'externo'
-export type TipoAbertura = 'porta_interna' | 'porta_externa' | 'janela'
-
-export interface ComodoLayout {
-  nome: string
-  tipo_piso: TipoPiso
-  x: number
-  y: number
-  largura: number
-  comprimento: number
-}
-
-export interface ParedeLayout {
-  x1: number
-  y1: number
-  x2: number
-  y2: number
-}
-
-export interface AberturaLayout {
-  tipo: TipoAbertura
-  /** Índice na lista `paredes` deste mesmo layout. */
-  parede_index: number
-  /** 0.0 = extremidade (x1,y1) da parede referenciada, 1.0 = (x2,y2). */
-  posicao: number
-  /** Largura real do vão em metros -- lida do Quadro de Esquadrias
-   * quando existe, senão estimada pela IA, senão um padrão por tipo
-   * (ver core/vision.py::_normalizar_largura_abertura). Sempre presente
-   * depois da normalização no backend. */
-  largura_m: number
-}
-
-export interface LayoutGeometria {
-  disponivel: boolean
-  motivo_indisponivel: string
-  comodos: ComodoLayout[]
-  paredes: ParedeLayout[]
-  aberturas: AberturaLayout[]
-}
-
 export interface DadosExtraidos extends DadosRevisao {
   confianca: Partial<Record<CampoExtracao, ConfiancaCampo>>
-  /** Ausente em respostas antigas (cache anterior a essa mudança) --
-   * tratar igual a `disponivel: false`. */
-  layout?: LayoutGeometria
 }
 
 export interface ErroExtracaoDetalhe {

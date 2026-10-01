@@ -1,219 +1,109 @@
-"""Testes de core/vision.py -- normalizacao defensiva do bloco opcional
-'layout' (geometria). O orcamento nunca depende deste campo (ver
-CAMPOS_AGREGADOS em core/models.py), entao qualquer formato inesperado
-precisa cair em fallback seguro (disponivel: False) sem lancar excecao."""
-from config import LARGURA_JANELA_PADRAO_M, LARGURA_PORTA_PADRAO_M
-from core.vision import _normalizar_layout
+"""Testes de core/vision.py -- normalizacao da resposta da IA nos 7 campos
+agregados (CAMPOS_AGREGADOS em core/models.py) e na confianca, sem chamar
+a API real. Classificacao de erro do Gemini, monitor de cota e confianca
+malformada estao em tests/test_bugs_auditoria.py."""
+import pytest
+
+from config import DADOS_MOCK
+from core import vision
+from core.models import CAMPOS_AGREGADOS
 
 
-def _comodo(**overrides):
-    base = {"nome": "Sala", "tipo_piso": "seco", "x": 0.0, "y": 0.0, "largura": 5.0, "comprimento": 4.0}
-    base.update(overrides)
-    return base
+@pytest.fixture
+def resposta_ia(monkeypatch):
+    """Simula a resposta da IA sem mock nem cache; devolve uma funcao que
+    define o JSON que o Gemini "retornou"."""
+    monkeypatch.setattr(vision, "MOCK_AI", False)
+    monkeypatch.setattr(vision, "USE_CACHE", False)
+
+    def definir(dados):
+        monkeypatch.setattr(vision, "_chamar_gemini_e_obter_json", lambda *_a: dados)
+
+    return definir
 
 
-def _parede(**overrides):
-    base = {"x1": 0.0, "y1": 0.0, "x2": 5.0, "y2": 0.0}
-    base.update(overrides)
-    return base
+def test_mock_devolve_dados_fixos_sem_layout(monkeypatch):
+    monkeypatch.setattr(vision, "MOCK_AI", True)
+    dados = vision.extrair_dados_da_planta("planta.png")
+    assert dados is DADOS_MOCK
+    assert "layout" not in dados
+    assert all(campo in dados for campo in CAMPOS_AGREGADOS)
 
 
-def _layout_valido():
-    return {
-        "disponivel": True,
-        "motivo_indisponivel": "",
-        "comodos": [_comodo()],
-        "paredes": [_parede()],
-        "aberturas": [{"tipo": "janela", "parede_index": 0, "posicao": 0.5}],
-    }
+def test_prompt_nao_pede_mais_geometria():
+    assert "layout" not in vision.PROMPT_EXTRACAO
+    assert "GEOMETRIA" not in vision.PROMPT_EXTRACAO
+    for campo in CAMPOS_AGREGADOS:
+        assert f'"{campo}"' in vision.PROMPT_EXTRACAO
 
 
-class TestLayoutAusente:
-    def test_chave_layout_ausente_cai_em_fallback(self):
-        dados = {"area_piso_seco": 20.0}
-        resultado = _normalizar_layout(dados)
-        assert resultado["layout"]["disponivel"] is False
-        assert resultado["layout"]["comodos"] == []
-        assert resultado["layout"]["paredes"] == []
-        assert resultado["layout"]["aberturas"] == []
+def test_campos_ausentes_ou_null_viram_zero(resposta_ia):
+    resposta_ia({"area_piso_seco": 50, "metros_parede": 40, "janelas": None})
 
-    def test_layout_none_cai_em_fallback(self):
-        dados = {"layout": None}
-        resultado = _normalizar_layout(dados)
-        assert resultado["layout"]["disponivel"] is False
+    dados = vision.extrair_dados_da_planta("planta.png")
 
-    def test_ia_declarou_disponivel_false_preserva_motivo(self):
-        # Caso esperado do passo 8 do prompt: a IA decide nao arriscar
-        # geometria e explica o porque -- isso deve ser preservado.
-        dados = {
-            "layout": {
-                "disponivel": False,
-                "motivo_indisponivel": "Comodos em formato L, retangulo nao representa bem",
-                "comodos": [],
-                "paredes": [],
-                "aberturas": [],
-            }
-        }
-        resultado = _normalizar_layout(dados)
-        assert resultado["layout"]["disponivel"] is False
-        assert "formato L" in resultado["layout"]["motivo_indisponivel"]
+    assert dados["area_piso_seco"] == 50
+    assert dados["janelas"] == 0
+    assert dados["portas_internas"] == 0
 
 
-class TestLayoutMalformado:
-    def test_comodo_sem_largura_cai_em_fallback(self):
-        layout = _layout_valido()
-        del layout["comodos"][0]["largura"]
-        dados = {"layout": layout}
-        resultado = _normalizar_layout(dados)
-        assert resultado["layout"]["disponivel"] is False
-        assert resultado["layout"]["comodos"] == []
+def test_confianca_ausente_recebe_media_em_todos_os_campos(resposta_ia):
+    resposta_ia({"area_piso_seco": 50, "metros_parede": 40})
 
-    def test_comodo_com_tipo_piso_invalido_cai_em_fallback(self):
-        layout = _layout_valido()
-        layout["comodos"][0]["tipo_piso"] = "molhadinho"
-        dados = {"layout": layout}
-        resultado = _normalizar_layout(dados)
-        assert resultado["layout"]["disponivel"] is False
+    dados = vision.extrair_dados_da_planta("planta.png")
 
-    def test_comodo_com_largura_zero_cai_em_fallback(self):
-        layout = _layout_valido()
-        layout["comodos"][0]["largura"] = 0
-        dados = {"layout": layout}
-        resultado = _normalizar_layout(dados)
-        assert resultado["layout"]["disponivel"] is False
-
-    def test_parede_sem_coordenada_cai_em_fallback(self):
-        layout = _layout_valido()
-        del layout["paredes"][0]["x2"]
-        dados = {"layout": layout}
-        resultado = _normalizar_layout(dados)
-        assert resultado["layout"]["disponivel"] is False
-
-    def test_abertura_com_parede_index_inexistente_cai_em_fallback(self):
-        layout = _layout_valido()
-        layout["aberturas"][0]["parede_index"] = 5  # so existe indice 0
-        dados = {"layout": layout}
-        resultado = _normalizar_layout(dados)
-        assert resultado["layout"]["disponivel"] is False
-
-    def test_abertura_com_posicao_fora_de_0_1_cai_em_fallback(self):
-        layout = _layout_valido()
-        layout["aberturas"][0]["posicao"] = 1.5
-        dados = {"layout": layout}
-        resultado = _normalizar_layout(dados)
-        assert resultado["layout"]["disponivel"] is False
-
-    def test_abertura_com_tipo_invalido_cai_em_fallback(self):
-        layout = _layout_valido()
-        layout["aberturas"][0]["tipo"] = "porta_secreta"
-        dados = {"layout": layout}
-        resultado = _normalizar_layout(dados)
-        assert resultado["layout"]["disponivel"] is False
-
-    def test_comodos_nao_e_lista_cai_em_fallback(self):
-        layout = _layout_valido()
-        layout["comodos"] = "nao é uma lista"
-        dados = {"layout": layout}
-        resultado = _normalizar_layout(dados)
-        assert resultado["layout"]["disponivel"] is False
-
-    def test_sem_comodos_ou_paredes_cai_em_fallback(self):
-        layout = _layout_valido()
-        layout["comodos"] = []
-        dados = {"layout": layout}
-        resultado = _normalizar_layout(dados)
-        assert resultado["layout"]["disponivel"] is False
+    assert set(dados["confianca"]) == set(CAMPOS_AGREGADOS)
+    assert dados["confianca"]["janelas"]["nivel"] == "media"
 
 
-class TestLayoutValido:
-    def test_layout_valido_e_preservado(self):
-        dados = {"layout": _layout_valido()}
-        resultado = _normalizar_layout(dados)
-        assert resultado["layout"]["disponivel"] is True
-        assert resultado["layout"]["comodos"] == [_comodo()]
-        assert resultado["layout"]["paredes"] == [_parede()]
-        assert resultado["layout"]["aberturas"][0]["tipo"] == "janela"
+def test_confianca_informada_pela_ia_e_preservada(resposta_ia):
+    resposta_ia({
+        "area_piso_seco": 50, "metros_parede": 40,
+        "confianca": {"area_piso_seco": {"nivel": "alta", "motivo": "cota escrita"}},
+    })
 
-    def test_layout_valido_com_multiplos_comodos_e_paredes(self):
-        layout = {
-            "disponivel": True,
-            "motivo_indisponivel": "",
-            "comodos": [
-                _comodo(nome="Sala", tipo_piso="seco"),
-                _comodo(nome="Banheiro", tipo_piso="molhado", x=5.0),
-            ],
-            "paredes": [
-                _parede(),
-                _parede(x1=5.0, x2=5.0, y2=4.0),
-            ],
-            "aberturas": [
-                {"tipo": "porta_interna", "parede_index": 1, "posicao": 0.0},
-                {"tipo": "porta_externa", "parede_index": 0, "posicao": 1.0},
-            ],
-        }
-        dados = {"layout": layout}
-        resultado = _normalizar_layout(dados)
-        assert resultado["layout"]["disponivel"] is True
-        assert len(resultado["layout"]["comodos"]) == 2
-        assert len(resultado["layout"]["paredes"]) == 2
+    dados = vision.extrair_dados_da_planta("planta.png")
+
+    assert dados["confianca"]["area_piso_seco"] == {"nivel": "alta", "motivo": "cota escrita"}
 
 
-class TestLarguraAbertura:
-    """largura_m tem uma regra diferente das outras validacoes de
-    abertura: ausente ou fora da faixa plausivel nao invalida a
-    abertura nem o layout inteiro, so cai num padrao por tipo (ver
-    _normalizar_largura_abertura em core/vision.py)."""
+def test_parede_subestimada_marca_confianca_baixa(resposta_ia):
+    # 100 m² de piso pede ao menos 55 m de parede.
+    resposta_ia({"area_piso_seco": 100, "metros_parede": 30,
+                 "confianca": {"metros_parede": {"nivel": "alta", "motivo": "x"}}})
 
-    def test_largura_valida_e_preservada(self):
-        layout = _layout_valido()
-        layout["aberturas"][0]["largura_m"] = 1.5
-        dados = {"layout": layout}
-        resultado = _normalizar_layout(dados)
-        assert resultado["layout"]["disponivel"] is True
-        assert resultado["layout"]["aberturas"][0]["largura_m"] == 1.5
+    dados = vision.extrair_dados_da_planta("planta.png")
 
-    def test_largura_ausente_cai_no_padrao_por_tipo(self):
-        layout = _layout_valido()
-        layout["aberturas"][0]["tipo"] = "janela"
-        dados = {"layout": layout}
-        resultado = _normalizar_layout(dados)
-        assert resultado["layout"]["disponivel"] is True
-        assert resultado["layout"]["aberturas"][0]["largura_m"] == LARGURA_JANELA_PADRAO_M
+    assert dados["confianca"]["metros_parede"]["nivel"] == "baixa"
+    assert dados["metros_parede"] == 30  # avisa, mas nao substitui o valor
 
-    def test_largura_ausente_em_porta_cai_no_padrao_de_porta(self):
-        layout = _layout_valido()
-        layout["aberturas"][0]["tipo"] = "porta_interna"
-        dados = {"layout": layout}
-        resultado = _normalizar_layout(dados)
-        assert resultado["layout"]["disponivel"] is True
-        assert resultado["layout"]["aberturas"][0]["largura_m"] == LARGURA_PORTA_PADRAO_M
 
-    def test_largura_abaixo_da_faixa_cai_no_padrao_sem_invalidar_layout(self):
-        layout = _layout_valido()
-        layout["aberturas"][0]["largura_m"] = 0.05
-        dados = {"layout": layout}
-        resultado = _normalizar_layout(dados)
-        assert resultado["layout"]["disponivel"] is True
-        assert resultado["layout"]["aberturas"][0]["largura_m"] == LARGURA_JANELA_PADRAO_M
+def test_parede_plausivel_mantem_confianca(resposta_ia):
+    resposta_ia({"area_piso_seco": 100, "metros_parede": 80,
+                 "confianca": {"metros_parede": {"nivel": "alta", "motivo": "x"}}})
 
-    def test_largura_acima_da_faixa_cai_no_padrao_sem_invalidar_layout(self):
-        layout = _layout_valido()
-        layout["aberturas"][0]["largura_m"] = 15.0
-        dados = {"layout": layout}
-        resultado = _normalizar_layout(dados)
-        assert resultado["layout"]["disponivel"] is True
-        assert resultado["layout"]["aberturas"][0]["largura_m"] == LARGURA_JANELA_PADRAO_M
+    dados = vision.extrair_dados_da_planta("planta.png")
 
-    def test_uma_abertura_com_largura_invalida_nao_afeta_as_outras(self):
-        layout = _layout_valido()
-        layout["paredes"].append(_parede(x1=5.0, x2=5.0, y2=4.0))
-        layout["aberturas"] = [
-            {"tipo": "janela", "parede_index": 0, "posicao": 0.5, "largura_m": 15.0},  # invalida
-            {"tipo": "porta_interna", "parede_index": 1, "posicao": 0.3, "largura_m": 0.9},  # valida
-        ]
-        dados = {"layout": layout}
-        resultado = _normalizar_layout(dados)
-        assert resultado["layout"]["disponivel"] is True
-        aberturas = resultado["layout"]["aberturas"]
-        assert aberturas[0]["largura_m"] == LARGURA_JANELA_PADRAO_M
-        assert aberturas[1]["largura_m"] == 0.9
+    assert dados["confianca"]["metros_parede"]["nivel"] == "alta"
+
+
+def test_resultado_e_salvo_e_reaproveitado_do_cache(monkeypatch, tmp_path):
+    monkeypatch.setattr(vision, "MOCK_AI", False)
+    monkeypatch.setattr(vision, "USE_CACHE", True)
+    monkeypatch.setattr(vision.cache, "CACHE_DIR", str(tmp_path))
+    monkeypatch.setattr(vision, "_registrar_chamada_sem_falhar", lambda **_kw: None)
+    chamadas = []
+
+    def gemini(*_a):
+        chamadas.append(1)
+        return {"area_piso_seco": 50, "metros_parede": 40}
+
+    monkeypatch.setattr(vision, "_chamar_gemini_e_obter_json", gemini)
+    planta = tmp_path / "planta.png"
+    planta.write_bytes(b"planta")
+
+    primeira = vision.extrair_dados_da_planta(str(planta))
+    segunda = vision.extrair_dados_da_planta(str(planta))
+
+    assert primeira == segunda
+    assert len(chamadas) == 1
