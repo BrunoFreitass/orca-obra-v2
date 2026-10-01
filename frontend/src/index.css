@@ -10,9 +10,7 @@
 /* Design tokens do OrçaObra AI -- visual denso e técnico (referência:
 AutoCAD/Revit/Bluebeam), não um "SaaS de cards arredondados". Cantos
 quase retos, painéis com borda em vez de sombra, tipografia monoespaçada
-nos dados numéricos. Ver core/ui_config.py pra a paleta que isso
-substitui no app Streamlit atual (mantida como referência de marca:
-mesmo azul primário, só reaplicado num sistema mais denso). */
+nos dados numéricos. */
 @theme inline {
     --font-heading: var(--font-sans);
     --font-sans: 'IBM Plex Sans Variable', system-ui, sans-serif;
