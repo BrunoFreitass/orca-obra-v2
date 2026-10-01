@@ -40,8 +40,7 @@ class TestMontarOrcamentoCompleto:
 
     def test_nao_altera_as_listas_originais(self):
         # Editar o resultado nao deveria vazar de volta pras listas de
-        # origem (evita bug sutil de estado compartilhado no Streamlit,
-        # onde app.py guarda materiais/mao_de_obra em st.session_state).
+        # origem (evita bug sutil de estado compartilhado entre chamadas).
         materiais = [{"Total": 10}]
         mao_de_obra = [{"Total": 20}]
         resultado = orcamento_service.montar_orcamento_completo(materiais, mao_de_obra)
@@ -49,23 +48,3 @@ class TestMontarOrcamentoCompleto:
         assert len(materiais) == 1
         assert len(mao_de_obra) == 1
 
-
-class TestNomeArquivoSeguro:
-    def test_remove_caracteres_invalidos(self):
-        nome = orcamento_service.nome_arquivo_seguro("Rua Oito, 447 / Jardim Tropical")
-        # nao deve conter barra nem virgula
-        assert "/" not in nome
-        assert "," not in nome
-
-    def test_sempre_comeca_com_timestamp_de_14_digitos(self):
-        nome = orcamento_service.nome_arquivo_seguro("Teste")
-        carimbo = nome.split("_")[0] + "_" + nome.split("_")[1]
-        assert len(carimbo) == 15  # AAAAMMDD_HHMMSS
-        assert carimbo.replace("_", "").isdigit()
-
-    def test_respeita_o_limite_de_caracteres(self):
-        nome_longo = "A" * 100
-        resultado = orcamento_service.nome_arquivo_seguro(nome_longo, limite=10)
-        # 10 caracteres do nome + o carimbo de tempo na frente
-        parte_nome = resultado.split("_", 2)[-1]
-        assert len(parte_nome) <= 10

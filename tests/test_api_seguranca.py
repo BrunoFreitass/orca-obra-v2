@@ -11,6 +11,7 @@ from api.main import app
 from api.routers import perfil as perfil_router
 from api.routers import precos as precos_router
 from api.routers import sinapi as sinapi_router
+from core import perfil_empresa
 
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
@@ -154,13 +155,14 @@ class TestUploadLogo:
     def _isola_perfil(self, monkeypatch, tmp_path):
         """Sem isso o perfil iria pro banco (DATABASE_URL do .env) e pro
         perfil_empresa.json real."""
-        monkeypatch.setattr(perfil_router.paths, "PASTA_PERFIL", str(tmp_path))
+        monkeypatch.setattr(perfil_empresa.paths, "PASTA_PERFIL", str(tmp_path))
         perfil = {
             "nome_empresa": "", "profissional_responsavel": "", "telefone": "",
             "email": "", "registro": "", "caminho_logo": "",
         }
         monkeypatch.setattr(perfil_router, "carregar_perfil", lambda: dict(perfil))
         monkeypatch.setattr(perfil_router, "salvar_perfil", lambda **dados: dados)
+        monkeypatch.setattr(perfil_empresa, "salvar_configuracao", lambda _chave, _valor: False)
 
     @pytest.mark.parametrize("formato,extensao", [("PNG", ".png"), ("JPEG", ".jpg")])
     def test_aceita_png_e_jpeg_pelo_conteudo(self, client, tmp_path, formato, extensao):

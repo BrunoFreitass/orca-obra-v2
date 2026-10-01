@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 
 from api.main import app
 from api.routers import historico as historico_router
-from core import historico, monitor_api, orcamento_service, vision
+from core import historico, monitor_api, orcamento_service, perfil_empresa, vision
 from core.proposta_pdf import gerar_pdf_proposta
 
 
@@ -132,7 +132,7 @@ class TestMonitorCota:
 
         monkeypatch.setattr(vision, "MOCK_AI", False)
         monkeypatch.setattr(vision, "USE_CACHE", True)
-        monkeypatch.setattr(vision.cache, "buscar_cache", lambda _c: {"area_piso_seco": 10})
+        monkeypatch.setattr(vision.cache, "buscar_cache", lambda _c, _ctx: {"area_piso_seco": 10})
         monkeypatch.setattr(vision, "registrar_chamada", falha)
 
         assert vision.extrair_dados_da_planta("planta.png") == {"area_piso_seco": 10}
@@ -239,6 +239,7 @@ class TestDataDoPdf:
         }
         monkeypatch.setattr(historico_router, "buscar_orcamento", lambda _id: registro)
         monkeypatch.setattr(historico_router, "carregar_perfil", lambda: perfil)
+        monkeypatch.setattr(perfil_empresa, "obter_configuracao", lambda _chave: None)
 
         resposta = client.get("/api/historico/1/pdf")
 

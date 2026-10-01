@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 
+import { ErroMutacao } from '@/components/ErroMutacao'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -126,6 +127,7 @@ export function PerfilPanel() {
             if (arquivo) enviarLogo.mutate(arquivo)
           }}
         />
+        <ErroMutacao erro={enviarLogo.error} />
       </div>
 
       <Button
@@ -137,6 +139,7 @@ export function PerfilPanel() {
         {salvar.isPending ? 'Salvando…' : 'Salvar dados da empresa'}
       </Button>
       {salvar.isSuccess && <p className="text-[11px] text-success">Salvo.</p>}
+      <ErroMutacao erro={salvar.error} />
     </div>
   )
 }

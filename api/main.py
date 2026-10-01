@@ -96,8 +96,9 @@ async def headers_de_seguranca(request: Request, call_next):
     return resposta
 
 # Em dev, o Vite roda em processo separado (porta 5173) e precisa de CORS
-# pra chamar a API (porta 8000). Em produção, o frontend é servido pelos
-# mesmos estáticos desta API (mesma origem) -- sem necessidade de CORS.
+# pra chamar a API (porta 8010, ver frontend/vite.config.ts). Em produção,
+# o frontend é servido pelos mesmos estáticos desta API (mesma origem) --
+# sem necessidade de CORS.
 ORIGENS_DEV = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
 app.add_middleware(

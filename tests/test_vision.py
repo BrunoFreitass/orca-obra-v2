@@ -1,6 +1,6 @@
 """Testes de core/vision.py -- normalizacao defensiva do bloco opcional
 'layout' (geometria). O orcamento nunca depende deste campo (ver
-CAMPOS_AGREGADOS em core/vision.py), entao qualquer formato inesperado
+CAMPOS_AGREGADOS em core/models.py), entao qualquer formato inesperado
 precisa cair em fallback seguro (disponivel: False) sem lancar excecao."""
 from config import LARGURA_JANELA_PADRAO_M, LARGURA_PORTA_PADRAO_M
 from core.vision import _normalizar_layout

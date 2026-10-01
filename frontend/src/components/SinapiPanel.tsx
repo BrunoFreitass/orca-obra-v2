@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import { ErroMutacao } from '@/components/ErroMutacao'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAplicarSinapi, useImportarSinapi } from '@/hooks/use-sinapi'
@@ -16,6 +17,10 @@ export function SinapiPanel() {
   const avisosRelevantes =
     resultado?.avisos.filter((a) => !avisosSemCodigo.includes(a) && !avisosMes.includes(a)) ?? []
   const numPrecos = resultado ? Object.keys(resultado.precos).length : 0
+  // Mês não detectado pelo nome do arquivo: vale o digitado no campo, sem
+  // precisar reimportar (os preços já vieram na importação).
+  const mesDigitadoValido = /^\d{4}-(0[1-9]|1[0-2])$/.test(mesReferencia)
+  const mesRef = resultado?.mes_ref ?? (mesDigitadoValido ? mesReferencia : null)
 
   return (
     <div className="flex flex-col gap-2.5">
@@ -35,6 +40,7 @@ export function SinapiPanel() {
           importar.mutate({ arquivos, mesReferencia }, { onSuccess: setResultado })
         }}
       />
+      <ErroMutacao erro={importar.error} />
 
       <div className="flex flex-col gap-1.5">
         <label className="text-xs text-muted-foreground">
@@ -60,10 +66,10 @@ export function SinapiPanel() {
         </p>
       )}
 
-      {resultado && numPrecos > 0 && resultado.mes_ref && (
+      {resultado && numPrecos > 0 && mesRef && (
         <>
           <p className="text-xs text-muted-foreground">
-            {numPrecos} preço(s) prontos para atualizar (ref. {resultado.mes_ref}):
+            {numPrecos} preço(s) prontos para atualizar (ref. {mesRef}):
           </p>
           <div className="flex flex-col gap-0.5 font-mono text-[11px]">
             {Object.entries(resultado.precos).map(([chave, dado]) => (
@@ -77,24 +83,24 @@ export function SinapiPanel() {
             className="h-8 text-xs"
             disabled={aplicar.isPending}
             onClick={() => {
-              if (!resultado.mes_ref) return
               const valores = Object.fromEntries(
                 Object.entries(resultado.precos).map(([chave, dado]) => [chave, dado.valor]),
               )
               aplicar.mutate(
-                { valores, mesRef: resultado.mes_ref },
+                { valores, mesRef },
                 { onSuccess: () => setResultado(null) },
               )
             }}
           >
             {aplicar.isPending ? 'Aplicando…' : 'Aplicar preços do SINAPI'}
           </Button>
+          <ErroMutacao erro={aplicar.error} />
         </>
       )}
-      {resultado && numPrecos > 0 && !resultado.mes_ref && (
+      {resultado && numPrecos > 0 && !mesRef && (
         <p className="text-[11px] text-warning">
           Não consegui identificar o mês de referência pelo nome do arquivo — preencha o campo
-          acima para gravar os preços.
+          acima (AAAA-MM) para gravar os preços.
         </p>
       )}
     </div>

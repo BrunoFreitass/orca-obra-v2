@@ -175,7 +175,7 @@ def calcular_materiais(dados, padrao, tipo_cobertura="Telhado"):
     return itens_para_dicts(itens)
 
 
-def calcular_mao_de_obra(dados, tipo_cobertura="Telhado"):
+def calcular_mao_de_obra(dados):
     """Gera as linhas de MAO DE OBRA por servico.
 
     Servicos cujo material equivalente ja e' uma composicao SINAPI
@@ -186,9 +186,7 @@ def calcular_mao_de_obra(dados, tipo_cobertura="Telhado"):
     janela e pintura desde 2026-09. "Execução de Cobertura" tambem saiu
     daqui (2026-09): pra Laje virou item de MATERIAL "Estrutura da Laje
     de Cobertura" em calcular_materiais() (a composicao real inclui
-    material -- vigota/enchimento/concreto -- nao so mao de obra).
-    tipo_cobertura fica como parametro por compatibilidade com quem
-    chama esta funcao, mas nao afeta mais o resultado aqui."""
+    material -- vigota/enchimento/concreto -- nao so mao de obra)."""
     d = _dados_extracao(dados)
     fator_regional = FATOR_REGIONAL_RR.valor
     qtd_eletricos = round(d.area_piso_total / M2_POR_PONTO_ELETRICO.valor)

@@ -166,7 +166,6 @@ MATERIAIS_SIMPLES: dict[str, CodigoSinapi] = {
 # (ver aviso no topo do arquivo). O motivo de cada None está comentado
 # ao lado.
 # ---------------------------------------------------------------------
-_TRES_PADROES_M2 = {"Econômico": "m2", "Médio": "m2", "Alto Padrão": "m2"}
 _TRES_PADROES_UN = {"Econômico": "un", "Médio": "un", "Alto Padrão": "un"}
 
 GRUPOS_POR_PADRAO: dict[str, dict[str, CodigoSinapi]] = {

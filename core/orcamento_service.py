@@ -1,28 +1,15 @@
 """Camada de servico do OrcaObra AI.
 
-Reune regras de negocio que antes viviam misturadas com codigo de
-interface (Streamlit) dentro de app.py -- geracao de nome de arquivo,
-soma de custo direto e calculo do preco de venda com BDI. Nenhuma
-funcao aqui importa UI; quem chama (hoje, a API) so cuida de mostrar
-o resultado na tela.
+Reune regras de negocio do orcamento -- soma de custo direto, calculo
+do preco de venda com BDI e persistencia no historico. Nenhuma funcao
+aqui importa UI; quem chama (a API) so cuida de mostrar o resultado na
+tela.
 """
-
-from datetime import UTC, datetime
 
 from core.historico import salvar_orcamento
 from core.logger import get_logger
 
 logger = get_logger(__name__)
-
-
-def nome_arquivo_seguro(nome_projeto: str, limite: int = 40) -> str:
-    """Gera um nome de arquivo unico e seguro a partir do nome do
-    projeto/cliente: remove caracteres invalidos e prefixa com um
-    timestamp, para nunca sobrescrever um orcamento anterior."""
-    carimbo = datetime.now(tz=UTC).strftime("%Y%m%d_%H%M%S")
-    limpo = "".join(c if c.isalnum() or c in " -_" else "_" for c in nome_projeto)
-    limpo = limpo.strip().replace(" ", "_")[:limite]
-    return f"{carimbo}_{limpo}"
 
 
 def calcular_custo_e_preco(itens: list, bdi_percentual: float) -> tuple[float, float]:

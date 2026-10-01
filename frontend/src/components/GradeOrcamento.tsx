@@ -10,8 +10,7 @@ interface Props {
 }
 
 /** Grade editável de materiais/mão de obra -- Quantidade e Total são
- * calculados (somente leitura), só o Preço Unit. é editável, igual ao
- * st.data_editor de core/ui_orcamento.py. */
+ * calculados (somente leitura), só o Preço Unit. é editável. */
 export function GradeOrcamento({ titulo, itens, onEditarPreco }: Props) {
   const total = itens.reduce((soma, item) => soma + item.Total, 0)
 

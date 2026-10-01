@@ -1,5 +1,4 @@
-/** Local da obra -- hoje fixo (config.py::LOCAL_OBRA no backend), sem
- * campo de edição em nenhuma das duas UIs. */
+/** Local da obra -- hoje fixo, sem campo de edição na interface. */
 export const LOCAL_OBRA = 'Boa Vista/RR'
 
 // --- Constantes de extrusão 3D (VisualizacaoPlanta3D) ---------------------

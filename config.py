@@ -37,10 +37,6 @@ def _carregar_lista_de_chaves():
 # automaticamente pra proxima da lista antes de desistir.
 GEMINI_API_KEYS = _carregar_lista_de_chaves()
 
-# Mantido por compatibilidade com codigo que ainda espera uma chave
-# unica (ex: mensagens de erro que citam "a chave configurada").
-GEMINI_API_KEY = GEMINI_API_KEYS[0] if GEMINI_API_KEYS else ""
-
 # Modelo usado para ler as plantas. gemini-3.1-flash-lite e o mais barato
 # disponivel atualmente e da conta bem de extracao estruturada simples.
 # Troque aqui se precisar de mais precisao em plantas complexas
@@ -138,9 +134,6 @@ PEITORIL_JANELA_PADRAO_M = 0.90
 # campo ausente/invalido.
 LARGURA_PORTA_PADRAO_M = 0.80
 LARGURA_JANELA_PADRAO_M = 1.20
-
-# Local padrão da obra (usado em PDF e histórico)
-LOCAL_OBRA = os.environ.get("LOCAL_OBRA", "Boa Vista/RR")
 
 # Connection string do Postgres (Neon) usada por core/historico.py.
 # Vem com sslmode=require incluso na string padrao do Neon.

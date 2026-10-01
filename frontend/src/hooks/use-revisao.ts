@@ -5,8 +5,7 @@ import type { DadosExtraidos, RevisaoAvaliarResponse } from '@/lib/types'
 
 /** Recalcula índice de confiança + avisos de parede/gerais toda vez que
  * um dos valores muda -- a queryKey incluir os valores é o que dispara
- * o recálculo automaticamente (equivalente à "assinatura" que o
- * Streamlit usa hoje pra saber quando os dados mudaram). */
+ * o recálculo automaticamente. */
 export function useAvaliarRevisao(dados: DadosExtraidos | null) {
   return useQuery({
     queryKey: ['revisao', 'avaliar', dados],

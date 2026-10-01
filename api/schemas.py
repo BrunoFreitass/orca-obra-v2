@@ -1,6 +1,4 @@
-"""Espelhos pydantic dos modelos de core/models.py e respostas da API.
-Preenchido conforme cada fase liga suas rotas -- ver
-C:\\Users\\bruno\\.claude\\plans\\immutable-rolling-volcano.md."""
+"""Espelhos pydantic dos modelos de core/models.py e respostas da API."""
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -114,7 +112,7 @@ class ConfiancaCampo(BaseModel):
 
 
 # Espelha core/vision.py::LAYOUT_VAZIO / frontend/src/lib/types.ts -- geometria
-# opcional (layout 3D), aditiva ao orçamento (ver CAMPOS_AGREGADOS em vision.py).
+# opcional (layout 3D), aditiva ao orçamento (ver CAMPOS_AGREGADOS em core/models.py).
 
 class ComodoLayout(BaseModel):
     nome: str
@@ -157,11 +155,6 @@ class DadosExtraidos(BaseModel):
     janelas: int = 0
     confianca: dict[str, ConfiancaCampo] = {}
     layout: LayoutGeometria = LayoutGeometria()
-
-
-class ErroExtracao(BaseModel):
-    mensagem_amigavel: str
-    detalhe_tecnico: str | None = None
 
 
 class IndiceConfianca(BaseModel):

@@ -1,14 +1,8 @@
 """Pontuação de confiança da extração e heurística de plausibilidade da
 metragem de parede -- lógica pura, sem dependência de UI, reaproveitável
-por qualquer front-end.
+por qualquer front-end."""
 
-Realocado de core/ui_revisao.py em 2026-08 -- mesma lógica, sem mudança
-de comportamento."""
-
-CAMPOS_EXTRACAO = (
-    "area_piso_seco", "area_piso_molhado", "area_piso_externo",
-    "metros_parede", "portas_internas", "portas_externas", "janelas",
-)
+from core.models import ALTURA_PAREDE_PADRAO, CAMPOS_AGREGADOS
 
 # Pesos para cálculo do índice global de confiança
 PESO_CONFIANCA = {"alta": 3, "media": 2, "baixa": 1}
@@ -28,7 +22,7 @@ def calcular_indice_confianca(confianca: dict) -> dict:
 
     total_pontos = 0
     maximo_pontos = 0
-    for campo in CAMPOS_EXTRACAO:
+    for campo in CAMPOS_AGREGADOS:
         info = confianca.get(campo, {"nivel": "media"})
         nivel = info.get("nivel", "media")
         total_pontos += PESO_CONFIANCA.get(nivel, 2)
@@ -89,8 +83,8 @@ def validar_proporcao_parede(area_piso_total, metros_parede, portas_internas):
 
     if razao < minimo_razao:
         sugestao = sugestao_tipica
-        impacto_min = round((sugestao_tipica - metros_parede) * 2.8 * 40)
-        impacto_max = round((sugestao_tipica - metros_parede) * 2.8 * 55)
+        impacto_min = round((sugestao_tipica - metros_parede) * ALTURA_PAREDE_PADRAO * 40)
+        impacto_max = round((sugestao_tipica - metros_parede) * ALTURA_PAREDE_PADRAO * 55)
         avisos.append(
             f"""🧱 ATENÇÃO: Metros de parede SUBESTIMADOS
 
@@ -105,7 +99,7 @@ _Se não ajustar, o orçamento ficará R$ {impacto_min:,} a R$ {impacto_max:,} m
         )
     elif razao > maximo_razao:
         avisos.append(
-            f"""🧱 ATENÇÃO: Metros de parede SUPerestimados
+            f"""🧱 ATENÇÃO: Metros de parede SUPERESTIMADOS
 
 A IA leu **{metros_parede:.0f} m** de parede para **{area_piso_total:.0f} m²** de área.
 O máximo esperado é **{maximo_esperado} m**. Confira se nenhuma parede foi contada duas vezes."""

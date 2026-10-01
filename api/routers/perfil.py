@@ -1,15 +1,12 @@
 """Perfil da empresa e logo (core/perfil_empresa.py)."""
-import glob
 import io
-import os
 
 from fastapi import APIRouter, UploadFile
 from PIL import Image
 
 from api.schemas import PerfilEmpresa, PerfilEmpresaUpdate
 from api.uploads import erro_amigavel, ler_com_limite
-from core import paths
-from core.perfil_empresa import carregar_perfil, salvar_perfil
+from core.perfil_empresa import carregar_perfil, salvar_logo, salvar_perfil
 
 router = APIRouter(prefix="/api/perfil", tags=["perfil"])
 
@@ -48,11 +45,7 @@ async def enviar_logo(logo: UploadFile) -> dict:
     if formato not in EXTENSAO_POR_FORMATO:
         raise erro_amigavel(400, "Formato não suportado. Envie uma logo PNG ou JPEG.")
 
-    for antiga in glob.glob(os.path.join(paths.PASTA_PERFIL, "logo.*")):
-        os.remove(antiga)
-    caminho_logo = os.path.join(paths.PASTA_PERFIL, f"logo{EXTENSAO_POR_FORMATO[formato]}")
-    with open(caminho_logo, "wb") as f:
-        f.write(conteudo)
+    caminho_logo = salvar_logo(conteudo, EXTENSAO_POR_FORMATO[formato])
 
     perfil_atual = carregar_perfil()
     return salvar_perfil(

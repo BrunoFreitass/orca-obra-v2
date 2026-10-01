@@ -3,9 +3,8 @@ Tabela de precos e coeficientes de consumo -- fonte unica de verdade,
 versionada e rastreavel.
 
 Antes desta refatoracao (Fase 3 do roadmap), esses numeros estavam
-espalhados como constantes soltas em core/calculator.py e
-core/sinapi.py, sem nenhum registro de onde vieram nem de quando
-foram conferidos pela ultima vez. Se um preco estivesse desatualizado,
+espalhados como constantes soltas em core/calculator.py, sem nenhum
+registro de onde vieram nem de quando foram conferidos pela ultima vez. Se um preco estivesse desatualizado,
 a unica forma de descobrir era lembrar de cabeca.
 
 Cada valor agora e um objeto Preco(valor, fonte, data_ref) -- e da pra
@@ -178,7 +177,7 @@ PRECOS_ESTRUTURA_LAJE_COBERTURA = {
 # antigas (pesquisa de mercado: R$1,25/tijolo × 27 tijolos/m² ≈ R$33,75
 # de material + R$37,86 de mão de obra que existia como item separado)
 # pra manter o mesmo total de antes da mudança de unidade, só que numa
-# unidade consistente com o que calcular.py de fato multiplica.
+# unidade consistente com o que core/calculator.py de fato multiplica.
 PRECO_BLOCO_CERAMICO = Preco(71.61, "Pesquisa de mercado - bloco cerâmico 14x19x29, m² de parede pronta", "2026-06")
 PRECO_ARGAMASSA_KG = Preco(1.80, "Pesquisa de mercado - argamassa AC-II", "2026-06")
 PRECO_CIMENTO_SACO = Preco(44.00, "SINAPI/IBGE - média nacional, 1º bimestre/2026", "2026-06")
@@ -259,19 +258,16 @@ MAO_DE_OBRA_POR_SERVICO = {
         "preco": Preco(
             35.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA
         ),
-        "unidade": "m2_area",
     },
     "Instalação Elétrica": {
         "preco": Preco(
             60.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA
         ),
-        "unidade": "unidade",
     },
     "Instalação Hidráulica": {
         "preco": Preco(
             55.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA
         ),
-        "unidade": "unidade",
     },
 }
 

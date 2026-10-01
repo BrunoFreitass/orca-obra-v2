@@ -1,10 +1,11 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 import { GradeOrcamento } from '@/components/GradeOrcamento'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useGerarOrcamento, useMaoDeObra, useMateriais } from '@/hooks/use-orcamento'
-import { ApiError, urlDownload } from '@/lib/api-client'
+import { extrairDetalheErro } from '@/hooks/use-extracao'
+import { urlDownload } from '@/lib/api-client'
 import { LOCAL_OBRA } from '@/lib/constants'
 import { useExtracaoStore } from '@/lib/extracao-store'
 import { useOrcamentoStore } from '@/lib/orcamento-store'
@@ -38,6 +39,22 @@ export function Orcamento() {
   }, [assinatura, materiaisSugeridos, maoDeObraSugerida, carregarSugeridos])
 
   const gerar = useGerarOrcamento()
+  const corpoGerar = {
+    ...valores,
+    materiais,
+    mao_de_obra: maoDeObra,
+    bdi_percentual: bdi,
+    nome_projeto: nomeProjeto,
+    cliente: cliente,
+    padrao,
+    estrutura,
+    local_obra: LOCAL_OBRA,
+  }
+  // Evita orçamento duplicado no histórico: depois de gerar, o botão só
+  // volta a funcionar quando algum dado (itens, BDI, projeto…) mudar.
+  const assinaturaGerar = JSON.stringify(corpoGerar)
+  const [assinaturaGerada, setAssinaturaGerada] = useState<string | null>(null)
+  const jaGerado = assinaturaGerada === assinaturaGerar
 
   const custoDireto = materiais.reduce((s, i) => s + i.Total, 0) + maoDeObra.reduce((s, i) => s + i.Total, 0)
   const precoVenda = custoDireto * (1 + bdi / 100)
@@ -102,34 +119,23 @@ export function Orcamento() {
       <div>
         <Button
           className="h-9 text-xs"
-          disabled={gerar.isPending || !nomeProjeto.trim()}
-          onClick={() =>
-            gerar.mutate({
-              ...valores,
-              materiais,
-              mao_de_obra: maoDeObra,
-              bdi_percentual: bdi,
-              nome_projeto: nomeProjeto,
-              cliente: cliente,
-              padrao,
-              estrutura,
-              local_obra: LOCAL_OBRA,
-            })
-          }
+          disabled={gerar.isPending || !nomeProjeto.trim() || jaGerado}
+          onClick={() => gerar.mutate(corpoGerar, { onSuccess: () => setAssinaturaGerada(assinaturaGerar) })}
         >
           {gerar.isPending ? 'Gerando…' : '🚀 Gerar Orçamento Completo'}
         </Button>
+        {jaGerado && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            Orçamento já salvo no histórico. Altere algum dado para gerar um novo.
+          </p>
+        )}
         {!nomeProjeto.trim() && (
           <p className="mt-1 text-xs text-warning">
             Informe o nome do projeto/cliente na sidebar antes de gerar.
           </p>
         )}
         {gerar.isError && (
-          <p className="mt-1 text-xs text-destructive">
-            {gerar.error instanceof ApiError && typeof gerar.error.detail === 'string'
-              ? gerar.error.detail
-              : 'Erro ao gerar orçamento.'}
-          </p>
+          <p className="mt-1 text-xs text-destructive">{extrairDetalheErro(gerar.error).mensagem_amigavel}</p>
         )}
       </div>
 

@@ -235,13 +235,15 @@ def ler_planilha_sinapi(caminho: Path) -> dict[str, dict]:
     return encontrados
 
 
-def importar(arquivos: list[Path], mes_referencia: str | None = None) -> tuple[dict, list[str]]:
+def importar(arquivos: list[Path], mes_referencia: str | None = None) -> tuple[dict, list[str], str | None]:
     """Lê um ou mais arquivos oficiais do SINAPI, cruza com
-    core/sinapi_codigos.py e retorna (precos_para_gravar, avisos).
+    core/sinapi_codigos.py e retorna (precos_para_gravar, avisos, mes_ref).
 
     precos_para_gravar: {chave_interna: {"valor": float, "descricao": str}}
     avisos: mensagens sobre chaves sem código, códigos não encontrados
     nos arquivos, ou mudanças de unidade suspeitas.
+    mes_ref: "AAAA-MM" informado ou detectado pelo nome do arquivo, ou
+    None se não foi possível identificar.
     """
     todos_codigos: dict[str, dict] = {}
     mes_detectado = mes_referencia
@@ -307,8 +309,10 @@ def _resumo(precos: dict, avisos: list[str], mes_ref: str | None):
 
     if precos:
         print(f"{len(precos)} item(ns) prontos para atualizar:\n")
+        # Preço padrão real de cada chave, pra item sem override não aparecer como R$ 0,00.
+        padroes = {chave: preco for chave, _, _, preco in tp._itens_editaveis()}
         for chave, dado in precos.items():
-            atual = tp.obter_preco(chave, tp.coef.Preco(0, "", "")).valor
+            atual = tp.obter_preco(chave, padroes[chave]).valor
             marcador = " (sem mudança)" if abs(atual - dado["valor"]) < 0.005 else ""
             print(f"  - {chave}: R$ {atual:.2f} -> R$ {dado['valor']:.2f}{marcador}"
                   f"  [{dado['descricao'][:60]}]")

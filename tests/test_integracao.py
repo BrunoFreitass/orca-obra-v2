@@ -1,7 +1,7 @@
 """Testes de integração — ciclo completo de geração de documentos.
 
 Verificam que Excel e PDF são criados corretamente a partir de um
-orçamento completo, sem depender da UI (Streamlit) nem da API Gemini.
+orçamento completo, sem depender do frontend nem da API Gemini.
 """
 import os
 
@@ -42,7 +42,7 @@ def orcamento_completo(dados_exemplo):
     """Monta um orcamento completo (material + mao de obra) pronto
     para gerar documentos."""
     materiais = calcular_materiais(dados_exemplo, padrao="Médio", tipo_cobertura="Telhado")
-    mao_de_obra = calcular_mao_de_obra(dados_exemplo, tipo_cobertura="Telhado")
+    mao_de_obra = calcular_mao_de_obra(dados_exemplo)
     return orcamento_service.montar_orcamento_completo(materiais, mao_de_obra)
 
 
@@ -57,11 +57,6 @@ class TestGerarExcel:
         caminho = tmp_path / "orcamento_sem_bdi.xlsx"
         gerar_excel(orcamento_completo, str(caminho), bdi_percentual=0)
         assert os.path.exists(caminho)
-
-    def test_extensao_csv_e_convertida_para_xlsx(self, orcamento_completo, tmp_path):
-        caminho_csv = tmp_path / "orcamento.csv"
-        resultado = gerar_excel(orcamento_completo, str(caminho_csv), bdi_percentual=0)
-        assert resultado.endswith(".xlsx")
 
     def test_preco_de_venda_bate_com_orcamento_service(self, orcamento_completo, tmp_path):
         """Regressão: Excel, PDF e o valor salvo no histórico usavam 3

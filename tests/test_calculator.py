@@ -143,7 +143,7 @@ class TestMaoDeObraSemDuplicarComposicaoSinapiCompleta:
         )
 
     def test_itens_cobertos_por_composicao_sinapi_completa_nao_aparecem(self):
-        itens = calcular_mao_de_obra(self._dados(), tipo_cobertura="Telhado")
+        itens = calcular_mao_de_obra(self._dados())
         nomes = {it["Material"] for it in itens}
         redundantes = {
             "Alvenaria (assentamento)",
@@ -160,10 +160,8 @@ class TestMaoDeObraSemDuplicarComposicaoSinapiCompleta:
         # completa (94195/94207/94216); pra Laje, virou item de MATERIAL
         # "Estrutura da Laje de Cobertura" (laje pre-moldada, que inclui
         # material, nao so mao de obra) -- ver teste abaixo.
-        itens_telhado = calcular_mao_de_obra(self._dados(), tipo_cobertura="Telhado")
-        itens_laje = calcular_mao_de_obra(self._dados(), tipo_cobertura="Laje")
-        assert "Execução de Cobertura" not in {it["Material"] for it in itens_telhado}
-        assert "Execução de Cobertura" not in {it["Material"] for it in itens_laje}
+        itens = calcular_mao_de_obra(self._dados())
+        assert "Execução de Cobertura" not in {it["Material"] for it in itens}
 
     def test_estrutura_da_laje_de_cobertura_so_aparece_para_laje(self):
         materiais_telhado = calcular_materiais(self._dados(), padrao="Médio", tipo_cobertura="Telhado")
@@ -244,7 +242,7 @@ class TestRegressaoCasoReal:
         assert total == pytest.approx(79799.79, abs=0.5)
 
     def test_total_mao_de_obra_telhado(self):
-        mao_de_obra = calcular_mao_de_obra(self._dados(), tipo_cobertura="Telhado")
+        mao_de_obra = calcular_mao_de_obra(self._dados())
         total = round(sum(i["Total"] for i in mao_de_obra), 2)
         # Valor atualizado apos remover "Pintura" (agora embutida na
         # composicao do material) -- ver NOTA 7 na docstring da classe.

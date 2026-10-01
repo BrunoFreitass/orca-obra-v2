@@ -8,7 +8,7 @@ from starlette.background import BackgroundTask
 
 from api.schemas import OrcamentoHistorico
 from core.historico import buscar_orcamento, excluir_orcamento, listar_orcamentos
-from core.perfil_empresa import carregar_perfil
+from core.perfil_empresa import arquivo_logo, carregar_perfil
 from core.proposta_pdf import gerar_pdf_proposta
 from core.reporter import gerar_excel
 
@@ -78,20 +78,23 @@ def baixar_pdf(orcamento_id: int) -> FileResponse:
 
     fd, caminho = tempfile.mkstemp(suffix=".pdf")
     os.close(fd)
-    gerar_pdf_proposta(
-        registro["orcamento_json"], caminho,
-        nome_projeto=registro["nome_projeto"],
-        estado_uf=registro["estado_uf"], padrao=registro["padrao"],
-        tipo_cobertura=registro["tipo_cobertura"], area_piso=registro["area_piso"],
-        bdi_percentual=registro["bdi_percentual"],
-        nome_empresa=perfil["nome_empresa"] or "OrçaObra AI",
-        contato=contato_linhas,
-        registro=registro_str,
-        caminho_logo=perfil["caminho_logo"],
-        cliente=registro.get("cliente", "") or "",
-        # data_criacao é "dd/mm/aaaa HH:MM" -- a capa mostra só a data.
-        data_emissao=(registro.get("data_criacao") or "").split(" ")[0],
-    )
+    # A logo vem do banco (arquivo temporário só durante a geração) ou,
+    # sem banco, do caminho local salvo no perfil.
+    with arquivo_logo(perfil["caminho_logo"]) as caminho_logo:
+        gerar_pdf_proposta(
+            registro["orcamento_json"], caminho,
+            nome_projeto=registro["nome_projeto"],
+            estado_uf=registro["estado_uf"], padrao=registro["padrao"],
+            tipo_cobertura=registro["tipo_cobertura"], area_piso=registro["area_piso"],
+            bdi_percentual=registro["bdi_percentual"],
+            nome_empresa=perfil["nome_empresa"] or "OrçaObra AI",
+            contato=contato_linhas,
+            registro=registro_str,
+            caminho_logo=caminho_logo,
+            cliente=registro.get("cliente", "") or "",
+            # data_criacao é "dd/mm/aaaa HH:MM" -- a capa mostra só a data.
+            data_emissao=(registro.get("data_criacao") or "").split(" ")[0],
+        )
 
     return FileResponse(
         caminho,

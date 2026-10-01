@@ -17,8 +17,7 @@ interface Props {
 }
 
 /** Confirmação em dois passos pra excluir um orçamento do histórico --
- * mesma cautela que a tela do Streamlit já tem (não é uma ação
- * reversível: o registro some do banco). */
+ * não é uma ação reversível: o registro some do banco. */
 export function ConfirmarExclusaoDialog({ aberto, nomeProjeto, excluindo, onConfirmar, onCancelar }: Props) {
   return (
     <Dialog open={aberto} onOpenChange={(open) => !open && onCancelar()}>

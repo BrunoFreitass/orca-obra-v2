@@ -3,17 +3,17 @@ heuristica de plausibilidade da metragem de parede."""
 import pytest
 
 from core.confianca import (
-    CAMPOS_EXTRACAO,
     calcular_indice_confianca,
     estimar_metros_parede,
     validar_proporcao_parede,
 )
+from core.models import CAMPOS_AGREGADOS
 
 
 def _confianca(niveis: dict) -> dict:
     """Monta o dict de confianca no formato que a IA retorna, um nivel
-    por campo de CAMPOS_EXTRACAO -- campos nao informados usam 'media'."""
-    return {campo: {"nivel": niveis.get(campo, "media")} for campo in CAMPOS_EXTRACAO}
+    por campo de CAMPOS_AGREGADOS -- campos nao informados usam 'media'."""
+    return {campo: {"nivel": niveis.get(campo, "media")} for campo in CAMPOS_AGREGADOS}
 
 
 class TestCalcularIndiceConfianca:
@@ -23,13 +23,13 @@ class TestCalcularIndiceConfianca:
         assert indice["percentual"] == 50
 
     def test_todos_os_campos_alta_da_100_por_cento(self):
-        niveis = dict.fromkeys(CAMPOS_EXTRACAO, "alta")
+        niveis = dict.fromkeys(CAMPOS_AGREGADOS, "alta")
         indice = calcular_indice_confianca(_confianca(niveis))
         assert indice["percentual"] == 100
         assert indice["nivel"] == "alta"
 
     def test_todos_os_campos_baixa_fica_no_nivel_baixa(self):
-        niveis = dict.fromkeys(CAMPOS_EXTRACAO, "baixa")
+        niveis = dict.fromkeys(CAMPOS_AGREGADOS, "baixa")
         indice = calcular_indice_confianca(_confianca(niveis))
         # 1 ponto/campo de 3 possiveis = 33% -- bem abaixo do limiar de 70%
         assert indice["percentual"] == 33
@@ -37,30 +37,30 @@ class TestCalcularIndiceConfianca:
 
     def test_limiar_de_90_por_cento_e_inclusive(self):
         # 5 campos "alta" (3 pts) + 2 "media" (2 pts) = 19/21 = 90.48% -> arredonda pra 90
-        niveis = dict.fromkeys(CAMPOS_EXTRACAO[:5], "alta")
-        niveis.update(dict.fromkeys(CAMPOS_EXTRACAO[5:], "media"))
+        niveis = dict.fromkeys(CAMPOS_AGREGADOS[:5], "alta")
+        niveis.update(dict.fromkeys(CAMPOS_AGREGADOS[5:], "media"))
         indice = calcular_indice_confianca(_confianca(niveis))
         assert indice["percentual"] == 90
         assert indice["nivel"] == "alta"
 
     def test_um_ponto_abaixo_do_limiar_de_90_cai_pra_media(self):
         # 4 "alta" + 3 "media" = 12+6=18/21 = 85.7% -> nivel media
-        niveis = dict.fromkeys(CAMPOS_EXTRACAO[:4], "alta")
-        niveis.update(dict.fromkeys(CAMPOS_EXTRACAO[4:], "media"))
+        niveis = dict.fromkeys(CAMPOS_AGREGADOS[:4], "alta")
+        niveis.update(dict.fromkeys(CAMPOS_AGREGADOS[4:], "media"))
         indice = calcular_indice_confianca(_confianca(niveis))
         assert indice["nivel"] == "media"
         assert indice["percentual"] < 90
 
     def test_limiar_de_70_por_cento_e_inclusive(self):
         # 1 "alta" + 6 "media" = 3+12 = 15/21 = 71.4% -> nivel media (>=70)
-        niveis = dict.fromkeys(CAMPOS_EXTRACAO[:1], "alta")
-        niveis.update(dict.fromkeys(CAMPOS_EXTRACAO[1:], "media"))
+        niveis = dict.fromkeys(CAMPOS_AGREGADOS[:1], "alta")
+        niveis.update(dict.fromkeys(CAMPOS_AGREGADOS[1:], "media"))
         indice = calcular_indice_confianca(_confianca(niveis))
         assert indice["percentual"] == 71
         assert indice["nivel"] == "media"
 
     def test_abaixo_do_limiar_de_70_cai_pra_baixa(self):
-        niveis = dict.fromkeys(CAMPOS_EXTRACAO, "media")
+        niveis = dict.fromkeys(CAMPOS_AGREGADOS, "media")
         indice = calcular_indice_confianca(_confianca(niveis))
         assert indice["percentual"] < 70
         assert indice["nivel"] == "baixa"
@@ -102,5 +102,5 @@ class TestValidarProporcaoParede:
         # 100m2, 150m de parede -> razao 1.5, acima do maximo 1.10
         avisos, sugestao = validar_proporcao_parede(100, 150, 3)
         assert len(avisos) == 1
-        assert "SUPerestimados" in avisos[0]
+        assert "SUPERESTIMADOS" in avisos[0]
         assert sugestao is None

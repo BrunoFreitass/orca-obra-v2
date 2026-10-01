@@ -1,9 +1,9 @@
 """
 Logging estruturado para o OrçaObra AI.
 
-Por padrao, logs de INFO+ vao para o console (visiveis no Streamlit
-Cloud / terminal) e logs de DEBUG+ vao para arquivo rotativo
-(app.log, max 5MB, 3 backups). Isso permite diagnosticar problemas
+Por padrao, logs de INFO+ vao para o console (visiveis no terminal /
+logs do Render) e logs de DEBUG+ vao para arquivo rotativo
+(logs/orcaobra.log, max 5MB, 3 backups). Isso permite diagnosticar problemas
 em producao sem poluir a tela do usuario.
 
 Uso:
@@ -31,7 +31,7 @@ def _configurar():
     """Configura o logging global uma unica vez."""
     root = logging.getLogger()
     if root.handlers:
-        return  # ja configurado (evita duplicar em reloads do Streamlit)
+        return  # ja configurado (evita duplicar handlers em reloads)
 
     root.setLevel(logging.DEBUG)
 

@@ -42,7 +42,7 @@ def materiais(corpo: OrcamentoCalcularRequest) -> list[dict]:
 
 @router.post("/mao-de-obra", response_model=list[ItemOrcamento])
 def mao_de_obra(corpo: OrcamentoCalcularRequest) -> list[dict]:
-    return calcular_mao_de_obra(_dados_extracao(corpo), corpo.estrutura)
+    return calcular_mao_de_obra(_dados_extracao(corpo))
 
 
 @router.post("/gerar", response_model=OrcamentoGerarResponse)

@@ -8,9 +8,8 @@ function recalcularTotal(item: ItemOrcamento, precoUnit: number): ItemOrcamento 
 
 interface OrcamentoState {
   /** Serializa os inputs que definem os itens sugeridos (padrão, estrutura,
-   * áreas, parede, aberturas) -- equivalente à "assinatura" que o Streamlit
-   * usa hoje (core/ui_revisao.py) pra saber quando precisa re-sugerir
-   * materiais/mão de obra e descartar as edições de preço anteriores. */
+   * áreas, parede, aberturas) -- quando muda, re-sugere materiais/mão de
+   * obra e descarta as edições de preço anteriores. */
   assinatura: string | null
   materiais: ItemOrcamento[]
   maoDeObra: ItemOrcamento[]

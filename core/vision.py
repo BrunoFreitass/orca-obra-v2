@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import json
 import os
 import tempfile
@@ -19,6 +20,7 @@ from config import (
 from core import cache
 from core.image_processing import melhorar_imagem
 from core.logger import get_logger
+from core.models import CAMPOS_AGREGADOS
 from core.monitor_api import registrar_chamada
 from core.validacao import validar_area_total_planta
 
@@ -38,14 +40,9 @@ class ErroExtracaoAmigavel(Exception):
         self.detalhe_tecnico = detalhe_tecnico
 
 
-CAMPOS_AGREGADOS = (
-    "area_piso_seco", "area_piso_molhado", "area_piso_externo",
-    "metros_parede", "portas_internas", "portas_externas", "janelas",
-)
-
 # Fallback do bloco opcional "layout" (geometria) -- usado sempre que a
 # IA nao retornar layout, ou retornar em formato inesperado. O
-# orcamento nunca depende deste campo (ver CAMPOS_AGREGADOS acima),
+# orcamento nunca depende deste campo (ver CAMPOS_AGREGADOS em core/models.py),
 # entao "disponivel: False" e sempre um resultado seguro.
 LAYOUT_VAZIO = {
     "disponivel": False,
@@ -284,6 +281,12 @@ PROMPT_EXTRACAO = """
     }
     """
 
+# Entra na chave do cache da IA junto com GEMINI_MODEL: trocar de modelo
+# ou editar o prompt invalida as respostas antigas em vez de devolver
+# resultado velho.
+VERSAO_PROMPT_EXTRACAO = hashlib.sha256(PROMPT_EXTRACAO.encode("utf-8")).hexdigest()[:12]
+_CONTEXTO_CACHE = f"{GEMINI_MODEL}:{VERSAO_PROMPT_EXTRACAO}"
+
 # Prompt avulso usado só por gerar_layout_ilustrativo() -- pede a mesma
 # geometria do passo 8 de PROMPT_EXTRACAO, mas SEM a válvula de
 # segurança "disponivel: false" pra formato de prédio irregular: aqui a
@@ -352,10 +355,6 @@ PROMPT_LAYOUT_ILUSTRATIVO = """
         }
     }
     """
-
-
-def _montar_prompt():
-    return PROMPT_EXTRACAO
 
 
 def _numero_valido(valor):
@@ -692,12 +691,12 @@ def extrair_dados_da_planta(caminho_arquivo):
     # 2. Cache local: a mesma planta (mesmo arquivo) ja testada antes
     #    nao dispara uma nova chamada de API.
     if USE_CACHE:
-        resultado_em_cache = cache.buscar_cache(caminho_arquivo)
+        resultado_em_cache = cache.buscar_cache(caminho_arquivo, _CONTEXTO_CACHE)
         if resultado_em_cache is not None:
             _registrar_chamada_sem_falhar(status="CACHE", modelo=GEMINI_MODEL)
             return resultado_em_cache
 
-    dados = _chamar_gemini_e_obter_json(_montar_prompt(), caminho_arquivo)
+    dados = _chamar_gemini_e_obter_json(PROMPT_EXTRACAO, caminho_arquivo)
 
     # Defesa: garante que todos os 7 campos agregados existam e nunca
     # sejam None (a Gemini as vezes retorna null em vez de omitir).
@@ -740,10 +739,6 @@ def extrair_dados_da_planta(caminho_arquivo):
     dados = validar_area_total_planta(dados)
     dados = _normalizar_layout(dados)
 
-    for campo in CAMPOS_AGREGADOS:
-        if campo not in dados or dados[campo] is None:
-            dados[campo] = 0
-
     if "confianca" not in dados:
         dados["confianca"] = {}
     for campo in CAMPOS_AGREGADOS:
@@ -752,6 +747,6 @@ def extrair_dados_da_planta(caminho_arquivo):
         )
 
     if USE_CACHE:
-        cache.salvar_cache(caminho_arquivo, dados)
+        cache.salvar_cache(caminho_arquivo, dados, _CONTEXTO_CACHE)
 
     return dados
