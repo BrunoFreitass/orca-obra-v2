@@ -1,4 +1,5 @@
-from datetime import UTC, datetime
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import psycopg
 from psycopg.rows import dict_row
@@ -6,6 +7,10 @@ from psycopg.types.json import Jsonb
 
 import config
 from core.coeficientes import VERSAO_TABELA
+
+# data_criacao é texto exibido como hora local de RR. Registros antigos
+# (gravados em UTC) não são migrados.
+FUSO_OBRA = ZoneInfo("America/Boa_Vista")
 
 _COLUNAS_LISTAGEM = """
     id, data_criacao, nome_projeto, cliente, estado_uf, padrao, tipo_cobertura,
@@ -84,7 +89,7 @@ def salvar_orcamento(nome_projeto, estado_uf, padrao, tipo_cobertura,
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
         """, (
-            datetime.now(tz=UTC).strftime("%d/%m/%Y %H:%M"),
+            datetime.now(tz=FUSO_OBRA).strftime("%d/%m/%Y %H:%M"),
             nome_projeto, cliente or "", estado_uf, padrao, tipo_cobertura,
             area_piso, area_piso_seco, area_piso_molhado, area_piso_externo,
             metros_parede, portas_internas, portas_externas, janelas,

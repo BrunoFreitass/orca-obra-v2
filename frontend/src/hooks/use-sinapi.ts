@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
+import { recarregarOrcamentoComPrecosNovos } from '@/hooks/use-orcamento'
 import { apiPost, apiPostFormData } from '@/lib/api-client'
 import type { ItemPreco, SinapiImportarResponse } from '@/lib/types'
 
@@ -19,6 +20,9 @@ export function useAplicarSinapi() {
   return useMutation({
     mutationFn: ({ valores, mesRef }: { valores: Record<string, number>; mesRef: string }) =>
       apiPost<ItemPreco[]>('/sinapi/aplicar', { valores, mes_ref: mesRef }),
-    onSuccess: (itens) => queryClient.setQueryData(['precos'], itens),
+    onSuccess: (itens) => {
+      queryClient.setQueryData(['precos'], itens)
+      return recarregarOrcamentoComPrecosNovos(queryClient)
+    },
   })
 }

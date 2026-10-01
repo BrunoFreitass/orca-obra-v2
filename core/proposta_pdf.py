@@ -36,7 +36,7 @@ def gerar_pdf_proposta(dados_orcamento, output_path, nome_projeto,
                         estado_uf, padrao, tipo_cobertura, area_piso,
                         bdi_percentual=0, nome_empresa="OrçaObra AI",
                         contato="", registro="", caminho_logo="",
-                        cliente=""):
+                        cliente="", data_emissao=""):
     """Gera uma proposta comercial em PDF, com capa e tabela resumida
     (sem quantidade/preco unitario por item -- so os totais por
     servico/material), pensada pra ser enviada ao cliente final.
@@ -46,6 +46,9 @@ def gerar_pdf_proposta(dados_orcamento, output_path, nome_projeto,
     pra personalizar o documento em vez de sair sempre com a marca
     "OrçaObra AI". Todos opcionais -- se nao informados, o PDF sai
     com a marca padrao e sem essas linhas de contato.
+
+    data_emissao: data impressa na capa ("dd/mm/aaaa"). Ao regenerar pelo
+    historico, e a data de criacao do orcamento; vazio usa a data de hoje.
 
     Diferente do Excel (gerado por core/reporter.py), que mostra o
     detalhamento completo pra uso interno do profissional, o PDF e um
@@ -125,7 +128,7 @@ def gerar_pdf_proposta(dados_orcamento, output_path, nome_projeto,
         ["Projeto / Cliente:", nome_projeto],
     ]
     dados_capa.extend([
-        ["Data:", datetime.now(tz=UTC).strftime("%d/%m/%Y")],
+        ["Data:", data_emissao or datetime.now(tz=UTC).strftime("%d/%m/%Y")],
         ["Estado da Obra:", estado_uf],
         ["Padrão de Acabamento:", padrao],
         ["Tipo de Cobertura:", tipo_cobertura],

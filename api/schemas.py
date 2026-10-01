@@ -1,7 +1,9 @@
 """Espelhos pydantic dos modelos de core/models.py e respostas da API.
 Preenchido conforme cada fase liga suas rotas -- ver
 C:\\Users\\bruno\\.claude\\plans\\immutable-rolling-volcano.md."""
-from pydantic import BaseModel
+from typing import Literal
+
+from pydantic import BaseModel, Field
 
 
 class HealthResponse(BaseModel):
@@ -198,40 +200,48 @@ class ItemOrcamento(BaseModel):
 
     Tipo: str
     Material: str
-    Quantidade: float
-    Preco_Unit: float
+    Quantidade: float = Field(ge=0)
+    Preco_Unit: float = Field(ge=0)
+    # Recalculado no servidor em /api/orcamento/gerar -- o valor enviado
+    # pelo cliente é ignorado.
     Total: float
     Fase: str
 
 
+# Valores aceitos por core/coeficientes.py e core/calculator.py -- qualquer
+# outro dava KeyError (500) no cálculo.
+Padrao = Literal["Econômico", "Médio", "Alto Padrão"]
+Estrutura = Literal["Telhado", "Laje"]
+
+
 class OrcamentoCalcularRequest(BaseModel):
-    area_piso_seco: float = 0
-    area_piso_molhado: float = 0
-    area_piso_externo: float = 0
-    metros_parede: float = 0
-    portas_internas: int = 0
-    portas_externas: int = 0
-    janelas: int = 0
-    padrao: str
-    estrutura: str
+    area_piso_seco: float = Field(default=0, ge=0)
+    area_piso_molhado: float = Field(default=0, ge=0)
+    area_piso_externo: float = Field(default=0, ge=0)
+    metros_parede: float = Field(default=0, ge=0)
+    portas_internas: int = Field(default=0, ge=0)
+    portas_externas: int = Field(default=0, ge=0)
+    janelas: int = Field(default=0, ge=0)
+    padrao: Padrao
+    estrutura: Estrutura
 
 
 class OrcamentoGerarRequest(BaseModel):
     materiais: list[ItemOrcamento]
     mao_de_obra: list[ItemOrcamento]
-    bdi_percentual: float
-    nome_projeto: str
-    cliente: str = ""
-    padrao: str
-    estrutura: str
+    bdi_percentual: float = Field(ge=0, le=100)
+    nome_projeto: str = Field(max_length=200)
+    cliente: str = Field(default="", max_length=200)
+    padrao: Padrao
+    estrutura: Estrutura
     local_obra: str
-    area_piso_seco: float = 0
-    area_piso_molhado: float = 0
-    area_piso_externo: float = 0
-    metros_parede: float = 0
-    portas_internas: int = 0
-    portas_externas: int = 0
-    janelas: int = 0
+    area_piso_seco: float = Field(default=0, ge=0)
+    area_piso_molhado: float = Field(default=0, ge=0)
+    area_piso_externo: float = Field(default=0, ge=0)
+    metros_parede: float = Field(default=0, ge=0)
+    portas_internas: int = Field(default=0, ge=0)
+    portas_externas: int = Field(default=0, ge=0)
+    janelas: int = Field(default=0, ge=0)
 
 
 class OrcamentoGerarResponse(BaseModel):

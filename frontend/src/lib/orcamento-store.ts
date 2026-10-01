@@ -16,6 +16,9 @@ interface OrcamentoState {
   maoDeObra: ItemOrcamento[]
   bdi: number
   carregarSugeridos: (assinatura: string, materiais: ItemOrcamento[], maoDeObra: ItemOrcamento[]) => void
+  /** A assinatura não inclui preços: quando a tabela de preços muda, zera
+   * pra próxima carga de sugeridos substituir os itens com preço antigo. */
+  resetarAssinatura: () => void
   setPrecoMaterial: (index: number, precoUnit: number) => void
   setPrecoMaoDeObra: (index: number, precoUnit: number) => void
   setBdi: (bdi: number) => void
@@ -28,6 +31,7 @@ export const useOrcamentoStore = create<OrcamentoState>()((set) => ({
   bdi: 25,
   carregarSugeridos: (assinatura, materiais, maoDeObra) =>
     set((state) => (state.assinatura === assinatura ? {} : { assinatura, materiais, maoDeObra })),
+  resetarAssinatura: () => set({ assinatura: null }),
   setPrecoMaterial: (index, precoUnit) =>
     set((state) => ({
       materiais: state.materiais.map((item, i) => (i === index ? recalcularTotal(item, precoUnit) : item)),

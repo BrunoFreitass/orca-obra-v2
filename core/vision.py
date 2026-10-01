@@ -514,6 +514,15 @@ def _preparar_imagem(caminho_arquivo):
     return buffer.tobytes()
 
 
+def _registrar_chamada_sem_falhar(**kwargs):
+    """O monitor de cota é acessório: banco fora não pode derrubar uma
+    extração que o Gemini (ou o cache) já respondeu."""
+    try:
+        registrar_chamada(**kwargs)
+    except Exception as e:
+        logger.warning("Não foi possível registrar a chamada no monitor de cota: %s", e)
+
+
 def _chamar_gemini_com_uma_chave(chave, prompt, img_base64):
     """Faz a chamada a API com UMA chave especifica, com ate 3
     tentativas em caso de erro temporario (503 UNAVAILABLE).
@@ -546,19 +555,24 @@ def _chamar_gemini_com_uma_chave(chave, prompt, img_base64):
     espera_segundos = 5
 
     for tentativa in range(1, max_tentativas + 1):
+        # HTTP e parse do JSON separados: requests.JSONDecodeError herda de
+        # RequestException, então num try só a resposta não-JSON virava
+        # ERRO_DE_REDE.
         try:
             resposta = requests.post(url, json=payload, headers=headers, timeout=60)
-            resultado = resposta.json()
         except requests.exceptions.RequestException as e:
             if tentativa < max_tentativas:
                 time.sleep(espera_segundos)
                 continue
             return None, {"status": "ERRO_DE_REDE", "bruto": str(e)}
+
+        try:
+            resultado = resposta.json()
         except ValueError:
             if tentativa < max_tentativas:
                 time.sleep(espera_segundos)
                 continue
-            return None, {"status": "RESPOSTA_INVALIDA", "bruto": resposta.text[:500] if 'resposta' in dir() else ""}
+            return None, {"status": "RESPOSTA_INVALIDA", "bruto": resposta.text[:500]}
 
         if "candidates" in resultado:
             return resultado, None
@@ -570,8 +584,6 @@ def _chamar_gemini_com_uma_chave(chave, prompt, img_base64):
             continue
 
         return None, {"status": status_erro, "bruto": resultado}
-
-    return None, {"status": "UNAVAILABLE", "bruto": resultado}
 
 
 def _chamar_gemini_e_obter_json(prompt, caminho_arquivo):
@@ -599,7 +611,7 @@ def _chamar_gemini_e_obter_json(prompt, caminho_arquivo):
         if resultado is not None:
             duracao = int((time.time() - inicio) * 1000)
             logger.info("Extração OK — chave %d/%d, %dms", indice, len(GEMINI_API_KEYS), duracao)
-            registrar_chamada(
+            _registrar_chamada_sem_falhar(
                 status="OK",
                 modelo=GEMINI_MODEL,
                 chave_indice=indice,
@@ -613,7 +625,7 @@ def _chamar_gemini_e_obter_json(prompt, caminho_arquivo):
             erro.get("status") or "erro desconhecido",
         )
         erros_por_chave.append(f"Chave {indice}: {erro['status'] or 'erro desconhecido'}")
-        registrar_chamada(
+        _registrar_chamada_sem_falhar(
             status="ERRO",
             modelo=GEMINI_MODEL,
             chave_indice=indice,
@@ -682,7 +694,7 @@ def extrair_dados_da_planta(caminho_arquivo):
     if USE_CACHE:
         resultado_em_cache = cache.buscar_cache(caminho_arquivo)
         if resultado_em_cache is not None:
-            registrar_chamada(status="CACHE", modelo=GEMINI_MODEL)
+            _registrar_chamada_sem_falhar(status="CACHE", modelo=GEMINI_MODEL)
             return resultado_em_cache
 
     dados = _chamar_gemini_e_obter_json(_montar_prompt(), caminho_arquivo)
@@ -692,6 +704,14 @@ def extrair_dados_da_planta(caminho_arquivo):
     for campo in CAMPOS_AGREGADOS:
         if dados.get(campo) is None:
             dados[campo] = 0
+
+    # Defesa: confianca (e cada campo dela) precisa ser dict -- string,
+    # lista ou null davam AttributeError nos .get() abaixo. O que não for
+    # dict é descartado e recebe o default no fim da função.
+    confianca = dados.get("confianca")
+    if not isinstance(confianca, dict):
+        confianca = {}
+    dados["confianca"] = {campo: valor for campo, valor in confianca.items() if isinstance(valor, dict)}
 
     # ------------------------------------------------------------------
     # VALIDAÇÃO: marca confiança como baixa se metros de parede parecer

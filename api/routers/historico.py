@@ -89,6 +89,8 @@ def baixar_pdf(orcamento_id: int) -> FileResponse:
         registro=registro_str,
         caminho_logo=perfil["caminho_logo"],
         cliente=registro.get("cliente", "") or "",
+        # data_criacao é "dd/mm/aaaa HH:MM" -- a capa mostra só a data.
+        data_emissao=(registro.get("data_criacao") or "").split(" ")[0],
     )
 
     return FileResponse(

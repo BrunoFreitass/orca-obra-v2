@@ -27,6 +27,14 @@ def _dados_extracao(corpo) -> DadosExtracao:
     )
 
 
+def _com_total_recalculado(item: ItemOrcamento) -> dict:
+    """O cliente nunca define o Total: recalcula a partir de quantidade e
+    preço unitário, pra custo direto, histórico, Excel e PDF baterem."""
+    dados = item.model_dump()
+    dados["Total"] = round(item.Quantidade * item.Preco_Unit, 2)
+    return dados
+
+
 @router.post("/materiais", response_model=list[ItemOrcamento])
 def materiais(corpo: OrcamentoCalcularRequest) -> list[dict]:
     return calcular_materiais(_dados_extracao(corpo), corpo.padrao, corpo.estrutura)
@@ -46,8 +54,8 @@ def gerar(corpo: OrcamentoGerarRequest) -> dict:
         )
 
     orcamento_final = montar_orcamento_completo(
-        [item.model_dump() for item in corpo.materiais],
-        [item.model_dump() for item in corpo.mao_de_obra],
+        [_com_total_recalculado(item) for item in corpo.materiais],
+        [_com_total_recalculado(item) for item in corpo.mao_de_obra],
     )
     dados = _dados_extracao(corpo)
 
