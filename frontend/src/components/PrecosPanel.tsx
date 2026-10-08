@@ -41,7 +41,7 @@ export function PrecosPanel() {
       <ErroMutacao erro={importar.error} />
 
       {preview?.avisos.map((aviso, i) => (
-        <p key={i} className="text-[11px] text-warning">
+        <p key={i} className="text-xs text-warning">
           ⚠ {aviso}
         </p>
       ))}
@@ -68,7 +68,7 @@ export function PrecosPanel() {
 
       {overridesAtivos > 0 && (
         <>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {overridesAtivos} preço(s) customizado(s)
           </p>
           <Button

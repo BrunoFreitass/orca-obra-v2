@@ -71,7 +71,7 @@ export function Orcamento() {
   }
 
   return (
-    <div className="flex max-w-4xl flex-col gap-4">
+    <div className="flex w-full flex-col gap-4">
       <div>
         <h1 className="font-mono text-sm uppercase tracking-wider text-muted-foreground">Orçamento</h1>
         <p className="text-sm text-muted-foreground">
@@ -101,17 +101,17 @@ export function Orcamento() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="border border-border p-3">
-          <p className="text-[11px] uppercase text-muted-foreground">Custo Direto</p>
+          <p className="text-xs uppercase text-muted-foreground">Custo Direto</p>
           <p className="mt-1 font-mono font-medium">{formatarMoeda(custoDireto)}</p>
         </div>
         <div className="border border-border p-3">
-          <p className="text-[11px] uppercase text-muted-foreground">BDI</p>
+          <p className="text-xs uppercase text-muted-foreground">BDI</p>
           <p className="mt-1 font-mono font-medium">{bdi.toFixed(0)}%</p>
         </div>
         <div className="border border-success/40 bg-success/10 p-3">
-          <p className="text-[11px] uppercase text-muted-foreground">Preço de Venda</p>
+          <p className="text-xs uppercase text-muted-foreground">Preço de Venda</p>
           <p className="mt-1 font-mono font-medium text-success">{formatarMoeda(precoVenda)}</p>
         </div>
       </div>
@@ -142,7 +142,7 @@ export function Orcamento() {
       {gerar.data && (
         <div className="flex flex-col gap-2 border border-success/40 bg-success/10 p-3">
           <p className="text-sm text-success">✅ Orçamento gerado com sucesso!</p>
-          <div className="grid grid-cols-4 gap-3 font-mono text-xs">
+          <div className="grid grid-cols-2 gap-3 font-mono text-xs sm:grid-cols-4">
             <div>
               <div className="text-muted-foreground">Área Total</div>
               <div className="font-medium">

@@ -43,7 +43,7 @@ export function PerfilPanel() {
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+      <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
         Sua Empresa
       </p>
 
@@ -113,7 +113,7 @@ export function PerfilPanel() {
           Logo (PNG/JPG)
         </Label>
         {perfil?.caminho_logo && (
-          <p className="truncate text-[11px] text-muted-foreground">
+          <p className="truncate text-xs text-muted-foreground">
             Atual: {perfil.caminho_logo.split(/[/\\]/).pop()}
           </p>
         )}
@@ -138,7 +138,7 @@ export function PerfilPanel() {
       >
         {salvar.isPending ? 'Salvando…' : 'Salvar dados da empresa'}
       </Button>
-      {salvar.isSuccess && <p className="text-[11px] text-success">Salvo.</p>}
+      {salvar.isSuccess && <p className="text-xs text-success">Salvo.</p>}
       <ErroMutacao erro={salvar.error} />
     </div>
   )

@@ -71,7 +71,7 @@ export function Revisao() {
   }
 
   return (
-    <div className="flex max-w-3xl flex-col gap-4">
+    <div className="flex w-full flex-col gap-4">
       <div>
         <h1 className="font-mono text-sm uppercase tracking-wider text-muted-foreground">
           Revisão dos Dados Extraídos
@@ -89,17 +89,17 @@ export function Revisao() {
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="border border-border p-3">
-          <p className="text-[11px] uppercase text-muted-foreground">Padrão selecionado</p>
+          <p className="text-xs uppercase text-muted-foreground">Padrão selecionado</p>
           <p className="mt-1 font-medium">{padrao}</p>
         </div>
         <div className="border border-border p-3">
-          <p className="text-[11px] uppercase text-muted-foreground">Cobertura</p>
+          <p className="text-xs uppercase text-muted-foreground">Cobertura</p>
           <p className="mt-1 font-medium">{estrutura}</p>
         </div>
         <div className="border border-border p-3">
-          <p className="text-[11px] uppercase text-muted-foreground">Local da obra</p>
+          <p className="text-xs uppercase text-muted-foreground">Local da obra</p>
           <p className="mt-1 font-medium">{LOCAL_OBRA}</p>
         </div>
       </div>
@@ -107,7 +107,7 @@ export function Revisao() {
       {confirmado && (
         <div className="flex flex-col gap-2 border border-success/40 bg-success/10 p-3">
           <p className="text-sm text-success">✅ Dados confirmados. Revise abaixo se necessário.</p>
-          <div className="grid grid-cols-4 gap-3 font-mono text-xs">
+          <div className="grid grid-cols-2 gap-3 font-mono text-xs sm:grid-cols-4">
             <div>
               <div className="text-muted-foreground">Área Total</div>
               <div className="font-medium">{avaliacao?.area_piso_total.toFixed(1) ?? '—'} m²</div>
@@ -134,7 +134,7 @@ export function Revisao() {
       <div className="flex flex-col gap-3">
         <div className="border border-border p-3">
           <p className="mb-2 text-xs font-medium">🏠 Áreas de Piso (m²)</p>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <CampoNumerico label="Área Seca" campo="area_piso_seco" ajuda="Sala, quartos, cozinha, corredores" />
             <CampoNumerico label="Área Molhada" campo="area_piso_molhado" ajuda="Banheiros, área de serviço" />
             <CampoNumerico label="Área Externa" campo="area_piso_externo" ajuda="Varanda, garagem" />
@@ -151,7 +151,7 @@ export function Revisao() {
 
         <div className="border border-border p-3">
           <p className="mb-2 text-xs font-medium">🚪 Aberturas (unidades)</p>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <CampoNumerico label="Portas Internas" campo="portas_internas" />
             <CampoNumerico label="Portas Externas" campo="portas_externas" />
             <CampoNumerico label="Janelas" campo="janelas" />

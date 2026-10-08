@@ -10,7 +10,7 @@ export function BadgeConfianca({ info }: { info: ConfiancaCampo | undefined }) {
   const nivel = info?.nivel ?? 'media'
   const visual = VISUAL[nivel] ?? VISUAL.media
   return (
-    <p className="text-[11px] text-muted-foreground">
+    <p className="text-xs text-muted-foreground">
       {visual.emoji} {visual.label}
       {info?.motivo ? ` — ${info.motivo}` : ''}
     </p>
