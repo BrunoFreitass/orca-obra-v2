@@ -1,32 +1,26 @@
-# React + TypeScript + Vite
+# OrçaObra AI — frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React 19 + Vite + TypeScript, com Tailwind, componentes shadcn/ui (Radix),
+TanStack Query para as chamadas à API e Zustand para o estado da sessão.
 
-Currently, two official plugins are available:
+## Comandos
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm ci           # instala dependências
+npm run dev      # servidor de desenvolvimento em http://localhost:5173
+npm run lint     # oxlint
+npm run build    # checagem de tipos (tsc) + build de produção em dist/
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Em desenvolvimento, `/api` é encaminhado para o backend em `http://localhost:8010`
+(ver `vite.config.ts`). Em produção, o `dist/` é servido pela própria API
+(`api/main.py`), na mesma origem.
+
+## Estrutura
+
+- `src/routes/`: telas (início/histórico, revisão dos dados extraídos, orçamento).
+- `src/components/`: painéis da sidebar (planta, projeto, perfil, preços, SINAPI) e componentes de UI.
+- `src/hooks/`: uma hook por recurso da API (TanStack Query).
+- `src/lib/`: cliente HTTP (`api-client.ts`), stores Zustand e tipos espelhando `api/schemas.py`.
+
+Como rodar o projeto inteiro e configurar as variáveis de ambiente: veja o `README.md` na raiz.

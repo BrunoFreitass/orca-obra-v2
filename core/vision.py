@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import json
 import os
 import tempfile
@@ -11,18 +12,16 @@ from config import (
     DADOS_MOCK,
     GEMINI_API_KEYS,
     GEMINI_MODEL,
-    LARGURA_JANELA_PADRAO_M,
-    LARGURA_PORTA_PADRAO_M,
     MOCK_AI,
     USE_CACHE,
 )
 from core import cache
 from core.image_processing import melhorar_imagem
 from core.logger import get_logger
-from core.monitor_api import inicializar_tabela_monitor, registrar_chamada
+from core.models import CAMPOS_AGREGADOS
+from core.monitor_api import registrar_chamada
 from core.validacao import validar_area_total_planta
 
-inicializar_tabela_monitor()
 logger = get_logger(__name__)
 
 
@@ -38,35 +37,6 @@ class ErroExtracaoAmigavel(Exception):
         self.mensagem_amigavel = mensagem
         self.detalhe_tecnico = detalhe_tecnico
 
-
-CAMPOS_AGREGADOS = (
-    "area_piso_seco", "area_piso_molhado", "area_piso_externo",
-    "metros_parede", "portas_internas", "portas_externas", "janelas",
-)
-
-# Fallback do bloco opcional "layout" (geometria) -- usado sempre que a
-# IA nao retornar layout, ou retornar em formato inesperado. O
-# orcamento nunca depende deste campo (ver CAMPOS_AGREGADOS acima),
-# entao "disponivel: False" e sempre um resultado seguro.
-LAYOUT_VAZIO = {
-    "disponivel": False,
-    "motivo_indisponivel": "",
-    "comodos": [],
-    "paredes": [],
-    "aberturas": [],
-}
-
-# O limiar de "mais de 10 comodos" no passo 8 do PROMPT_EXTRACAO (e no
-# passo equivalente de PROMPT_LAYOUT_ILUSTRATIVO) e uma estimativa
-# inicial, nao um valor validado extensivamente -- baseada em 1 caso
-# real (planta "Casa Bruno", 15 comodos) que falhou de 3 formas
-# diferentes em 3 chamadas reais (recusa com um motivo, recusa com
-# outro motivo, "disponivel: true" com paredes/aberturas vazias). O
-# objetivo aqui e trocar recusa inconsistente por recusa previsivel,
-# nao achar o numero "certo" -- pode precisar de ajuste (pra cima ou
-# pra baixo) conforme mais plantas reais passarem por isso.
-TIPOS_PISO_VALIDOS = {"seco", "molhado", "externo"}
-TIPOS_ABERTURA_VALIDOS = {"porta_interna", "porta_externa", "janela"}
 
 PROMPT_EXTRACAO = """
     Analise esta imagem de planta baixa de engenharia/arquitetura.
@@ -131,80 +101,10 @@ PROMPT_EXTRACAO = """
        com a soma dos comodos, nao confunda com ela. Se a planta nao
        declarar nenhum total explicito, retorne area_total_planta
        como 0.
-    8. GEOMETRIA (opcional -- só preencha se estiver confiante):
-       LIMITE DE COMPLEXIDADE (verifique ANTES de tentar qualquer coisa
-       abaixo): se voce ja identificou MAIS DE 10 comodos/ambientes
-       distintos nesta planta (contando os do passo 3, acima), NAO tente
-       gerar paredes e aberturas -- retorne imediatamente "disponivel":
-       false com "motivo_indisponivel": "Pré-visualização 3D ainda não
-       suportada para plantas com mais de 10 ambientes." Isso vale mesmo
-       que voce ache que consegue -- e melhor recusar de forma limpa e
-       previsivel do que arriscar geometria incompleta (paredes/aberturas
-       vazias) ou malformada (comodos sobrepostos). Plantas com 10
-       comodos ou menos seguem o processo normal abaixo.
-
-       Tente montar um layout aproximado da planta, reaproveitando o
-       raciocinio comodo-por-comodo que voce ja fez acima:
-       (a) Para cada comodo, estime um retangulo que o represente
-           (posicao x,y do canto inferior-esquerdo + largura +
-           comprimento), num sistema de coordenadas relativo em
-           metros que voce mesmo define (ex: comodo 1 comeca em
-           x=0,y=0). Os retangulos devem se encaixar entre si sem
-           sobrepor, respeitando a posicao relativa real dos comodos
-           na planta.
-       (b) Liste os segmentos de parede como dois pontos extremos
-           (x1,y1)-(x2,y2), reaproveitando os retangulos dos comodos
-           -- paredes compartilhadas entre dois comodos aparecem uma
-           unica vez, igual voce ja faz no passo 4.
-       (c) Para cada porta/janela, informe a qual parede ela pertence
-           (indice na lista de paredes) e a posicao proporcional ao
-           longo dela -- 0.0 significa "na extremidade (x1,y1) dessa
-           parede", 1.0 significa "na extremidade (x2,y2)", e valores
-           intermediarios interpolam linearmente entre as duas. Use
-           sempre a ordem (x1,y1)->(x2,y2) tal como voce mesmo listou
-           essa parede no passo (b) -- nao inverta o sentido. Informe
-           tambem "largura_m" (largura real do vao, em metros): se a
-           planta tiver um Quadro de Esquadrias ou cota explicita pra
-           aquela porta/janela (ex: "P4 = 1,60m"), USE esse numero
-           diretamente -- e a MESMA logica de "leitura direta" do
-           passo 3a. Se nao houver cota explicita, estime por
-           proporcao visual em relacao as cotas que voce ja tem na
-           planta -- e a MESMA logica de "estimativa por calculo" do
-           passo 3b. Isso nao muda o sistema de confianca agregado (7
-           variaveis do passo acima) -- e so mais um dado da geometria
-           opcional.
-       ATENCAO -- ERRO COMUM A EVITAR: o contorno GERAL do terreno ou
-       do predio ser em L, em U, ou irregular NAO E MOTIVO PRA
-       RECUSAR a geometria. Isso e normal e esperado na maioria das
-       casas reais, e nao impede montar o layout. Exemplo concreto:
-       uma casa com contorno em L, onde a "reentrancia" do L e area
-       externa (quintal, piscina, jardim) e todos os comodos internos
-       sao retangulares -- esse caso e FACIL e voce DEVE montar a
-       geometria normalmente: cada comodo vira um retangulo, e a
-       reentrancia do L simplesmente fica sem nenhum retangulo ali
-       (nao sobra nem falta nada, o "buraco" do L e so o espaco vazio
-       entre os retangulos dos comodos). Voce NUNCA precisa desenhar
-       o contorno externo do predio como forma unica -- so os
-       comodos, um a um.
-       So retorne "disponivel": false na situacao rara em que um
-       COMODO INDIVIDUAL (nao o predio inteiro) tem parede angulada,
-       curva, ou formato que um unico retangulo realmente nao
-       representa (ex: um comodo com um canto cortado em diagonal).
-       "A casa/planta tem formato em L" sozinho NUNCA e motivo valido
-       para "motivo_indisponivel" -- se voce pensar em escrever algo
-       assim, pare e verifique se e so o contorno externo (que nao
-       importa) e nao um comodo especifico de verdade.
-       Se, mesmo assim, nenhum comodo individual puder ser
-       representado, deixe as 3 listas vazias e explique o motivo
-       citando o comodo especifico (ex: "closet tem parede diagonal
-       cortando o canto, retangulo simples nao representa bem"). E
-       preferivel nao desenhar do que desenhar errado, mas o objetivo
-       e SEMPRE tentar primeiro.
 
     Depois de percorrer todos os comodos, SOME os resultados nas
     seguintes 7 variaveis agregadas (essas sao as 7 variaveis
-    OBRIGATORIAS do JSON final; a geometria do passo 8 e um bloco
-    ADICIONAL e opcional, explicado abaixo):
+    OBRIGATORIAS do JSON final):
     - area_piso_seco: soma da area de todos os comodos "seco"
     - area_piso_molhado: soma da area de todos os comodos "molhado"
     - area_piso_externo: soma da area de todos os comodos "externo"
@@ -242,13 +142,6 @@ PROMPT_EXTRACAO = """
     area de 12m2 escrita no banheiro" para alta, ou "area calculada
     multiplicando cotas lineares de 3,85 x 2,70" para media).
 
-    O campo "layout" abaixo e ADICIONAL e nao deve alterar de forma
-    alguma os 7 campos agregados acima nem a logica usada pra
-    calcula-los -- eles continuam sendo a fonte oficial do orcamento.
-    Se voce nao tiver montado a geometria do passo 8, retorne
-    "disponivel": false com as 3 listas vazias -- nunca omita o campo
-    "layout" inteiro.
-
     Retorne estritamente um JSON valido com a estrutura abaixo, sem
     textos adicionais, explicacoes ou marcacoes de markdown -- so o JSON:
     {
@@ -268,203 +161,15 @@ PROMPT_EXTRACAO = """
             "portas_internas": {"nivel": "alta|media|baixa", "motivo": "<string curta>"},
             "portas_externas": {"nivel": "alta|media|baixa", "motivo": "<string curta>"},
             "janelas": {"nivel": "alta|media|baixa", "motivo": "<string curta>"}
-        },
-        "layout": {
-            "disponivel": <bool>,
-            "motivo_indisponivel": "<string curta, so quando disponivel=false>",
-            "comodos": [
-                {"nome": "<string>", "tipo_piso": "seco|molhado|externo", "x": <float>, "y": <float>, "largura": <float>, "comprimento": <float>}
-            ],
-            "paredes": [
-                {"x1": <float>, "y1": <float>, "x2": <float>, "y2": <float>}
-            ],
-            "aberturas": [
-                {"tipo": "porta_interna|porta_externa|janela", "parede_index": <int>, "posicao": <float 0.0-1.0>, "largura_m": <float>}
-            ]
         }
     }
     """
 
-# Prompt avulso usado só por gerar_layout_ilustrativo() -- pede a mesma
-# geometria do passo 8 de PROMPT_EXTRACAO, mas SEM a válvula de
-# segurança "disponivel: false" pra formato de prédio irregular: aqui a
-# IA deve sempre tentar produzir uma aproximação, mesmo com baixa
-# confiança, porque o resultado é claramente rotulado como ilustrativo
-# no frontend e nunca alimenta o orçamento. Deliberadamente SEM o
-# limiar de "mais de 10 comodos" de PROMPT_EXTRACAO -- este fallback
-# existe justamente pra cobrir os casos que a extração oficial recusa,
-# então capá-lo com o mesmo limite deixaria plantas grandes/complexas
-# sem nenhum caminho de visualização 3D.
-PROMPT_LAYOUT_ILUSTRATIVO = """
-    Analise esta imagem de planta baixa de engenharia/arquitetura e monte
-    uma geometria aproximada e ILUSTRATIVA dos comodos, paredes e
-    aberturas -- essa geometria e so pra o usuario visualizar uma maquete
-    3D aproximada da planta, NAO alimenta nenhum calculo de orcamento.
-    Por isso, VOCE DEVE SEMPRE tentar montar um layout, mesmo com baixa
-    confianca -- e sempre melhor uma maquete aproximada do que nenhuma.
-
-    Raciocine comodo por comodo (nao inclua esse raciocinio na resposta
-    final, so o JSON):
-    (a) Liste cada comodo visivel na planta e classifique o tipo de piso:
-        "seco" (sala, quarto, cozinha, corredor), "molhado" (banheiro,
-        area de servico, lavabo), ou "externo" (varanda, garagem, quintal
-        coberto).
-    (b) Para cada comodo, estime um retangulo que o represente (posicao
-        x,y do canto inferior-esquerdo + largura + comprimento), num
-        sistema de coordenadas relativo em metros que voce mesmo define.
-        Os retangulos devem se encaixar entre si sem sobrepor, respeitando
-        a posicao relativa real dos comodos na planta. O contorno GERAL do
-        predio/terreno pode ser irregular (em L, em U, etc) sem problema
-        nenhum -- areas externas abertas sem comodo (quintal, piscina,
-        jardim) simplesmente ficam sem retangulo, ocupando o espaco vazio
-        entre os comodos.
-    (c) Liste os segmentos de parede como dois pontos extremos
-        (x1,y1)-(x2,y2) -- paredes compartilhadas entre dois comodos
-        aparecem uma unica vez.
-    (d) Para cada porta/janela, informe a qual parede ela pertence
-        (indice na lista de paredes) e a posicao proporcional ao longo
-        dela (0.0 a 1.0, na ordem (x1,y1)->(x2,y2) que voce listou essa
-        parede em (c)). Informe tambem "largura_m" (largura real do
-        vao, em metros): use a cota do Quadro de Esquadrias quando
-        existir (leitura direta), ou estime por proporcao visual
-        quando nao existir (estimativa) -- mesma logica do passo 3
-        de PROMPT_EXTRACAO, sem afetar nenhum calculo de orcamento.
-
-    So retorne "disponivel": false se a imagem estiver ilegivel demais
-    pra sequer identificar os comodos (ex: resolucao extrema baixa,
-    cortada, ou nao e uma planta baixa de verdade) -- fora isso, SEMPRE
-    monte a melhor aproximacao possivel, mesmo que nao seja perfeita.
-
-    Retorne estritamente um JSON valido com a estrutura abaixo, sem
-    textos adicionais, explicacoes ou marcacoes de markdown -- so o JSON:
-    {
-        "layout": {
-            "disponivel": <bool>,
-            "motivo_indisponivel": "<string curta, so quando disponivel=false>",
-            "comodos": [
-                {"nome": "<string>", "tipo_piso": "seco|molhado|externo", "x": <float>, "y": <float>, "largura": <float>, "comprimento": <float>}
-            ],
-            "paredes": [
-                {"x1": <float>, "y1": <float>, "x2": <float>, "y2": <float>}
-            ],
-            "aberturas": [
-                {"tipo": "porta_interna|porta_externa|janela", "parede_index": <int>, "posicao": <float 0.0-1.0>, "largura_m": <float>}
-            ]
-        }
-    }
-    """
-
-
-def _montar_prompt():
-    return PROMPT_EXTRACAO
-
-
-def _numero_valido(valor):
-    return isinstance(valor, (int, float)) and not isinstance(valor, bool)
-
-
-def _comodo_valido(comodo):
-    if not isinstance(comodo, dict) or comodo.get("tipo_piso") not in TIPOS_PISO_VALIDOS:
-        return False
-    if not all(_numero_valido(comodo.get(campo)) for campo in ("x", "y", "largura", "comprimento")):
-        return False
-    return comodo["largura"] > 0 and comodo["comprimento"] > 0
-
-
-def _parede_valida(parede):
-    if not isinstance(parede, dict):
-        return False
-    return all(_numero_valido(parede.get(campo)) for campo in ("x1", "y1", "x2", "y2"))
-
-
-def _abertura_valida(abertura, total_paredes):
-    if not isinstance(abertura, dict) or abertura.get("tipo") not in TIPOS_ABERTURA_VALIDOS:
-        return False
-    indice = abertura.get("parede_index")
-    if not isinstance(indice, int) or isinstance(indice, bool) or not (0 <= indice < total_paredes):
-        return False
-    posicao = abertura.get("posicao")
-    return _numero_valido(posicao) and 0 <= posicao <= 1
-
-
-LARGURA_ABERTURA_MIN_M = 0.3
-LARGURA_ABERTURA_MAX_M = 6.0
-
-
-def _largura_abertura_valida(valor):
-    return _numero_valido(valor) and LARGURA_ABERTURA_MIN_M <= valor <= LARGURA_ABERTURA_MAX_M
-
-
-def _normalizar_largura_abertura(abertura):
-    """largura_m segue uma regra DIFERENTE das outras validacoes de
-    abertura acima (_abertura_valida): ausente ou fora da faixa
-    plausivel NAO derruba o layout inteiro nem descarta a abertura --
-    so cai num padrao por tipo. Motivo: tipo/parede_index/posicao sao
-    estruturais (sem eles a abertura nem faz sentido geometrico), mas
-    largura_m e so um dado visual a mais que a IA pode nao estimar bem
-    numa planta especifica -- nao vale jogar fora uma porta/janela que
-    esta correta em tudo o resto por causa so desse campo."""
-    largura = abertura.get("largura_m")
-    if _largura_abertura_valida(largura):
-        return {**abertura, "largura_m": largura}
-    padrao = LARGURA_JANELA_PADRAO_M if abertura["tipo"] == "janela" else LARGURA_PORTA_PADRAO_M
-    return {**abertura, "largura_m": padrao}
-
-
-def _layout_com_fallback(motivo=""):
-    layout = dict(LAYOUT_VAZIO)
-    layout["motivo_indisponivel"] = motivo
-    return layout
-
-
-def _normalizar_layout(dados):
-    """Valida o bloco opcional 'layout' (geometria) retornado pela IA
-    (ver passo 8 de PROMPT_EXTRACAO). Qualquer formato inesperado --
-    campo ausente, tipos errados, comodo sem largura, abertura
-    apontando pra parede inexistente, posicao fora de 0-1 etc. -- cai
-    em fallback seguro (disponivel: False, listas vazias) em vez de
-    propagar dado malformado pro frontend. Nunca lanca excecao: o
-    orcamento nao depende deste campo (ver CAMPOS_AGREGADOS)."""
-    layout = dados.get("layout")
-
-    if not isinstance(layout, dict) or not layout.get("disponivel"):
-        motivo = ""
-        if isinstance(layout, dict) and layout.get("motivo_indisponivel"):
-            motivo = str(layout["motivo_indisponivel"])
-        dados["layout"] = _layout_com_fallback(motivo)
-        return dados
-
-    comodos = layout.get("comodos")
-    paredes = layout.get("paredes")
-    aberturas = layout.get("aberturas")
-
-    if not isinstance(comodos, list) or not isinstance(paredes, list) or not isinstance(aberturas, list):
-        dados["layout"] = _layout_com_fallback("Formato de layout inesperado retornado pela IA.")
-        return dados
-
-    if not comodos or not paredes:
-        dados["layout"] = _layout_com_fallback("IA não retornou cômodos/paredes suficientes.")
-        return dados
-
-    if not all(_comodo_valido(c) for c in comodos) or not all(_parede_valida(p) for p in paredes):
-        dados["layout"] = _layout_com_fallback("Geometria de cômodo/parede incompleta ou inválida.")
-        return dados
-
-    if not all(_abertura_valida(a, len(paredes)) for a in aberturas):
-        dados["layout"] = _layout_com_fallback("Abertura inválida (parede inexistente ou posição fora de 0-1).")
-        return dados
-
-    aberturas = [_normalizar_largura_abertura(a) for a in aberturas]
-
-    dados["layout"] = {
-        "disponivel": True,
-        "motivo_indisponivel": "",
-        "comodos": comodos,
-        "paredes": paredes,
-        "aberturas": aberturas,
-    }
-    return dados
-
+# Entra na chave do cache da IA junto com GEMINI_MODEL: trocar de modelo
+# ou editar o prompt invalida as respostas antigas em vez de devolver
+# resultado velho.
+VERSAO_PROMPT_EXTRACAO = hashlib.sha256(PROMPT_EXTRACAO.encode("utf-8")).hexdigest()[:12]
+_CONTEXTO_CACHE = f"{GEMINI_MODEL}:{VERSAO_PROMPT_EXTRACAO}"
 
 def _redimensionar_para_max(imagem_cv, max_dim=1024):
     """Reduz a imagem para que o lado maior tenha no máximo max_dim pixels.
@@ -515,6 +220,15 @@ def _preparar_imagem(caminho_arquivo):
     return buffer.tobytes()
 
 
+def _registrar_chamada_sem_falhar(**kwargs):
+    """O monitor de cota é acessório: banco fora não pode derrubar uma
+    extração que o Gemini (ou o cache) já respondeu."""
+    try:
+        registrar_chamada(**kwargs)
+    except Exception as e:
+        logger.warning("Não foi possível registrar a chamada no monitor de cota: %s", e)
+
+
 def _chamar_gemini_com_uma_chave(chave, prompt, img_base64):
     """Faz a chamada a API com UMA chave especifica, com ate 3
     tentativas em caso de erro temporario (503 UNAVAILABLE).
@@ -526,7 +240,7 @@ def _chamar_gemini_com_uma_chave(chave, prompt, img_base64):
     """
     url = (
         "https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{GEMINI_MODEL}:generateContent?key={chave}"
+        f"{GEMINI_MODEL}:generateContent"
     )
     payload = {
         "contents": [
@@ -539,25 +253,32 @@ def _chamar_gemini_com_uma_chave(chave, prompt, img_base64):
         ],
         "generationConfig": {"responseMimeType": "application/json"},
     }
-    headers = {"Content-Type": "application/json"}
+    # Chave no header (nao na URL) pra nao vazar em logs nem em
+    # mensagens de excecao do requests, que incluem a URL.
+    headers = {"Content-Type": "application/json", "x-goog-api-key": chave}
 
     max_tentativas = 3
     espera_segundos = 5
 
     for tentativa in range(1, max_tentativas + 1):
+        # HTTP e parse do JSON separados: requests.JSONDecodeError herda de
+        # RequestException, então num try só a resposta não-JSON virava
+        # ERRO_DE_REDE.
         try:
             resposta = requests.post(url, json=payload, headers=headers, timeout=60)
-            resultado = resposta.json()
         except requests.exceptions.RequestException as e:
             if tentativa < max_tentativas:
                 time.sleep(espera_segundos)
                 continue
             return None, {"status": "ERRO_DE_REDE", "bruto": str(e)}
+
+        try:
+            resultado = resposta.json()
         except ValueError:
             if tentativa < max_tentativas:
                 time.sleep(espera_segundos)
                 continue
-            return None, {"status": "RESPOSTA_INVALIDA", "bruto": resposta.text[:500] if 'resposta' in dir() else ""}
+            return None, {"status": "RESPOSTA_INVALIDA", "bruto": resposta.text[:500]}
 
         if "candidates" in resultado:
             return resultado, None
@@ -570,15 +291,11 @@ def _chamar_gemini_com_uma_chave(chave, prompt, img_base64):
 
         return None, {"status": status_erro, "bruto": resultado}
 
-    return None, {"status": "UNAVAILABLE", "bruto": resultado}
-
 
 def _chamar_gemini_e_obter_json(prompt, caminho_arquivo):
     """Prepara a imagem, tenta cada chave configurada em GEMINI_API_KEYS
     (com retentativas por chave, ver _chamar_gemini_com_uma_chave), e
-    devolve o JSON já parseado da resposta. Compartilhado entre a
-    extração oficial (extrair_dados_da_planta) e a geometria ilustrativa
-    avulsa (gerar_layout_ilustrativo) -- ambas so diferem no prompt."""
+    devolve o JSON já parseado da resposta."""
     if not GEMINI_API_KEYS:
         raise ErroExtracaoAmigavel(
             "Nenhuma chave da API do Gemini está configurada. Defina "
@@ -598,7 +315,7 @@ def _chamar_gemini_e_obter_json(prompt, caminho_arquivo):
         if resultado is not None:
             duracao = int((time.time() - inicio) * 1000)
             logger.info("Extração OK — chave %d/%d, %dms", indice, len(GEMINI_API_KEYS), duracao)
-            registrar_chamada(
+            _registrar_chamada_sem_falhar(
                 status="OK",
                 modelo=GEMINI_MODEL,
                 chave_indice=indice,
@@ -612,7 +329,7 @@ def _chamar_gemini_e_obter_json(prompt, caminho_arquivo):
             erro.get("status") or "erro desconhecido",
         )
         erros_por_chave.append(f"Chave {indice}: {erro['status'] or 'erro desconhecido'}")
-        registrar_chamada(
+        _registrar_chamada_sem_falhar(
             status="ERRO",
             modelo=GEMINI_MODEL,
             chave_indice=indice,
@@ -653,24 +370,6 @@ def _chamar_gemini_e_obter_json(prompt, caminho_arquivo):
         )
 
 
-def gerar_layout_ilustrativo(caminho_arquivo):
-    """Gera uma geometria 3D aproximada e ILUSTRATIVA pra pré-visualização,
-    usando um prompt sem a válvula de segurança do passo 8 de
-    PROMPT_EXTRACAO -- a IA é instruída a SEMPRE tentar montar um layout,
-    mesmo com baixa confiança. Isso é acionado sob demanda (botão no
-    frontend) só quando a extração oficial já recusou a geometria.
-
-    NUNCA alimenta CAMPOS_AGREGADOS nem qualquer cálculo de orçamento --
-    só a pré-visualização opcional. O resultado deve ser exibido no
-    frontend com um aviso claro de que é aproximado/não verificado."""
-    if MOCK_AI:
-        return DADOS_MOCK["layout"]
-
-    dados = _chamar_gemini_e_obter_json(PROMPT_LAYOUT_ILUSTRATIVO, caminho_arquivo)
-    dados_normalizados = _normalizar_layout({"layout": dados.get("layout")})
-    return dados_normalizados["layout"]
-
-
 def extrair_dados_da_planta(caminho_arquivo):
     # 1. Modo mock: nao gasta nenhuma chamada de API.
     if MOCK_AI:
@@ -679,18 +378,26 @@ def extrair_dados_da_planta(caminho_arquivo):
     # 2. Cache local: a mesma planta (mesmo arquivo) ja testada antes
     #    nao dispara uma nova chamada de API.
     if USE_CACHE:
-        resultado_em_cache = cache.buscar_cache(caminho_arquivo)
+        resultado_em_cache = cache.buscar_cache(caminho_arquivo, _CONTEXTO_CACHE)
         if resultado_em_cache is not None:
-            registrar_chamada(status="CACHE", modelo=GEMINI_MODEL)
+            _registrar_chamada_sem_falhar(status="CACHE", modelo=GEMINI_MODEL)
             return resultado_em_cache
 
-    dados = _chamar_gemini_e_obter_json(_montar_prompt(), caminho_arquivo)
+    dados = _chamar_gemini_e_obter_json(PROMPT_EXTRACAO, caminho_arquivo)
 
     # Defesa: garante que todos os 7 campos agregados existam e nunca
     # sejam None (a Gemini as vezes retorna null em vez de omitir).
     for campo in CAMPOS_AGREGADOS:
         if dados.get(campo) is None:
             dados[campo] = 0
+
+    # Defesa: confianca (e cada campo dela) precisa ser dict -- string,
+    # lista ou null davam AttributeError nos .get() abaixo. O que não for
+    # dict é descartado e recebe o default no fim da função.
+    confianca = dados.get("confianca")
+    if not isinstance(confianca, dict):
+        confianca = {}
+    dados["confianca"] = {campo: valor for campo, valor in confianca.items() if isinstance(valor, dict)}
 
     # ------------------------------------------------------------------
     # VALIDAÇÃO: marca confiança como baixa se metros de parede parecer
@@ -717,11 +424,6 @@ def extrair_dados_da_planta(caminho_arquivo):
     # ------------------------------------------------------------------
 
     dados = validar_area_total_planta(dados)
-    dados = _normalizar_layout(dados)
-
-    for campo in CAMPOS_AGREGADOS:
-        if campo not in dados or dados[campo] is None:
-            dados[campo] = 0
 
     if "confianca" not in dados:
         dados["confianca"] = {}
@@ -731,6 +433,6 @@ def extrair_dados_da_planta(caminho_arquivo):
         )
 
     if USE_CACHE:
-        cache.salvar_cache(caminho_arquivo, dados)
+        cache.salvar_cache(caminho_arquivo, dados, _CONTEXTO_CACHE)
 
     return dados

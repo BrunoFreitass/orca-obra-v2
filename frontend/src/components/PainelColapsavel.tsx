@@ -10,9 +10,9 @@ interface Props {
   abertoPorPadrao?: boolean
 }
 
-/** Painel técnico recolhível -- equivalente ao st.expander do Streamlit,
- * mas sem a "cara de card" (sem borda arredondada/sombra, só um
- * cabeçalho denso com seta). Usado nos painéis da sidebar. */
+/** Painel técnico recolhível, sem a "cara de card" (sem borda
+ * arredondada/sombra, só um cabeçalho denso com seta). Usado nos painéis
+ * da sidebar. */
 export function PainelColapsavel({ titulo, children, abertoPorPadrao = false }: Props) {
   const [aberto, setAberto] = useState(abertoPorPadrao)
 

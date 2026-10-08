@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import { ErroMutacao } from '@/components/ErroMutacao'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -37,6 +38,7 @@ export function PrecosPanel() {
           importar.mutate(arquivo, { onSuccess: setPreview })
         }}
       />
+      <ErroMutacao erro={importar.error} />
 
       {preview?.avisos.map((aviso, i) => (
         <p key={i} className="text-[11px] text-warning">
@@ -57,6 +59,7 @@ export function PrecosPanel() {
           >
             {aplicar.isPending ? 'Aplicando…' : 'Aplicar preços'}
           </Button>
+          <ErroMutacao erro={aplicar.error} />
         </>
       )}
       {preview && numAtualizados === 0 && preview.avisos.length === 0 && (
@@ -77,6 +80,7 @@ export function PrecosPanel() {
           >
             Restaurar padrão
           </Button>
+          <ErroMutacao erro={restaurar.error} />
         </>
       )}
     </div>

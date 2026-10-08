@@ -1,7 +1,7 @@
 """Testes de integração — ciclo completo de geração de documentos.
 
 Verificam que Excel e PDF são criados corretamente a partir de um
-orçamento completo, sem depender da UI (Streamlit) nem da API Gemini.
+orçamento completo, sem depender do frontend nem da API Gemini.
 """
 import os
 
@@ -42,7 +42,7 @@ def orcamento_completo(dados_exemplo):
     """Monta um orcamento completo (material + mao de obra) pronto
     para gerar documentos."""
     materiais = calcular_materiais(dados_exemplo, padrao="Médio", tipo_cobertura="Telhado")
-    mao_de_obra = calcular_mao_de_obra(dados_exemplo, tipo_cobertura="Telhado")
+    mao_de_obra = calcular_mao_de_obra(dados_exemplo)
     return orcamento_service.montar_orcamento_completo(materiais, mao_de_obra)
 
 
@@ -57,11 +57,6 @@ class TestGerarExcel:
         caminho = tmp_path / "orcamento_sem_bdi.xlsx"
         gerar_excel(orcamento_completo, str(caminho), bdi_percentual=0)
         assert os.path.exists(caminho)
-
-    def test_extensao_csv_e_convertida_para_xlsx(self, orcamento_completo, tmp_path):
-        caminho_csv = tmp_path / "orcamento.csv"
-        resultado = gerar_excel(orcamento_completo, str(caminho_csv), bdi_percentual=0)
-        assert resultado.endswith(".xlsx")
 
     def test_preco_de_venda_bate_com_orcamento_service(self, orcamento_completo, tmp_path):
         """Regressão: Excel, PDF e o valor salvo no histórico usavam 3
@@ -137,6 +132,23 @@ class TestGerarPdfProposta:
             caminho_logo="/caminho/inexistente/logo.png",
         )
         assert os.path.exists(caminho)
+
+    def test_pdf_escapa_marcacao_nos_dados_do_usuario(self, orcamento_completo, tmp_path):
+        """'<' e '&' vindos do perfil nao podem quebrar o Paragraph do reportlab."""
+        caminho = tmp_path / "proposta_marcacao.pdf"
+        gerar_pdf_proposta(
+            orcamento_completo,
+            str(caminho),
+            nome_projeto="Casa Marcacao",
+            estado_uf="Boa Vista/RR",
+            padrao="Médio",
+            tipo_cobertura="Telhado",
+            area_piso=100.0,
+            nome_empresa="A <B> & C",
+            contato=["Tel <1>", "x & y"],
+            registro="CREA <RR>",
+        )
+        assert os.path.getsize(caminho) > 2048
 
     def test_pdf_com_dados_minimos(self, orcamento_completo, tmp_path):
         """PDF deve funcionar mesmo com apenas os campos obrigatorios."""

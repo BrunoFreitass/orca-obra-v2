@@ -81,17 +81,20 @@ def resumo_periodo(dias: int = 1) -> dict:
     with _conectar() as conn:
         row = conn.execute("""
             SELECT
-                COUNT(*) as total,
                 SUM(CASE WHEN status = 'OK' THEN 1 ELSE 0 END) as sucessos,
                 SUM(CASE WHEN status = 'ERRO' THEN 1 ELSE 0 END) as falhas,
                 SUM(CASE WHEN status = 'CACHE' THEN 1 ELSE 0 END) as caches
             FROM api_chamadas
             WHERE data_hora >= %s
         """, (desde,)).fetchone()
+    sucessos = row["sucessos"] or 0
+    falhas = row["falhas"] or 0
+    # "total" é o que conta pra cota: só chamadas reais ao Gemini. CACHE
+    # não gasta cota e fica só em "caches".
     return {
-        "total": row["total"] or 0,
-        "sucessos": row["sucessos"] or 0,
-        "falhas": row["falhas"] or 0,
+        "total": sucessos + falhas,
+        "sucessos": sucessos,
+        "falhas": falhas,
         "caches": row["caches"] or 0,
     }
 

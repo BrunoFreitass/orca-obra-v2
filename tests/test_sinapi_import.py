@@ -204,3 +204,11 @@ class TestImportarCompensaFatorRegional:
         precos, _avisos, _mes = si.importar([caminho], mes_referencia="2026-07")
 
         assert precos["aco"]["valor"] == pytest.approx(9.47, abs=0.001)
+
+
+class TestResumo:
+    def test_item_sem_override_mostra_preco_padrao_e_nao_zero(self, capsys):
+        # conftest isola os overrides: bloco_ceramico fica no padrão de core/coeficientes.py.
+        padrao = si.tp.coef.PRECO_BLOCO_CERAMICO.valor
+        si._resumo({"bloco_ceramico": {"valor": 1.0, "descricao": "Bloco"}}, [], "2026-08")
+        assert f"R$ {padrao:.2f} -> R$ 1.00" in capsys.readouterr().out

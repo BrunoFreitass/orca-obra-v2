@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { recarregarOrcamentoComPrecosNovos } from '@/hooks/use-orcamento'
 import { apiGet, apiPost, apiPostFormData } from '@/lib/api-client'
 import type { ItemPreco, PrecosImportarResponse } from '@/lib/types'
 
@@ -27,7 +28,10 @@ export function useAplicarPrecos() {
   return useMutation({
     mutationFn: (valores: Record<string, number>) =>
       apiPost<ItemPreco[]>('/precos/aplicar', { valores }),
-    onSuccess: (itens) => queryClient.setQueryData(CHAVE_PRECOS, itens),
+    onSuccess: (itens) => {
+      queryClient.setQueryData(CHAVE_PRECOS, itens)
+      return recarregarOrcamentoComPrecosNovos(queryClient)
+    },
   })
 }
 
@@ -35,6 +39,9 @@ export function useRestaurarPrecos() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: () => apiPost<ItemPreco[]>('/precos/restaurar', {}),
-    onSuccess: (itens) => queryClient.setQueryData(CHAVE_PRECOS, itens),
+    onSuccess: (itens) => {
+      queryClient.setQueryData(CHAVE_PRECOS, itens)
+      return recarregarOrcamentoComPrecosNovos(queryClient)
+    },
   })
 }

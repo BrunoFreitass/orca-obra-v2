@@ -15,10 +15,7 @@ import { useExcluirOrcamento, useHistorico } from '@/hooks/use-historico'
 import { urlDownload } from '@/lib/api-client'
 import { useExtracaoStore } from '@/lib/extracao-store'
 import type { OrcamentoHistorico } from '@/lib/types'
-
-function formatarMoeda(valor: number): string {
-  return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-}
+import { formatarMoeda } from '@/lib/utils'
 
 function LinhaQuantitativos({ registro }: { registro: OrcamentoHistorico }) {
   const itens: [string, string][] = [

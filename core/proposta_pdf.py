@@ -1,5 +1,6 @@
 import os
 from datetime import UTC, datetime
+from xml.sax.saxutils import escape
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -35,7 +36,7 @@ def gerar_pdf_proposta(dados_orcamento, output_path, nome_projeto,
                         estado_uf, padrao, tipo_cobertura, area_piso,
                         bdi_percentual=0, nome_empresa="OrçaObra AI",
                         contato="", registro="", caminho_logo="",
-                        cliente=""):
+                        cliente="", data_emissao=""):
     """Gera uma proposta comercial em PDF, com capa e tabela resumida
     (sem quantidade/preco unitario por item -- so os totais por
     servico/material), pensada pra ser enviada ao cliente final.
@@ -45,6 +46,9 @@ def gerar_pdf_proposta(dados_orcamento, output_path, nome_projeto,
     pra personalizar o documento em vez de sair sempre com a marca
     "OrçaObra AI". Todos opcionais -- se nao informados, o PDF sai
     com a marca padrao e sem essas linhas de contato.
+
+    data_emissao: data impressa na capa ("dd/mm/aaaa"). Ao regenerar pelo
+    historico, e a data de criacao do orcamento; vazio usa a data de hoje.
 
     Diferente do Excel (gerado por core/reporter.py), que mostra o
     detalhamento completo pra uso interno do profissional, o PDF e um
@@ -97,7 +101,9 @@ def gerar_pdf_proposta(dados_orcamento, output_path, nome_projeto,
             # PDF inteiro -- ignora o logo e segue sem ele.
             pass
 
-    story.append(Paragraph(nome_empresa or "OrçaObra AI", estilo_titulo))
+    # Dados do usuario sao escapados: Paragraph interpreta marcacao, e um
+    # "<" ou "&" no nome da empresa quebraria a geracao do PDF.
+    story.append(Paragraph(escape(nome_empresa or "OrçaObra AI"), estilo_titulo))
     story.append(Paragraph("Proposta de Orçamento de Obra", estilo_subtitulo))
 
     # Contato: aceita string (compatibilidade) ou lista de linhas
@@ -105,11 +111,11 @@ def gerar_pdf_proposta(dados_orcamento, output_path, nome_projeto,
         if isinstance(contato, list):
             for parte in contato:
                 if parte:
-                    story.append(Paragraph(parte, estilo_contato))
+                    story.append(Paragraph(escape(parte), estilo_contato))
         else:
-            story.append(Paragraph(contato, estilo_contato))
+            story.append(Paragraph(escape(contato), estilo_contato))
     if registro:
-        story.append(Paragraph(registro, estilo_contato))
+        story.append(Paragraph(escape(registro), estilo_contato))
 
     story.append(Spacer(1, 10))
     story.append(HRFlowable(width="100%", color=colors.HexColor("#1F4E78"), thickness=1.2))
@@ -122,7 +128,7 @@ def gerar_pdf_proposta(dados_orcamento, output_path, nome_projeto,
         ["Projeto / Cliente:", nome_projeto],
     ]
     dados_capa.extend([
-        ["Data:", datetime.now(tz=UTC).strftime("%d/%m/%Y")],
+        ["Data:", data_emissao or datetime.now(tz=UTC).strftime("%d/%m/%Y")],
         ["Estado da Obra:", estado_uf],
         ["Padrão de Acabamento:", padrao],
         ["Tipo de Cobertura:", tipo_cobertura],

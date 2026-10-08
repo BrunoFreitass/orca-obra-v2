@@ -8,14 +8,16 @@ function recalcularTotal(item: ItemOrcamento, precoUnit: number): ItemOrcamento 
 
 interface OrcamentoState {
   /** Serializa os inputs que definem os itens sugeridos (padrão, estrutura,
-   * áreas, parede, aberturas) -- equivalente à "assinatura" que o Streamlit
-   * usa hoje (core/ui_revisao.py) pra saber quando precisa re-sugerir
-   * materiais/mão de obra e descartar as edições de preço anteriores. */
+   * áreas, parede, aberturas) -- quando muda, re-sugere materiais/mão de
+   * obra e descarta as edições de preço anteriores. */
   assinatura: string | null
   materiais: ItemOrcamento[]
   maoDeObra: ItemOrcamento[]
   bdi: number
   carregarSugeridos: (assinatura: string, materiais: ItemOrcamento[], maoDeObra: ItemOrcamento[]) => void
+  /** A assinatura não inclui preços: quando a tabela de preços muda, zera
+   * pra próxima carga de sugeridos substituir os itens com preço antigo. */
+  resetarAssinatura: () => void
   setPrecoMaterial: (index: number, precoUnit: number) => void
   setPrecoMaoDeObra: (index: number, precoUnit: number) => void
   setBdi: (bdi: number) => void
@@ -28,6 +30,7 @@ export const useOrcamentoStore = create<OrcamentoState>()((set) => ({
   bdi: 25,
   carregarSugeridos: (assinatura, materiais, maoDeObra) =>
     set((state) => (state.assinatura === assinatura ? {} : { assinatura, materiais, maoDeObra })),
+  resetarAssinatura: () => set({ assinatura: null }),
   setPrecoMaterial: (index, precoUnit) =>
     set((state) => ({
       materiais: state.materiais.map((item, i) => (i === index ? recalcularTotal(item, precoUnit) : item)),

@@ -3,9 +3,8 @@ Tabela de precos e coeficientes de consumo -- fonte unica de verdade,
 versionada e rastreavel.
 
 Antes desta refatoracao (Fase 3 do roadmap), esses numeros estavam
-espalhados como constantes soltas em core/calculator.py e
-core/sinapi.py, sem nenhum registro de onde vieram nem de quando
-foram conferidos pela ultima vez. Se um preco estivesse desatualizado,
+espalhados como constantes soltas em core/calculator.py, sem nenhum
+registro de onde vieram nem de quando foram conferidos pela ultima vez. Se um preco estivesse desatualizado,
 a unica forma de descobrir era lembrar de cabeca.
 
 Cada valor agora e um objeto Preco(valor, fonte, data_ref) -- e da pra
@@ -41,6 +40,27 @@ efetiva de um orcamento inteiro (ver data_mais_antiga() abaixo)."""
         else:
             datas.extend(p.data_ref for p in item.values())
     return min(datas)
+
+
+# =====================================================================
+# FATOR REGIONAL -- fixo para Roraima (RR), unico estado atendido pelo
+# OrçaObra neste momento. core/calculator.py multiplica todo preço
+# padrão por ele.
+# =====================================================================
+FATOR_REGIONAL_RR = Preco(
+    1.070,
+    "buscadorsinapi.com.br (CEF/IBGE) - média geral de RR sobre a média nacional",
+    "2026-06",
+)
+
+
+def _sem_fator_regional(valor_sinapi_rr: float) -> float:
+    """Preço SINAPI oficial de RR já inclui o custo regional, mas o
+    calculator multiplica todo padrão por FATOR_REGIONAL_RR -- sem isso o
+    item saía ~7% acima do SINAPI. Guarda o valor-base (RR / fator) pro
+    calculator chegar de volta no preço SINAPI exato; mesmo critério do
+    importador (core/sinapi_import.py)."""
+    return round(valor_sinapi_rr / FATOR_REGIONAL_RR.valor, 2)
 
 
 # =====================================================================
@@ -89,15 +109,19 @@ PRECOS_PORTA_EXTERNA = {
 # contagem de janelas vira area). Valores reais do SINAPI oficial
 # (CAIXA/IBGE) RR, ref. 2026-07 -- ja incluem fornecimento + instalação.
 PRECOS_JANELA = {
-    "Econômico": Preco(368.87, "SINAPI oficial código 94570 - janela de alumínio de correr, 2 folhas, vidro incluso, fornecimento e instalação", "2026-07"),
+    "Econômico": Preco(
+        _sem_fator_regional(368.87),
+        "SINAPI oficial código 94570 - janela de alumínio de correr, 2 folhas, vidro incluso, fornecimento e instalação",
+        "2026-07",
+    ),
     "Médio": Preco(
-        410.39,
+        _sem_fator_regional(410.39),
         "SINAPI oficial código 94573 - janela de alumínio de correr, 4 "
         "folhas com bandeira, vidro incluso, fornecimento e instalação",
         "2026-07",
     ),
     "Alto Padrão": Preco(
-        527.09,
+        _sem_fator_regional(527.09),
         "SINAPI oficial código 94572 - janela de alumínio de correr, 3 "
         "folhas (2 venezianas + 1 vidro), fornecimento e instalação",
         "2026-07",
@@ -110,9 +134,21 @@ PRECOS_JANELA = {
 # com bloco_ceramico. Valores reais do SINAPI oficial (CAIXA/IBGE) RR,
 # ref. 2026-07.
 PRECOS_PINTURA = {
-    "Econômico": Preco(12.02, "SINAPI oficial código 104641 - pintura látex acrílica econômica, aplicação manual em paredes, 2 demãos", "2026-07"),
-    "Médio": Preco(13.89, "SINAPI oficial código 104642 - pintura látex acrílica standard, aplicação manual em paredes, 2 demãos", "2026-07"),
-    "Alto Padrão": Preco(17.08, "SINAPI oficial código 88489 - pintura látex acrílica premium, aplicação manual em paredes, 2 demãos", "2026-07"),
+    "Econômico": Preco(
+        _sem_fator_regional(12.02),
+        "SINAPI oficial código 104641 - pintura látex acrílica econômica, aplicação manual em paredes, 2 demãos",
+        "2026-07",
+    ),
+    "Médio": Preco(
+        _sem_fator_regional(13.89),
+        "SINAPI oficial código 104642 - pintura látex acrílica standard, aplicação manual em paredes, 2 demãos",
+        "2026-07",
+    ),
+    "Alto Padrão": Preco(
+        _sem_fator_regional(17.08),
+        "SINAPI oficial código 88489 - pintura látex acrílica premium, aplicação manual em paredes, 2 demãos",
+        "2026-07",
+    ),
 }
 
 # -----------------------------------------------------------------
@@ -163,9 +199,13 @@ PRECOS_COBERTURA = {
 # diferenciados pela espessura total (mais espesso = mais robusto/vão
 # maior, critério de padrão razoável na ausência de outro).
 PRECOS_ESTRUTURA_LAJE_COBERTURA = {
-    "Econômico": Preco(229.96, "SINAPI oficial código 101951 - laje pré-moldada, vigota treliçada, enchimento EPS, LT=12cm", "2026-07"),
-    "Médio": Preco(254.03, "SINAPI oficial código 101948 - laje pré-moldada, vigota treliçada, enchimento cerâmico, LT=16cm", "2026-07"),
-    "Alto Padrão": Preco(273.03, "SINAPI oficial código 101949 - laje pré-moldada, vigota treliçada, enchimento cerâmico, LT=20cm", "2026-07"),
+    "Econômico": Preco(_sem_fator_regional(229.96), "SINAPI oficial código 101951 - laje pré-moldada, vigota treliçada, enchimento EPS, LT=12cm", "2026-07"),
+    "Médio": Preco(_sem_fator_regional(254.03), "SINAPI oficial código 101948 - laje pré-moldada, vigota treliçada, enchimento cerâmico, LT=16cm", "2026-07"),
+    "Alto Padrão": Preco(
+        _sem_fator_regional(273.03),
+        "SINAPI oficial código 101949 - laje pré-moldada, vigota treliçada, enchimento cerâmico, LT=20cm",
+        "2026-07",
+    ),
 }
 
 # =====================================================================
@@ -178,7 +218,7 @@ PRECOS_ESTRUTURA_LAJE_COBERTURA = {
 # antigas (pesquisa de mercado: R$1,25/tijolo × 27 tijolos/m² ≈ R$33,75
 # de material + R$37,86 de mão de obra que existia como item separado)
 # pra manter o mesmo total de antes da mudança de unidade, só que numa
-# unidade consistente com o que calcular.py de fato multiplica.
+# unidade consistente com o que core/calculator.py de fato multiplica.
 PRECO_BLOCO_CERAMICO = Preco(71.61, "Pesquisa de mercado - bloco cerâmico 14x19x29, m² de parede pronta", "2026-06")
 PRECO_ARGAMASSA_KG = Preco(1.80, "Pesquisa de mercado - argamassa AC-II", "2026-06")
 PRECO_CIMENTO_SACO = Preco(44.00, "SINAPI/IBGE - média nacional, 1º bimestre/2026", "2026-06")
@@ -195,7 +235,7 @@ PRECO_BRITA_M3 = Preco(140.00, "Pesquisa de mercado - brita nº 1", "2026-06")
 # isso tem coeficiente de consumo proprio.
 # =====================================================================
 PRECO_REBOCO_M2 = Preco(
-    60.09,
+    _sem_fator_regional(60.09),
     "SINAPI oficial (CAIXA/IBGE) RR, ref. 2026-07 - soma de 2 composições "
     "(sem código único pro reboco completo): chapisco 87878 (R$6,81/m²) + "
     "emboço/massa única 87794 (R$53,28/m²), sem presença de vãos, preparo manual",
@@ -212,15 +252,9 @@ CONSUMO_REJUNTE_KG_POR_M2 = Preco(0.4, "Padrão de mercado - rejunte para piso/r
 PRECO_REJUNTE_KG = Preco(12.00, "Pesquisa de mercado - rejunte cimentício/epóxi padrão médio", "2026-09")
 
 # =====================================================================
-# FATOR REGIONAL E ACO -- fixos para Roraima (RR), unico estado
-# atendido pelo OrçaObra neste momento.
+# ACO -- fixo para Roraima (RR), unico estado atendido pelo OrçaObra
+# neste momento (FATOR_REGIONAL_RR fica no topo do arquivo).
 # =====================================================================
-FATOR_REGIONAL_RR = Preco(
-    1.070,
-    "buscadorsinapi.com.br (CEF/IBGE) - média geral de RR sobre a média nacional",
-    "2026-06",
-)
-
 PRECO_ACO_RR = Preco(
     9.38,
     "buscadorsinapi.com.br - insumo 32 (aço CA-50, 6,3mm, vergalhão), desonerado, RR",
@@ -259,19 +293,16 @@ MAO_DE_OBRA_POR_SERVICO = {
         "preco": Preco(
             35.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA
         ),
-        "unidade": "m2_area",
     },
     "Instalação Elétrica": {
         "preco": Preco(
             60.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA
         ),
-        "unidade": "unidade",
     },
     "Instalação Hidráulica": {
         "preco": Preco(
             55.00, _FONTE_MAO_DE_OBRA, _DATA_MAO_DE_OBRA
         ),
-        "unidade": "unidade",
     },
 }
 

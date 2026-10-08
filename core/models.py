@@ -1,13 +1,21 @@
 """Modelos de dominio do OrcaObra AI.
 
 Antes desta refatoracao, os dados extraidos da planta (area_piso_seco,
-metros_parede, portas etc.) viajavam como dict solto entre vision.py,
-app.py e calculator.py -- e cada funcao que precisava da area total ou
+metros_parede, portas etc.) viajavam como dict solto entre vision.py
+e calculator.py -- e cada funcao que precisava da area total ou
 da area de parede repetia as mesmas 4-5 linhas de "dados.get(...)".
 Este modulo centraliza essas regras num unico lugar.
 """
 
 from dataclasses import dataclass, field
+
+# Os 7 campos que a IA extrai da planta e que alimentam o orcamento --
+# usados por core/vision.py (normalizacao da resposta) e core/confianca.py
+# (indice de confianca).
+CAMPOS_AGREGADOS = (
+    "area_piso_seco", "area_piso_molhado", "area_piso_externo",
+    "metros_parede", "portas_internas", "portas_externas", "janelas",
+)
 
 # Pe direito padrao (m) usado para converter metros lineares de parede
 # em area vertical de parede. Antes esse "2.8" estava duplicado dentro

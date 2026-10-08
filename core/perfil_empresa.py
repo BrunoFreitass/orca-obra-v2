@@ -1,10 +1,15 @@
+import base64
+import glob
 import json
 import os
+import tempfile
+from contextlib import contextmanager
 
 from core import paths
 from core.historico import obter_configuracao, salvar_configuracao
 
 PERFIL_PATH = paths.PERFIL_PATH
+CHAVE_LOGO = "logo_empresa"
 
 PERFIL_PADRAO = {
     "nome_empresa": "",
@@ -58,3 +63,40 @@ def salvar_perfil(nome_empresa, profissional_responsavel, telefone, email,
         pass
 
     return perfil
+
+
+def salvar_logo(conteudo: bytes, extensao: str) -> str:
+    """Grava a logo (já validada pelo router) no PostgreSQL, em base64 na
+    tabela configuracoes -- o disco do Render é efêmero e a logo sumia a
+    cada redeploy. Também grava o arquivo local (fallback sem banco),
+    removendo a logo anterior de qualquer extensão. Retorna o caminho local."""
+    for antiga in glob.glob(os.path.join(paths.PASTA_PERFIL, "logo.*")):
+        os.remove(antiga)
+    caminho_logo = os.path.join(paths.PASTA_PERFIL, f"logo{extensao}")
+    with open(caminho_logo, "wb") as f:
+        f.write(conteudo)
+
+    salvar_configuracao(CHAVE_LOGO, {
+        "extensao": extensao,
+        "base64": base64.b64encode(conteudo).decode("ascii"),
+    })
+    return caminho_logo
+
+
+@contextmanager
+def arquivo_logo(caminho_logo: str):
+    """Caminho de arquivo da logo pra montar o PDF. Se a logo estiver no
+    banco, gera um arquivo temporário (apagado ao sair do bloco); senão,
+    usa o caminho local salvo no perfil (fallback sem DATABASE_URL)."""
+    dados = obter_configuracao(CHAVE_LOGO)
+    if not dados:
+        yield caminho_logo
+        return
+
+    fd, caminho_temp = tempfile.mkstemp(suffix=dados["extensao"])
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(base64.b64decode(dados["base64"]))
+        yield caminho_temp
+    finally:
+        os.remove(caminho_temp)

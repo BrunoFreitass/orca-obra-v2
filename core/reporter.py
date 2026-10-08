@@ -4,8 +4,6 @@ from openpyxl.utils import get_column_letter
 
 
 def gerar_excel(dados_orcamento, output_path, bdi_percentual=0):
-    xlsx_path = output_path.replace(".csv", ".xlsx")
-
     wb = Workbook()
     ws = wb.active
     ws.title = "Orçamento"
@@ -59,7 +57,6 @@ def gerar_excel(dados_orcamento, output_path, bdi_percentual=0):
         grupos[tipo].append(item)
 
     linha_atual = linha_cabecalho + 1
-    linhas_subtotal = []
 
     for tipo in ordem_grupos:
         itens_grupo = grupos[tipo]
@@ -116,7 +113,6 @@ def gerar_excel(dados_orcamento, output_path, bdi_percentual=0):
         celula_subtotal = ws.cell(row=linha_atual, column=4, value=subtotal_valor)
         celula_subtotal.font = Font(name=fonte_padrao, size=10, bold=True, color="000000")
         celula_subtotal.number_format = 'R$ #,##0.00'
-        linhas_subtotal.append(linha_atual)
         linha_atual += 2
 
     # --- CUSTO DIRETO ---
@@ -203,5 +199,5 @@ def gerar_excel(dados_orcamento, output_path, bdi_percentual=0):
     ws.cell(row=linha_rodape, column=1,
             value="Nota: os totais são calculados automaticamente (Quantidade x Preço Unitário).")
 
-    wb.save(xlsx_path)
-    return xlsx_path
+    wb.save(output_path)
+    return output_path

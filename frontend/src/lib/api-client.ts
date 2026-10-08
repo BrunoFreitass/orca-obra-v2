@@ -1,6 +1,6 @@
 /** Cliente HTTP fino pra API do OrçaObra AI -- todas as chamadas passam
  * por aqui pra centralizar tratamento de erro e base URL. Em dev, o
- * Vite faz proxy de /api pra localhost:8000 (ver vite.config.ts); em
+ * Vite faz proxy de /api pra localhost:8010 (ver vite.config.ts); em
  * produção, front e API são a mesma origem. */
 
 export class ApiError extends Error {

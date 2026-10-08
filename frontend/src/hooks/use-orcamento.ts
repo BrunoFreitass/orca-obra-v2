@@ -1,6 +1,7 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { type QueryClient, useMutation, useQuery } from '@tanstack/react-query'
 
 import { apiPost } from '@/lib/api-client'
+import { useOrcamentoStore } from '@/lib/orcamento-store'
 import type {
   ItemOrcamento,
   OrcamentoCalcularRequest,
@@ -25,6 +26,16 @@ export function useMaoDeObra(corpo: OrcamentoCalcularRequest | null) {
     queryFn: () => apiPost<ItemOrcamento[]>('/orcamento/mao-de-obra', corpo),
     enabled: corpo !== null,
   })
+}
+
+/** Chamado depois de aplicar/restaurar preços (tabela ou SINAPI). Zera a
+ * assinatura ANTES de refazer as queries: quando os sugeridos novos
+ * chegarem, Orcamento.tsx os aceita no lugar dos itens com preço antigo.
+ * refetchType 'all' refaz também as queries inativas (tela de orçamento
+ * fechada), pra ela não abrir com os preços antigos do cache. */
+export function recarregarOrcamentoComPrecosNovos(queryClient: QueryClient) {
+  useOrcamentoStore.getState().resetarAssinatura()
+  return queryClient.invalidateQueries({ queryKey: ['orcamento'], refetchType: 'all' })
 }
 
 export function useGerarOrcamento() {

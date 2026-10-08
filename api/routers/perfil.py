@@ -1,13 +1,17 @@
 """Perfil da empresa e logo (core/perfil_empresa.py)."""
-import os
+import io
 
 from fastapi import APIRouter, UploadFile
+from PIL import Image
 
 from api.schemas import PerfilEmpresa, PerfilEmpresaUpdate
-from core import paths
-from core.perfil_empresa import carregar_perfil, salvar_perfil
+from api.uploads import erro_amigavel, ler_com_limite
+from core.perfil_empresa import carregar_perfil, salvar_logo, salvar_perfil
 
 router = APIRouter(prefix="/api/perfil", tags=["perfil"])
+
+MAX_TAMANHO_LOGO = 2 * 1024 * 1024  # 2 MB
+EXTENSAO_POR_FORMATO = {"PNG": ".png", "JPEG": ".jpg"}
 
 
 @router.get("", response_model=PerfilEmpresa)
@@ -30,11 +34,18 @@ def atualizar(dados: PerfilEmpresaUpdate) -> dict:
 
 @router.post("/logo", response_model=PerfilEmpresa)
 async def enviar_logo(logo: UploadFile) -> dict:
-    extensao = os.path.splitext(logo.filename or "")[1] or ".png"
-    caminho_logo = os.path.join(paths.PASTA_PERFIL, f"logo{extensao}")
-    conteudo = await logo.read()
-    with open(caminho_logo, "wb") as f:
-        f.write(conteudo)
+    conteudo = await ler_com_limite(logo, MAX_TAMANHO_LOGO)
+    # Valida pelo conteúdo, não pela extensão enviada pelo cliente.
+    try:
+        with Image.open(io.BytesIO(conteudo)) as imagem:
+            formato = imagem.format
+            imagem.verify()
+    except (OSError, SyntaxError, ValueError, Image.DecompressionBombError) as e:
+        raise erro_amigavel(400, "Não foi possível ler a imagem. Envie uma logo PNG ou JPEG.") from e
+    if formato not in EXTENSAO_POR_FORMATO:
+        raise erro_amigavel(400, "Formato não suportado. Envie uma logo PNG ou JPEG.")
+
+    caminho_logo = salvar_logo(conteudo, EXTENSAO_POR_FORMATO[formato])
 
     perfil_atual = carregar_perfil()
     return salvar_perfil(
