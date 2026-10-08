@@ -15,7 +15,7 @@ export function MonitorBadge() {
   return (
     <Badge
       variant="outline"
-      className={cn('font-mono text-[11px] font-normal', CORES_NIVEL[status.nivel])}
+      className={cn('font-mono text-xs font-normal', CORES_NIVEL[status.nivel])}
     >
       {status.total}/{status.limite} hoje
     </Badge>

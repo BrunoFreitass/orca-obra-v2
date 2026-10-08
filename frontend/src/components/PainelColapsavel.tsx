@@ -18,7 +18,7 @@ export function PainelColapsavel({ titulo, children, abertoPorPadrao = false }: 
 
   return (
     <Collapsible open={aberto} onOpenChange={setAberto}>
-      <CollapsibleTrigger className="flex w-full items-center gap-1.5 py-1.5 text-left font-mono text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground">
+      <CollapsibleTrigger className="flex w-full items-center gap-1.5 py-1.5 text-left font-mono text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground">
         <ChevronRight className={`size-3 shrink-0 transition-transform ${aberto ? 'rotate-90' : ''}`} />
         {titulo}
       </CollapsibleTrigger>

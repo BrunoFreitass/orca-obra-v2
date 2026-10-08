@@ -14,10 +14,10 @@ export function PlantaPanel() {
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+      <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
         Planta Baixa
       </p>
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-xs text-muted-foreground">
         PDF, JPG ou PNG. Plantas com Quadro de Áreas dão resultados mais precisos.
       </p>
 
@@ -47,7 +47,7 @@ export function PlantaPanel() {
       )}
 
       {analisar.isError && (
-        <p className="text-[11px] text-destructive">
+        <p className="text-xs text-destructive">
           {extrairDetalheErro(analisar.error).mensagem_amigavel}
         </p>
       )}

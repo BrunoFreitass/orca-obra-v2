@@ -1,5 +1,5 @@
 import { Moon, Sun } from 'lucide-react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { Link, NavLink, Outlet } from 'react-router-dom'
 
 import { MonitorBadge } from '@/components/MonitorBadge'
 import { PainelColapsavel } from '@/components/PainelColapsavel'
@@ -29,9 +29,14 @@ export function AppShell() {
     <div className="flex h-screen flex-col bg-background text-foreground">
       {/* Barra de ferramentas -- densa, com borda em vez de sombra */}
       <header className="flex h-12 shrink-0 items-center gap-4 border-b border-border bg-card px-4">
-        <span className="font-mono text-xs font-medium uppercase tracking-widest text-primary">
+        {/* Nome do app = atalho pro início (Histórico); não apaga a planta/orçamento em andamento. */}
+        <Link
+          to="/"
+          title="Voltar para o início"
+          className="rounded-sm font-mono text-xs font-medium uppercase tracking-widest text-primary hover:opacity-80"
+        >
           OrçaObra AI
-        </span>
+        </Link>
         <nav className="flex items-center gap-1">
           {NAV_ITEMS.map((item) => {
             const indisponivel = item.to !== '/' && !dadosOriginais
